@@ -47,3 +47,4 @@ desktop.ini
 
 # ===== AI agent local state =====
 .claude/settings.local.json
+.superpowers/
