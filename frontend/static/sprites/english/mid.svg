@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- 魔法鸦 - Magic raven -->
+  <defs>
+    <radialGradient id="body" cx="50%" cy="50%"><stop offset="0%" stop-color="#F3E5F5"/><stop offset="100%" stop-color="#CE93D8"/></radialGradient>
+  </defs>
+  <ellipse cx="100" cy="125" rx="75" ry="25" fill="#AB47BC" opacity="0.1"/>
+  <!-- Sleek body -->
+  <ellipse cx="100" cy="115" rx="40" ry="48" fill="url(#body)" stroke="#6A1B9A" stroke-width="2.5"/>
+  <!-- Bird-like beak -->
+  <polygon points="100,115 110,115 105,108" fill="#F48FB1" stroke="#6A1B9A" stroke-width="1"/>
+  <!-- Eyes -->
+  <ellipse cx="88" cy="108" rx="7" ry="8" fill="#4A148C"/>
+  <ellipse cx="112" cy="108" rx="7" ry="8" fill="#4A148C"/>
+  <ellipse cx="90" cy="105" rx="3" ry="3.5" fill="white"/>
+  <ellipse cx="114" cy="105" rx="3" ry="3.5" fill="white"/>
+  <circle cx="86" cy="107" r="1.5" fill="white" opacity="0.8"/>
+  <circle cx="110" cy="107" r="1.5" fill="white" opacity="0.8"/>
+  <!-- Wizard hat (slightly tilted) -->
+  <path d="M65 90 L95 40 L125 90" fill="#6A1B9A" stroke="#4A148C" stroke-width="2" stroke-linejoin="round" transform="rotate(8 95 65)"/>
+  <rect x="62" y="88" width="72" height="6" rx="2" fill="#4A148C" transform="rotate(8 98 91)"/>
+  <!-- Wing arms -->
+  <path d="M60 110 Q35 95 40 80 Q55 90 62 105" fill="#CE93D8" stroke="#6A1B9A" stroke-width="1.5"/>
+  <path d="M140 110 Q165 95 160 80 Q145 90 138 105" fill="#CE93D8" stroke="#6A1B9A" stroke-width="1.5"/>
+  <!-- Magic sparkles -->
+  <text x="35" y="75" fill="#FFD54F" font-size="12" opacity="0.7">✦</text>
+  <text x="160" y="70" fill="#FFD54F" font-size="10" opacity="0.6">✦</text>
+  <text x="50" y="95" fill="#CE93D8" font-size="8" opacity="0.5">✦</text>
+  <text x="145" y="95" fill="#CE93D8" font-size="8" opacity="0.5">✦</text>
+  <!-- Stage badge -->
+  <ellipse cx="100" cy="78" rx="10" ry="6" fill="#6A1B9A"/>
+  <text x="100" y="80" text-anchor="middle" fill="white" font-size="8" font-weight="bold">2</text>
+</svg>

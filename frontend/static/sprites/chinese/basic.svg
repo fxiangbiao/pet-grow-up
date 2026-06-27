@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- 小书仙 - A cute book creature -->
+  <defs>
+    <radialGradient id="body" cx="50%" cy="50%"><stop offset="0%" stop-color="#FFF3E0"/><stop offset="100%" stop-color="#FFE0B2"/></radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%"><stop offset="0%" stop-color="#FFD54F" stop-opacity="0.3"/><stop offset="100%" stop-color="#FFD54F" stop-opacity="0"/></radialGradient>
+  </defs>
+  <!-- Glow -->
+  <ellipse cx="100" cy="120" rx="70" ry="20" fill="#FFD54F" opacity="0.15"/>
+  <!-- Body -->
+  <ellipse cx="100" cy="115" rx="40" ry="42" fill="url(#body)" stroke="#8D6E63" stroke-width="2"/>
+  <!-- Wings (tiny book pages) -->
+  <path d="M62 95 Q40 80 50 70 Q60 75 62 90" fill="#FFF9C4" stroke="#FFD54F" stroke-width="1"/>
+  <path d="M138 95 Q160 80 150 70 Q140 75 138 90" fill="#FFF9C4" stroke="#FFD54F" stroke-width="1"/>
+  <!-- Eyes -->
+  <ellipse cx="85" cy="108" rx="6" ry="7" fill="#5D4037"/>
+  <ellipse cx="115" cy="108" rx="6" ry="7" fill="#5D4037"/>
+  <ellipse cx="87" cy="106" rx="2.5" ry="2.5" fill="white"/>
+  <ellipse cx="117" cy="106" rx="2.5" ry="2.5" fill="white"/>
+  <!-- Blush -->
+  <ellipse cx="75" cy="120" rx="8" ry="4" fill="#FF8A80" opacity="0.4"/>
+  <ellipse cx="125" cy="120" rx="8" ry="4" fill="#FF8A80" opacity="0.4"/>
+  <!-- Tiny book on belly -->
+  <rect x="88" y="125" width="24" height="18" rx="2" fill="#8D6E63" stroke="#5D4037" stroke-width="1"/>
+  <line x1="92" y1="130" x2="108" y2="130" stroke="#FFF9C4" stroke-width="1.5"/>
+  <line x1="92" y1="134" x2="108" y2="134" stroke="#FFF9C4" stroke-width="1.5"/>
+  <line x1="92" y1="138" x2="105" y2="138" stroke="#FFF9C4" stroke-width="1.5"/>
+  <!-- Small hat -->
+  <path d="M85 80 Q100 55 115 80" fill="#8D6E63" stroke="#5D4037" stroke-width="1.5"/>
+  <rect x="80" y="78" width="40" height="6" rx="3" fill="#6D4C41"/>
+</svg>

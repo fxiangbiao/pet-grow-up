@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- 智慧猫 - Smart cat -->
+  <defs>
+    <radialGradient id="body" cx="50%" cy="50%"><stop offset="0%" stop-color="#E3F2FD"/><stop offset="100%" stop-color="#BBDEFB"/></radialGradient>
+  </defs>
+  <ellipse cx="100" cy="120" rx="70" ry="20" fill="#42A5F5" opacity="0.1"/>
+  <!-- Body -->
+  <ellipse cx="100" cy="120" rx="38" ry="40" fill="url(#body)" stroke="#1E88E5" stroke-width="2"/>
+  <!-- Ears -->
+  <path d="M70 90 L65 65 L85 82" fill="#BBDEFB" stroke="#1E88E5" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M130 90 L135 65 L115 82" fill="#BBDEFB" stroke="#1E88E5" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Inner ears -->
+  <path d="M72 88 L68 70 L83 83" fill="#F8BBD0" opacity="0.6"/>
+  <path d="M128 88 L132 70 L117 83" fill="#F8BBD0" opacity="0.6"/>
+  <!-- Eyes -->
+  <ellipse cx="85" cy="110" rx="7" ry="8" fill="#1565C0"/>
+  <ellipse cx="115" cy="110" rx="7" ry="8" fill="#1565C0"/>
+  <ellipse cx="87" cy="107" rx="3" ry="3.5" fill="white"/>
+  <ellipse cx="117" cy="107" rx="3" ry="3.5" fill="white"/>
+  <ellipse cx="85" cy="110" rx="3" ry="5" fill="#0D47A1"/>
+  <ellipse cx="115" cy="110" rx="3" ry="5" fill="#0D47A1"/>
+  <!-- Glasses -->
+  <circle cx="85" cy="110" rx="11" ry="11" fill="none" stroke="#90A4AE" stroke-width="1.5"/>
+  <circle cx="115" cy="110" rx="11" ry="11" fill="none" stroke="#90A4AE" stroke-width="1.5"/>
+  <line x1="96" y1="109" x2="104" y2="109" stroke="#90A4AE" stroke-width="1.5"/>
+  <!-- Nose and mouth -->
+  <ellipse cx="100" cy="122" rx="3" ry="2" fill="#F48FB1"/>
+  <path d="M93 126 Q100 132 107 126" fill="none" stroke="#1E88E5" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Whiskers -->
+  <line x1="65" y1="118" x2="80" y2="120" stroke="#90A4AE" stroke-width="1" opacity="0.6"/>
+  <line x1="65" y1="124" x2="80" y2="124" stroke="#90A4AE" stroke-width="1" opacity="0.6"/>
+  <line x1="135" y1="118" x2="120" y2="120" stroke="#90A4AE" stroke-width="1" opacity="0.6"/>
+  <line x1="135" y1="124" x2="120" y2="124" stroke="#90A4AE" stroke-width="1" opacity="0.6"/>
+  <!-- Tail -->
+  <path d="M138 115 Q165 100 158 80 Q155 70 150 75" fill="none" stroke="#1E88E5" stroke-width="3" stroke-linecap="round"/>
+  <!-- Blush -->
+  <ellipse cx="73" cy="120" rx="7" ry="4" fill="#FF8A80" opacity="0.3"/>
+  <ellipse cx="127" cy="120" rx="7" ry="4" fill="#FF8A80" opacity="0.3"/>
+</svg>

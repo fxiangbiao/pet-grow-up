@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --poetry-primary: #8B4513;
+  --poetry-secondary: #D2691E;
+  --poetry-accent: #FFD700;
+  --poetry-bg: #FFF8E7;
+
+  --wisdom-primary: #1E90FF;
+  --wisdom-secondary: #4169E1;
+  --wisdom-accent: #00CED1;
+  --wisdom-bg: #F0F8FF;
+
+  --magic-primary: #9370DB;
+  --magic-secondary: #8A2BE2;
+  --magic-accent: #FF69B4;
+  --magic-bg: #F8F0FF;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+/* ===== Subject-themed adventure backgrounds ===== */
+.adventure-bg-chinese {
+  background: linear-gradient(175deg, #FFF8E7 0%, #F5E6CC 30%, #EDE0C8 60%, #E8D5B0 100%);
+}
+.adventure-bg-math {
+  background: linear-gradient(175deg, #F0F8FF 0%, #E0EEFF 30%, #D0E8FF 60%, #C8E0F8 100%);
+}
+.adventure-bg-english {
+  background: linear-gradient(175deg, #F8F0FF 0%, #EDE0F8 30%, #E0D0F0 60%, #D8C8E8 100%);
+}
+
+/* Floating background decorations */
+.bg-deco-chinese {
+  position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+}
+.bg-deco-chinese span {
+  position: absolute; color: rgba(139, 69, 19, 0.07); font-size: 1.8rem; font-family: serif;
+  animation: float-up 13s linear infinite;
+}
+.bg-deco-chinese span:nth-child(1) { left: 10%; animation-delay: 0s; }
+.bg-deco-chinese span:nth-child(2) { left: 25%; animation-delay: 3s; animation-duration: 11s; }
+.bg-deco-chinese span:nth-child(3) { left: 45%; animation-delay: 6s; animation-duration: 14s; }
+.bg-deco-chinese span:nth-child(4) { left: 65%; animation-delay: 2s; animation-duration: 10s; }
+.bg-deco-chinese span:nth-child(5) { left: 80%; animation-delay: 8s; }
+.bg-deco-chinese span:nth-child(6) { left: 55%; animation-delay: 5s; animation-duration: 12s; }
+
+.bg-deco-math {
+  position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+  background-image:
+    linear-gradient(rgba(30,144,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,144,255,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: grid-drift 60s linear infinite;
+}
+
+.bg-deco-english {
+  position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+}
+.bg-deco-english span {
+  position: absolute; color: rgba(147,112,219,0.08); font-size: 1.3rem; font-family: serif;
+  animation: float-up 10s linear infinite;
+}
+.bg-deco-english span:nth-child(1) { left: 8%; animation-delay: 0s; }
+.bg-deco-english span:nth-child(2) { left: 22%; animation-delay: 2s; animation-duration: 12s; }
+.bg-deco-english span:nth-child(3) { left: 38%; animation-delay: 4s; }
+.bg-deco-english span:nth-child(4) { left: 52%; animation-delay: 1s; animation-duration: 13s; }
+.bg-deco-english span:nth-child(5) { left: 68%; animation-delay: 6s; }
+.bg-deco-english span:nth-child(6) { left: 82%; animation-delay: 3s; animation-duration: 11s; }
+.bg-deco-english span:nth-child(7) { left: 15%; animation-delay: 7s; }
+.bg-deco-english span:nth-child(8) { left: 75%; animation-delay: 5s; animation-duration: 14s; }
+
+@keyframes float-up {
+  0% { transform: translateY(105vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-8vh) rotate(15deg); opacity: 0; }
+}
+@keyframes grid-drift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  100% { transform: translate(-30px, -30px) rotate(1deg); }
+}
+
+* {
+  box-sizing: border-box;
+}

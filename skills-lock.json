@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "find-skills": {
+      "source": "modelscope.cn",
+      "sourceType": "well-known",
+      "computedHash": "d31e234f0c90694a670222cdd1dafa853e051d7066beda389f1097c22dadd461"
+    },
+    "skill-creator": {
+      "source": "modelscope.cn",
+      "sourceType": "well-known",
+      "computedHash": "b0818700436c3cf2a09bde7a9a9e3511c6db1bbbc2938753eb6bbd6f36f9f48f"
+    }
+  }
+}

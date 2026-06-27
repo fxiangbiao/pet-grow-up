@@ -1,0 +1,7 @@
+logging:
+  level:
+    com.petgrowup: DEBUG
+    org.springframework.security: DEBUG
+
+cors:
+  allowed-origins: http://localhost:5173

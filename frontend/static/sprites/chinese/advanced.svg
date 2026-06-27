@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- 文圣 - Grand sage -->
+  <defs>
+    <radialGradient id="body" cx="50%" cy="50%"><stop offset="0%" stop-color="#FFFDE7"/><stop offset="100%" stop-color="#FFE082"/></radialGradient>
+    <radialGradient id="glow" cx="50%" cy="60%"><stop offset="0%" stop-color="#FFB300" stop-opacity="0.5"/><stop offset="100%" stop-color="#FFB300" stop-opacity="0"/></radialGradient>
+  </defs>
+  <ellipse cx="100" cy="130" rx="90" ry="30" fill="#FFB300" opacity="0.1"/>
+  <!-- Grand body -->
+  <ellipse cx="100" cy="118" rx="50" ry="55" fill="url(#body)" stroke="#6D4C41" stroke-width="3"/>
+  <!-- Large majestic wings -->
+  <path d="M50 80 Q10 50 25 20 Q55 40 52 75" fill="#FFF9C4" stroke="#FF8F00" stroke-width="2"/>
+  <path d="M150 80 Q190 50 175 20 Q145 40 148 75" fill="#FFF9C4" stroke="#FF8F00" stroke-width="2"/>
+  <!-- Scroll halo -->
+  <ellipse cx="100" cy="70" rx="55" ry="14" fill="none" stroke="#FFC107" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.6"/>
+  <rect x="65" y="66" width="15" height="10" rx="1" fill="#FFF9C4" stroke="#FFB300" stroke-width="1" transform="rotate(-5 72 71)" opacity="0.6"/>
+  <rect x="120" y="66" width="15" height="10" rx="1" fill="#FFF9C4" stroke="#FFB300" stroke-width="1" transform="rotate(5 127 71)" opacity="0.6"/>
+  <!-- Eyes - wise -->
+  <ellipse cx="85" cy="105" rx="8" ry="9" fill="#4E342E"/>
+  <ellipse cx="115" cy="105" rx="8" ry="9" fill="#4E342E"/>
+  <ellipse cx="87" cy="102" rx="3.5" ry="4" fill="white"/>
+  <ellipse cx="117" cy="102" rx="3.5" ry="4" fill="white"/>
+  <ellipse cx="85" cy="105" rx="3.5" ry="3.5" fill="#3E2723"/>
+  <ellipse cx="115" cy="105" rx="3.5" ry="3.5" fill="#3E2723"/>
+  <!-- Eye sparkle -->
+  <circle cx="83" cy="103" r="1.5" fill="white" opacity="0.8"/>
+  <circle cx="113" cy="103" r="1.5" fill="white" opacity="0.8"/>
+  <!-- Glasses -->
+  <circle cx="85" cy="105" rx="12" ry="12" fill="none" stroke="#8D6E63" stroke-width="1.5"/>
+  <circle cx="115" cy="105" rx="12" ry="12" fill="none" stroke="#8D6E63" stroke-width="1.5"/>
+  <line x1="97" y1="103" x2="103" y2="103" stroke="#8D6E63" stroke-width="1.5"/>
+  <!-- Serene smile -->
+  <path d="M90 128 Q100 136 110 128" fill="none" stroke="#6D4C41" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Scroll in hand -->
+  <rect x="140" y="90" width="28" height="20" rx="2" fill="#FFF9C4" stroke="#8D6E63" stroke-width="1.5" transform="rotate(10 154 100)"/>
+  <line x1="144" y1="96" x2="164" y2="96" stroke="#8D6E63" stroke-width="1" transform="rotate(10 154 100)"/>
+  <line x1="144" y1="100" x2="164" y2="100" stroke="#8D6E63" stroke-width="1" transform="rotate(10 154 100)"/>
+  <line x1="144" y1="104" x2="160" y2="104" stroke="#8D6E63" stroke-width="1" transform="rotate(10 154 100)"/>
+  <text x="100" y="84" text-anchor="middle" fill="#E65100" font-size="9" font-weight="bold">3</text>
+</svg>

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- 大魔导师 - Grand Archmage -->
+  <defs>
+    <radialGradient id="body" cx="50%" cy="50%"><stop offset="0%" stop-color="#F3E5F5"/><stop offset="100%" stop-color="#7B1FA2"/></radialGradient>
+  </defs>
+  <ellipse cx="100" cy="135" rx="85" ry="30" fill="#7B1FA2" opacity="0.08"/>
+  <!-- Majestic body with robe -->
+  <ellipse cx="100" cy="120" rx="50" ry="55" fill="url(#body)" stroke="#4A148C" stroke-width="3"/>
+  <!-- Robe/cape -->
+  <path d="M50 120 Q65 155 100 165 Q135 155 150 120" fill="#7B1FA2" opacity="0.4"/>
+  <!-- Large pointed hat -->
+  <path d="M60 85 L100 20 L140 85" fill="#4A148C" stroke="#311B92" stroke-width="2.5" stroke-linejoin="round"/>
+  <rect x="55" y="82" width="90" height="8" rx="4" fill="#311B92"/>
+  <!-- Hat stars -->
+  <text x="100" y="50" text-anchor="middle" fill="#FFD54F" font-size="14">★</text>
+  <text x="80" y="65" fill="#FFD54F" font-size="8">★</text>
+  <text x="120" y="60" fill="#FFD54F" font-size="8">★</text>
+  <!-- Eyes - mystical -->
+  <ellipse cx="85" cy="108" rx="8" ry="9" fill="#311B92"/>
+  <ellipse cx="115" cy="108" rx="8" ry="9" fill="#311B92"/>
+  <ellipse cx="87" cy="105" rx="3.5" ry="4" fill="white"/>
+  <ellipse cx="117" cy="105" rx="3.5" ry="4" fill="white"/>
+  <circle cx="83" cy="106" r="2" fill="white" opacity="0.9"/>
+  <circle cx="113" cy="106" r="2" fill="white" opacity="0.9"/>
+  <!-- Mystical glow in eyes -->
+  <ellipse cx="85" cy="108" rx="3" ry="5" fill="#E040FB"/>
+  <ellipse cx="115" cy="108" rx="3" ry="5" fill="#E040FB"/>
+  <!-- Calm knowing smile -->
+  <path d="M90 127 Q100 134 110 127" fill="none" stroke="#4A148C" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Floating orbs orbiting -->
+  <circle cx="40" cy="90" r="6" fill="#CE93D8" opacity="0.6"/>
+  <circle cx="160" cy="100" r="5" fill="#E1BEE7" opacity="0.6"/>
+  <circle cx="45" cy="120" r="4" fill="#CE93D8" opacity="0.4"/>
+  <circle cx="155" cy="75" r="4" fill="#E1BEE7" opacity="0.4"/>
+  <!-- Magic swirls -->
+  <path d="M35 100 Q25 80 40 70 Q55 80 45 95" fill="none" stroke="#CE93D8" stroke-width="1" opacity="0.5"/>
+  <path d="M165 90 Q175 110 160 120 Q145 110 155 95" fill="none" stroke="#CE93D8" stroke-width="1" opacity="0.5"/>
+  <text x="100" y="80" text-anchor="middle" fill="#E040FB" font-size="9" font-weight="bold">3</text>
+</svg>
