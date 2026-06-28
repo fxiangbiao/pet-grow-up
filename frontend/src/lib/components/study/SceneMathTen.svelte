@@ -141,12 +141,10 @@
   <div
     id="bowl-zone"
     class="absolute bottom-8 left-1/2 -translate-x-1/2 w-40 h-28 flex flex-col items-center justify-end
-      border-4 border-dashed rounded-b-[80px] transition-all duration-300"
-    class:border-green-400={bowlCount === needed}
-    class:border-amber-400={bowlCount > 0 && bowlCount < needed}
-    class:border-gray-300={bowlCount === 0}
-    class:bg-green-100/50={bowlCount === needed}
-    class:bg-amber-50/50={bowlCount > 0 && bowlCount < needed}
+      border-4 border-dashed rounded-b-[80px] transition-all duration-300
+      {bowlCount === needed ? 'border-green-400 bg-green-100/50' : ''}
+      {bowlCount > 0 && bowlCount < needed ? 'border-amber-400 bg-amber-50/50' : ''}
+      {bowlCount === 0 ? 'border-gray-300' : ''}"
   >
     <span class="text-5xl mb-1">🥣</span>
     <span class="text-xs text-gray-500 mb-1">拖苹果到这里</span>
@@ -175,7 +173,7 @@
   {/if}
 </div>
 
-<style>
+<style lang="postcss">
   @keyframes bounceIn {
     0% { transform: scale(0.3); opacity: 0; }
     50% { transform: scale(1.1); }

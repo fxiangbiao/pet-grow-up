@@ -193,7 +193,7 @@
   {#if showBubble && currentQuote && showSpeechBubble}
     <div class="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap
       bg-white/90 backdrop-blur text-xs text-gray-800 px-3 py-1.5 rounded-2xl
-      shadow-md border border-gray-200 animate-fade-in z-10
+      shadow-md border border-gray-200 animate-fade-in z-50
       after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2
       after:border-8 after:border-transparent after:border-t-white/90">
       {currentQuote}
