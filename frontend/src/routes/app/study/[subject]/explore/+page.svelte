@@ -428,7 +428,7 @@
         <div class="mb-3">
           <h2 class="text-base font-medium text-gray-800 mb-4">{question.questionText}</h2>
 
-          {#if question.questionType === 'MULTIPLE_CHOICE'}
+          {#if question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'SCENE_TAP'}
             <div class="space-y-2">
               {#each parsedOptions as opt}
                 <button onclick={() => selectAnswer(opt.key)} disabled={submitted}
@@ -439,7 +439,7 @@
                 </button>
               {/each}
             </div>
-          {:else if question.questionType === 'FILL_BLANK'}
+          {:else if question.questionType === 'FILL_BLANK' || question.questionType === 'SCENE_MATCH'}
             <input type="text" bind:value={selectedAnswer} disabled={submitted}
                    placeholder="输入你的答案..."
                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
