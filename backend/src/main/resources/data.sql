@@ -35,11 +35,11 @@ INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficu
 ('chinese', 'chinese_tang', '唐诗鉴赏', '欣赏唐代著名诗人的代表作品', 2, NULL, 2),
 ('chinese', 'chinese_song', '宋词赏析', '品味宋代词人的婉约与豪放', 3, NULL, 3);
 
--- Knowledge Nodes: Math (智慧王国)
+-- Knowledge Nodes: Math (智慧王国) — 一年级数学（人教2024版）
 INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
-('math', 'math_intro', '算术基础', '掌握加减乘除的基本运算', 1, NULL, 1),
-('math', 'math_geometry', '几何入门', '认识基本图形及其性质', 2, NULL, 2),
-('math', 'math_logic', '逻辑推理', '培养逻辑思维和推理能力', 3, NULL, 3);
+('math', 'math_intro', '凑十法与10以内', '掌握凑十法、10以内加减法', 1, NULL, 1),
+('math', 'math_addsub20', '20以内加减', '掌握20以内进位加法和退位减法', 2, NULL, 2),
+('math', 'math_geometry', '认识图形', '认识圆形、正方形、三角形等基本图形', 3, NULL, 3);
 
 -- Knowledge Nodes: English (魔法学院)
 INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
@@ -59,17 +59,30 @@ INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, 
 ((SELECT id FROM knowledge_node WHERE node_key = 'chinese_song'), 'MULTIPLE_CHOICE', 3, '李清照是什么词派的代表人物？', '[{"key":"A","text":"豪放派"},{"key":"B","text":"婉约派"},{"key":"C","text":"花间派"},{"key":"D","text":"边塞派"}]', 'B', '李清照是宋代婉约词派的代表词人。', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'chinese_song'), 'FILL_BLANK', 3, '"众里寻他千百度，蓦然回首，那人却在，______。"', NULL, '灯火阑珊处', '出自辛弃疾的《青玉案·元夕》。', 10);
 
--- Quiz Questions: Math
+-- Quiz Questions: Math (一年级数学 — 人教2024版)
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
-((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'MULTIPLE_CHOICE', 1, '25 × 4 = ?', '[{"key":"A","text":"75"},{"key":"B","text":"100"},{"key":"C","text":"125"},{"key":"D","text":"80"}]', 'B', '25 × 4 = 100', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'MULTIPLE_CHOICE', 1, '144 ÷ 12 = ?', '[{"key":"A","text":"10"},{"key":"B","text":"11"},{"key":"C","text":"12"},{"key":"D","text":"13"}]', 'C', '144 ÷ 12 = 12', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'FILL_BLANK', 1, '一个三角形有几个角？', NULL, '3', '三角形有三个角。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'MULTIPLE_CHOICE', 2, '圆的周长公式是？', '[{"key":"A","text":"2πr"},{"key":"B","text":"πr²"},{"key":"C","text":"πd²"},{"key":"D","text":"πr"}]', 'A', '圆的周长 C = 2πr', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'MULTIPLE_CHOICE', 2, '直角三角形的两个锐角之和为？', '[{"key":"A","text":"45°"},{"key":"B","text":"90°"},{"key":"C","text":"180°"},{"key":"D","text":"360°"}]', 'B', '直角三角形有一个90°角，另两个锐角之和为90°。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'TRUE_FALSE', 2, '正方形的对角线互相垂直。', NULL, 'true', '正方形的对角线互相垂直且相等。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'math_logic'), 'MULTIPLE_CHOICE', 3, '如果所有的A都是B，所有的B都是C，那么？', '[{"key":"A","text":"所有的C都是A"},{"key":"B","text":"所有的A都是C"},{"key":"C","text":"所有的B都是A"},{"key":"D","text":"有的C不是A"}]', 'B', 'A ⊆ B ⊆ C，所以 A ⊆ C。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'math_logic'), 'MULTIPLE_CHOICE', 3, '1, 1, 2, 3, 5, 8, ? 下一个数字是？', '[{"key":"A","text":"10"},{"key":"B","text":"11"},{"key":"C","text":"12"},{"key":"D","text":"13"}]', 'D', '斐波那契数列：每个数等于前两数之和。8 + 5 = 13', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'math_logic'), 'FILL_BLANK', 3, '一个两位数，十位数字是3，个位数字是5，这个数是____？', NULL, '35', '十位是3表示30，个位是5，合起来是35。', 10);
+-- 凑十法（场景化拖拽）
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_DRAG', 1, '凑十法：8 + ? = 10', NULL, '2', '拖2个苹果到碗里！8+2=10', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_DRAG', 1, '凑十法：7 + ? = 10', NULL, '3', '拖3个能量块！7+3=10', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_DRAG', 1, '凑十法：6 + ? = 10', NULL, '4', '再拖4个就满啦！6+4=10', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_DRAG', 1, '凑十法：9 + ? = 10', NULL, '1', '还差1个！9+1=10', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_DRAG', 1, '凑十法：5 + ? = 10', NULL, '5', '正好一半！5+5=10', 10),
+-- 10以内加减（点击操作）
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_TAP', 1, '3 + 2 = ?', '[{"key":"A","text":"4"},{"key":"B","text":"5"},{"key":"C","text":"6"}]', 'B', '3+2=5，伸出3根手指再加2根', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_TAP', 1, '7 - 4 = ?', '[{"key":"A","text":"2"},{"key":"B","text":"3"},{"key":"C","text":"4"}]', 'B', '7-4=3，7去掉4还剩3', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_TAP', 1, '6 + 3 = ?', '[{"key":"A","text":"8"},{"key":"B","text":"9"},{"key":"C","text":"10"}]', 'B', '6+3=9', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_TAP', 1, '10 - 5 = ?', '[{"key":"A","text":"4"},{"key":"B","text":"5"},{"key":"C","text":"6"}]', 'B', '10-5=5', 10),
+-- 20以内加减（点击操作）
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_TAP', 2, '9 + 6 = ?', '[{"key":"A","text":"14"},{"key":"B","text":"15"},{"key":"C","text":"16"}]', 'B', '9+6=15，把9凑成10，再加剩下的5', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_TAP', 2, '8 + 7 = ?', '[{"key":"A","text":"14"},{"key":"B","text":"15"},{"key":"C","text":"16"}]', 'B', '8+7=15，8和2凑成10，加剩下的5', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_TAP', 2, '15 - 8 = ?', '[{"key":"A","text":"6"},{"key":"B","text":"7"},{"key":"C","text":"8"}]', 'B', '15-8=7，用破十法：10-8=2，2+5=7', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_TAP', 2, '13 - 6 = ?', '[{"key":"A","text":"6"},{"key":"B","text":"7"},{"key":"C","text":"8"}]', 'B', '13-6=7，破十法：10-6=4，4+3=7', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_TAP', 2, '12 + 5 = ?', '[{"key":"A","text":"16"},{"key":"B","text":"17"},{"key":"C","text":"18"}]', 'B', '12+5=17，十位不变个位加', 10),
+-- 认识图形（配对操作）
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是圆形？', NULL, 'CIRCLE', '圆圆的，没有角的就是圆形', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是正方形？', NULL, 'SQUARE', '四条边一样长，四个角一样大', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是三角形？', NULL, 'TRIANGLE', '三条边、三个角', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是长方形？', NULL, 'RECTANGLE', '对边相等，四个角一样大', 10);
 
 -- Quiz Questions: English
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
@@ -127,11 +140,11 @@ INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, 
 ((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'POEM_SEQUENCE', 1, '请将《静夜思》的诗句按正确顺序排列', '["举头望明月","床前明月光","低头思故乡","疑是地上霜"]', '2,4,1,3', '床前明月光，疑是地上霜。举头望明月，低头思故乡。', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'POEM_SEQUENCE', 1, '请将《登鹳雀楼》的诗句按正确顺序排列', '["更上一层楼","白日依山尽","欲穷千里目","黄河入海流"]', '2,4,3,1', '白日依山尽，黄河入海流。欲穷千里目，更上一层楼。', 10);
 
--- Math: MATH_INPUT
+-- Math: MATH_INPUT (一年级 20以内加减)
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
-((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'MATH_INPUT', 1, '12 + 15 = ?', NULL, '27', '12 + 15 = 27', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'MATH_INPUT', 1, '3 × 7 = ?', NULL, '21', '3 × 7 = 21', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'MATH_INPUT', 1, '100 - 34 = ?', NULL, '66', '100 - 34 = 66', 10);
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'MATH_INPUT', 2, '6 + 7 = ?', NULL, '13', '6+7=13，6和4凑成10，加剩下的3', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'MATH_INPUT', 2, '9 + 4 = ?', NULL, '13', '9+4=13，9和1凑成10，加剩下的3', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'MATH_INPUT', 2, '14 - 9 = ?', NULL, '5', '14-9=5，平十法：14-4=10，10-5=5', 10);
 
 -- English: VOCAB_MATCH
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
