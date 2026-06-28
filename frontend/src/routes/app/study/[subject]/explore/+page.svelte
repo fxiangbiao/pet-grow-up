@@ -19,6 +19,7 @@
   import BossBattle from '$lib/components/study/BossBattle.svelte';
   import TreasureChest from '$lib/components/study/TreasureChest.svelte';
   import ExploreConfirm from '$lib/components/study/ExploreConfirm.svelte';
+  import SceneMathTen from '$lib/components/study/SceneMathTen.svelte';
   import { spiritStore } from '$lib/stores/spirit.svelte';
   import { soundManager } from '$lib/audio/sound-manager';
 
@@ -249,6 +250,69 @@
     handleSubmit();
   }
 
+  // Scene component result handler — processes AnswerResult from SceneMathTen etc.
+  async function handleSceneResult(result: AnswerResult) {
+    lastResult = result;
+    results[answeredCount] = result.isCorrect;
+
+    // Trigger battle animation
+    if (result.isCorrect) {
+      battleState = 'player_attack';
+      setTimeout(() => { battleState = 'idle'; }, 600);
+    } else {
+      battleState = 'enemy_attack';
+      setTimeout(() => { battleState = 'idle'; }, 600);
+    }
+
+    if (result.isCorrect) {
+      combo++;
+      maxCombo = Math.max(maxCombo, combo);
+
+      if (result.isLastQuestion) {
+        bossAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
+      } else {
+        if (combo >= 2 && combo % 2 === 0) {
+          treasuresFound++;
+          treasureTier = combo >= 4 ? 'big' : 'small';
+          treasureEnergy = treasureTier === 'big' ? 10 : 5;
+          if (treasureTier === 'big' && hp < 5) {
+            hp = Math.min(5, hp + 1);
+          }
+          showTreasureChest = true;
+        }
+      }
+    } else {
+      combo = 0;
+      if (result.isLastQuestion) {
+        bossAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
+        hp -= 2;
+      } else {
+        hp -= 1;
+      }
+      if (hp <= 0) {
+        adventureEnded = true;
+        setTimeout(() => { phase = 'result'; }, 2000);
+        return;
+      }
+    }
+
+    if (result.isSessionComplete) {
+      if (!result.isLastQuestion || bossBattleResolved || adventureEnded) {
+        setTimeout(() => { phase = 'result'; }, 2000);
+      }
+    } else if (result.nextQuestion) {
+      const nextQ = result.nextQuestion;
+      setTimeout(() => {
+        question = nextQ;
+        answeredCount = nextQ.answeredCount ?? answeredCount + 1;
+        submitted = false;
+        selectedAnswer = '';
+        lastResult = null;
+        questionStartTime = Date.now();
+      }, 1500);
+    }
+  }
+
   const isLastQuestion = $derived(answeredCount >= totalQuestions - 1);
 </script>
 
@@ -358,57 +422,61 @@
       </div>
 
       <!-- Question area -->
-      <div class="mb-3">
-        <h2 class="text-base font-medium text-gray-800 mb-4">{question.questionText}</h2>
+      {#if question.questionType === 'SCENE_DRAG' && question.questionText?.includes('凑十法')}
+        <SceneMathTen question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
+      {:else}
+        <div class="mb-3">
+          <h2 class="text-base font-medium text-gray-800 mb-4">{question.questionText}</h2>
 
-        {#if question.questionType === 'MULTIPLE_CHOICE'}
-          <div class="space-y-2">
-            {#each parsedOptions as opt}
-              <button onclick={() => selectAnswer(opt.key)} disabled={submitted}
-                class={['w-full text-left px-4 py-3 rounded-xl border-2 transition text-sm',
-                  selectedAnswer === opt.key ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
-                ].join(' ')}>
-                <span class="font-medium">{opt.key}.</span> {opt.text}
+          {#if question.questionType === 'MULTIPLE_CHOICE'}
+            <div class="space-y-2">
+              {#each parsedOptions as opt}
+                <button onclick={() => selectAnswer(opt.key)} disabled={submitted}
+                  class={['w-full text-left px-4 py-3 rounded-xl border-2 transition text-sm',
+                    selectedAnswer === opt.key ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
+                  ].join(' ')}>
+                  <span class="font-medium">{opt.key}.</span> {opt.text}
+                </button>
+              {/each}
+            </div>
+          {:else if question.questionType === 'FILL_BLANK'}
+            <input type="text" bind:value={selectedAnswer} disabled={submitted}
+                   placeholder="输入你的答案..."
+                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
+          {:else if question.questionType === 'TRUE_FALSE'}
+            <div class="grid grid-cols-2 gap-4">
+              <button onclick={() => selectAnswer('true')} disabled={submitted}
+                class={['py-4 rounded-xl border-2 text-center transition text-lg font-medium',
+                  selectedAnswer === 'true' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'].join(' ')}>
+                ✓ 正确
               </button>
-            {/each}
-          </div>
-        {:else if question.questionType === 'FILL_BLANK'}
-          <input type="text" bind:value={selectedAnswer} disabled={submitted}
-                 placeholder="输入你的答案..."
-                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
-        {:else if question.questionType === 'TRUE_FALSE'}
-          <div class="grid grid-cols-2 gap-4">
-            <button onclick={() => selectAnswer('true')} disabled={submitted}
-              class={['py-4 rounded-xl border-2 text-center transition text-lg font-medium',
-                selectedAnswer === 'true' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'].join(' ')}>
-              ✓ 正确
-            </button>
-            <button onclick={() => selectAnswer('false')} disabled={submitted}
-              class={['py-4 rounded-xl border-2 text-center transition text-lg font-medium',
-                selectedAnswer === 'false' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 hover:border-gray-300'].join(' ')}>
-              ✗ 错误
-            </button>
-          </div>
-        {:else if question.questionType === 'POEM_SEQUENCE'}
-          <PoemSequence options={parsedPoemLines} disabled={submitted} onSelect={onNewTypeAnswer} />
-        {:else if question.questionType === 'MATH_INPUT'}
-          <MathInput disabled={submitted} onSelect={(v) => { selectedAnswer = v; }} />
-        {:else if question.questionType === 'VOCAB_MATCH'}
-          {#if parsedVocabOptions}
-            <VocabMatch options={parsedVocabOptions} disabled={submitted} onSelect={onNewTypeAnswer} />
+              <button onclick={() => selectAnswer('false')} disabled={submitted}
+                class={['py-4 rounded-xl border-2 text-center transition text-lg font-medium',
+                  selectedAnswer === 'false' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 hover:border-gray-300'].join(' ')}>
+                ✗ 错误
+              </button>
+            </div>
+          {:else if question.questionType === 'POEM_SEQUENCE'}
+            <PoemSequence options={parsedPoemLines} disabled={submitted} onSelect={onNewTypeAnswer} />
+          {:else if question.questionType === 'MATH_INPUT'}
+            <MathInput disabled={submitted} onSelect={(v) => { selectedAnswer = v; }} />
+          {:else if question.questionType === 'VOCAB_MATCH'}
+            {#if parsedVocabOptions}
+              <VocabMatch options={parsedVocabOptions} disabled={submitted} onSelect={onNewTypeAnswer} />
+            {/if}
           {/if}
-        {/if}
 
-        {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH'}
-          <button onclick={handleSubmit} disabled={!selectedAnswer}
-                  class="mt-4 w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 text-white text-lg font-black rounded-xl
-                    hover:from-amber-300 hover:via-orange-300 hover:to-red-400
-                    disabled:from-gray-300 disabled:via-gray-300 disabled:to-gray-300 disabled:text-gray-400
-                    transition-all active:scale-95 shadow-lg">
-            ⚔️ 攻击！
-          </button>
-        {/if}
-      </div>
+          {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH'}
+            <button onclick={handleSubmit} disabled={!selectedAnswer}
+                    class="mt-4 w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 text-white text-lg font-black rounded-xl
+                      hover:from-amber-300 hover:via-orange-300 hover:to-red-400
+                      disabled:from-gray-300 disabled:via-gray-300 disabled:to-gray-300 disabled:text-gray-400
+                      transition-all active:scale-95 shadow-lg">
+              ⚔️ 攻击！
+            </button>
+          {/if}
+        </div>
+      {/if}
     </div>
 
     <!-- Feedback -->
