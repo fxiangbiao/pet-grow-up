@@ -146,7 +146,7 @@
       </div>
     {/each}
 
-    <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 relative overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 relative">
       <!-- Spirit avatar section with sparkle effect on evolve -->
       <div class="text-center mb-6">
         <div class="inline-flex mb-2 transition-all duration-500" class:animate-bounce-in={showCelebration}>
