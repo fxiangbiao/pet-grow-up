@@ -25,7 +25,7 @@ public class QuizQuestion {
     private Long knowledgeNodeId;
 
     @Column("question_type")
-    private String questionType;
+    private String questionType; // MULTIPLE_CHOICE, FILL_BLANK, TRUE_FALSE, MATH_INPUT, POEM_SEQUENCE, VOCAB_MATCH, SCENE_DRAG, SCENE_TAP, SCENE_MATCH
 
     private Integer difficulty;
 
