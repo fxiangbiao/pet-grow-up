@@ -25,6 +25,7 @@
   let feedback = $state<'idle' | 'correct' | 'tooMany'>('idle');
   let showFeedback = $state(false);
   let submitted = $state(false);
+  let containerEl = $state<HTMLDivElement | null>(null);
 
   // Initialize apples scattered randomly
   function initApples() {
@@ -45,23 +46,31 @@
   function handlePointerDown(id: number, e: PointerEvent) {
     if (submitted) return;
     dragging = id;
-    dragX = e.clientX;
-    dragY = e.clientY;
+    const rect = containerEl?.getBoundingClientRect();
+    dragX = e.clientX - (rect?.left ?? 0);
+    dragY = e.clientY - (rect?.top ?? 0);
     (e.target as HTMLElement)?.setPointerCapture?.(e.pointerId);
   }
 
   function handlePointerMove(e: PointerEvent) {
     if (dragging === null) return;
-    dragX = e.clientX;
-    dragY = e.clientY;
+    const rect = containerEl?.getBoundingClientRect();
+    dragX = e.clientX - (rect?.left ?? 0);
+    dragY = e.clientY - (rect?.top ?? 0);
   }
 
   function handlePointerUp() {
     if (dragging === null || submitted) return;
     const bowlEl = document.getElementById('bowl-zone');
-    if (bowlEl) {
-      const rect = bowlEl.getBoundingClientRect();
-      if (dragX > rect.left && dragX < rect.right && dragY > rect.top && dragY < rect.bottom) {
+    const containerRect = containerEl?.getBoundingClientRect();
+    if (bowlEl && containerRect) {
+      const bowlRect = bowlEl.getBoundingClientRect();
+      // Convert bowl rect to container-relative coordinates
+      const bowlLeft = bowlRect.left - containerRect.left;
+      const bowlRight = bowlRect.right - containerRect.left;
+      const bowlTop = bowlRect.top - containerRect.top;
+      const bowlBottom = bowlRect.bottom - containerRect.top;
+      if (dragX > bowlLeft && dragX < bowlRight && dragY > bowlTop && dragY < bowlBottom) {
         const apple = apples.find(a => a.id === dragging);
         if (apple && !apple.inBowl) {
           apple.inBowl = true;
@@ -104,6 +113,7 @@
   class="relative w-full h-full min-h-[480px] bg-gradient-to-b from-amber-50 to-orange-100 overflow-hidden select-none touch-none"
   onpointermove={handlePointerMove}
   onpointerup={handlePointerUp}
+  bind:this={containerEl}
 >
   <!-- Pet hint banner -->
   <div class="absolute top-4 left-1/2 -translate-x-1/2 text-center z-10">
