@@ -27,12 +27,12 @@
   let submitted = $state(false);
   let containerEl = $state<HTMLDivElement | null>(null);
 
-  // Initialize apples scattered randomly
+  // Initialize apples scattered randomly (avoid bowl area at bottom)
   function initApples() {
     apples = Array.from({ length: target }, (_, i) => ({
       id: i,
-      x: 30 + Math.random() * 70,
-      y: 20 + Math.random() * 50,
+      x: 15 + Math.random() * 70,
+      y: 10 + Math.random() * 50,
       inBowl: false
     }));
     bowlCount = 0;
@@ -105,6 +105,14 @@
       setTimeout(() => { onComplete(result); }, 1500);
     } catch (err) {
       console.error('Submit failed', err);
+      // Recover: reset state so child can try again
+      submitted = false;
+      feedback = 'idle';
+      showFeedback = false;
+      // Re-spawn apples and reset bowl
+      for (const a of apples) { a.inBowl = false; }
+      bowlCount = 0;
+      initApples();
     }
   }
 </script>
