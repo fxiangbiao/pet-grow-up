@@ -224,6 +224,8 @@ public class ExplorationService {
                 .isSessionComplete(isSessionComplete)
                 .isLastQuestion(isSessionComplete)
                 .nextQuestion(nextQuestion)
+                .sceneRewardItem(isCorrect ? "ENERGY_BLOCK" : null)
+                .sceneRewardCount(isCorrect ? 1 : 0)
                 .build();
     }
 
