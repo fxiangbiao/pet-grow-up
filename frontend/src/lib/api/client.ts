@@ -33,34 +33,48 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers
-  });
+  // 10-second timeout to prevent hanging requests
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-  // 401/403 → clear auth & redirect to login (check BEFORE parsing JSON,
-  // because Spring Security returns HTML for auth failures, not JSON)
-  if (res.status === 401 || res.status === 403) {
-    localStorage.removeItem('auth_user');
-    localStorage.removeItem('auth_token');
-    setToken(null);
-    window.location.href = '/login?expired=1';
-    throw new ApiError(res.status, '登录已过期，请重新登录');
-  }
-
-  let json: ApiResponse<T>;
   try {
-    json = await res.json();
-  } catch {
-    // Non-JSON response body (e.g. Spring Security HTML error page)
-    throw new ApiError(res.status, res.statusText || '请求失败');
-  }
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
 
-  if (!res.ok || json.code !== 200) {
-    throw new ApiError(json.code, json.message || '请求失败');
-  }
+    // 401/403 → clear auth & redirect to login (check BEFORE parsing JSON,
+    // because Spring Security returns HTML for auth failures, not JSON)
+    if (res.status === 401 || res.status === 403) {
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('auth_token');
+      setToken(null);
+      window.location.href = '/login?expired=1';
+      throw new ApiError(res.status, '登录已过期，请重新登录');
+    }
 
-  return json.data;
+    let json: ApiResponse<T>;
+    try {
+      json = await res.json();
+    } catch {
+      // Non-JSON response body (e.g. Spring Security HTML error page)
+      throw new ApiError(res.status, res.statusText || '请求失败');
+    }
+
+    if (!res.ok || json.code !== 200) {
+      throw new ApiError(json.code, json.message || '请求失败');
+    }
+
+    return json.data;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new ApiError(0, '请求超时，请确认后端服务是否启动');
+    }
+    throw err;
+  }
 }
 
 export const api = {
