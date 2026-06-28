@@ -119,6 +119,8 @@
     loading = true;
     error = '';
     resetAdventure();
+    // Ensure spirits are loaded for BattleScene pet display
+    spiritStore.refresh(0);
     try {
       const result = await startSession({ subject, sessionType: 'DAILY', difficultyLevel: 1, knowledgeNodeId: nodeId });
       sessionId = result.sessionId;
