@@ -75,7 +75,7 @@
   <div class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity duration-300"
     class:opacity-0={phase === 'appearing'}
     class:opacity-100={phase !== 'appearing'}
-    on:click={phase === 'waiting' ? handleOpen : phase === 'revealed' ? handleCollect : undefined}
+    onclick={phase === 'waiting' ? handleOpen : phase === 'revealed' ? handleCollect : undefined}
   ></div>
 
   <!-- Gold particles during reveal -->
