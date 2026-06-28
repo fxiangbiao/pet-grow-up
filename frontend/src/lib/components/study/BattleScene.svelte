@@ -91,25 +91,33 @@
     style="left: 12%; bottom: 18%; transform: translateY(0);">
     {#if species}
       <SpiritAvatar {species} {evolutionStage} size="md" {mood} />
+    {:else}
+      <!-- Fallback pet when no spirit data loaded -->
+      <div class="flex flex-col items-center">
+        <span class="text-4xl">🐱</span>
+        <span class="text-[10px] text-gray-400 mt-0.5">精灵</span>
+      </div>
     {/if}
   </div>
 
   <!-- VS / Attack effects -->
   <div class="absolute left-1/2 -translate-x-1/2" style="top: 30%;">
-    {#if state === 'player_attack'}
-      <!-- Slash effect -->
-      <div class="text-3xl animate-bounce-in" style="animation-duration: 0.3s;">⚡</div>
-    {:else if state === 'enemy_attack'}
-      <!-- Enemy attack effect -->
-      <div class="text-3xl animate-bounce-in text-red-500" style="animation-duration: 0.3s;">💢</div>
-    {:else if state === 'enemy_defeated'}
-      <div class="text-2xl animate-boss-shatter">💥</div>
-    {:else}
-      <!-- Idle: show encounter number -->
-      <div class="text-xs font-black text-gray-400 bg-white/50 rounded-full px-2 py-0.5 backdrop-blur-sm">
-        ROUND {currentIndex + 1}/{totalQuestions}
-      </div>
-    {/if}
+    {#key state}
+      {#if state === 'player_attack'}
+        <!-- Slash effect -->
+        <div class="text-3xl animate-bounce-in" style="animation-duration: 0.3s;">⚡</div>
+      {:else if state === 'enemy_attack'}
+        <!-- Enemy attack effect -->
+        <div class="text-3xl animate-bounce-in text-red-500" style="animation-duration: 0.3s;">💢</div>
+      {:else if state === 'enemy_defeated'}
+        <div class="text-2xl animate-boss-shatter">💥</div>
+      {:else}
+        <!-- Idle: show encounter number -->
+        <div class="text-xs font-black text-gray-400 bg-white/50 rounded-full px-2 py-0.5 backdrop-blur-sm">
+          ROUND {currentIndex + 1}/{totalQuestions}
+        </div>
+      {/if}
+    {/key}
   </div>
 
   <!-- Combo indicator (player side) -->
@@ -147,9 +155,11 @@
   {/if}
 
   <!-- State overlay flash -->
-  {#if state === 'player_attack'}
-    <div class="absolute inset-0 bg-white/20 animate-bounce-in pointer-events-none" style="animation-duration: 0.4s;"></div>
-  {:else if state === 'enemy_attack'}
-    <div class="absolute inset-0 bg-red-500/10 animate-shake pointer-events-none" style="animation-duration: 0.5s;"></div>
-  {/if}
+  {#key state}
+    {#if state === 'player_attack'}
+      <div class="absolute inset-0 bg-white/20 animate-bounce-in pointer-events-none" style="animation-duration: 0.4s;"></div>
+    {:else if state === 'enemy_attack'}
+      <div class="absolute inset-0 bg-red-500/10 animate-shake pointer-events-none" style="animation-duration: 0.5s;"></div>
+    {/if}
+  {/key}
 </div>
