@@ -102,15 +102,18 @@
         answer: String(needed),
         timeSpent: 0
       });
-      setTimeout(() => { onComplete(result); }, 1500);
+      if (result) {
+        setTimeout(() => { onComplete(result); }, 1500);
+      } else {
+        // Null result — force recovery
+        throw new Error('Empty result from API');
+      }
     } catch (err) {
-      console.error('Submit failed', err);
+      console.error('Submit failed, resetting:', err);
       // Recover: reset state so child can try again
       submitted = false;
       feedback = 'idle';
       showFeedback = false;
-      // Re-spawn apples and reset bowl
-      for (const a of apples) { a.inBowl = false; }
       bowlCount = 0;
       initApples();
     }

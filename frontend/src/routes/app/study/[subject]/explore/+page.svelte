@@ -252,16 +252,23 @@
 
   // Scene component result handler — processes AnswerResult from SceneMathTen etc.
   async function handleSceneResult(result: AnswerResult) {
+    if (!result) {
+      // Safety: force transition if result is null/undefined
+      console.error('handleSceneResult: null result, forcing result phase');
+      phase = 'result';
+      return;
+    }
+
     lastResult = result;
     results[answeredCount] = result.isCorrect;
 
     // Trigger battle animation
     if (result.isCorrect) {
       battleState = 'player_attack';
-      setTimeout(() => { battleState = 'idle'; }, 600);
+      setTimeout(() => { battleState = 'idle'; }, 800);
     } else {
       battleState = 'enemy_attack';
-      setTimeout(() => { battleState = 'idle'; }, 600);
+      setTimeout(() => { battleState = 'idle'; }, 800);
     }
 
     if (result.isCorrect) {
@@ -299,6 +306,15 @@
     if (result.isSessionComplete) {
       if (!result.isLastQuestion || bossBattleResolved || adventureEnded) {
         setTimeout(() => { phase = 'result'; }, 2000);
+      } else {
+        // Last question boss battle still active — wait for callback
+        // Safety fallback: force result after 10 seconds
+        setTimeout(() => {
+          if (phase === 'playing') {
+            bossBattleResolved = true;
+            phase = 'result';
+          }
+        }, 10000);
       }
     } else if (result.nextQuestion) {
       const nextQ = result.nextQuestion;
@@ -310,6 +326,10 @@
         lastResult = null;
         questionStartTime = Date.now();
       }, 1500);
+    } else {
+      // Safety: no next question but session not complete — force advance
+      console.error('handleSceneResult: no nextQuestion and session not complete, forcing result');
+      setTimeout(() => { phase = 'result'; }, 2000);
     }
   }
 
