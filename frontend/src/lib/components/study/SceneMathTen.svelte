@@ -16,6 +16,15 @@
   const start = parseInt(question.questionText.match(/(\d+)\s*\+/)?.[1] || '0');
   const needed = target - start;
 
+  // Slot positions relative to bowl center (bowl is 160×112, center at 80,56)
+  // Arranged bottom-to-top for natural pile look
+  const bowlSlots = [
+    { x: 30, y: 82 }, { x: 60, y: 85 }, { x: 90, y: 82 }, { x: 120, y: 78 },  // bottom row
+    { x: 42, y: 58 }, { x: 72, y: 56 }, { x: 105, y: 54 },                       // middle row
+    { x: 52, y: 34 }, { x: 90, y: 32 },                                           // upper row
+    { x: 72, y: 14 },                                                              // top
+  ];
+
   // Scene state
   let apples = $state<Array<{ id: number; x: number; y: number; inBowl: boolean }>>([]);
   let bowlCount = $state(0);
@@ -26,8 +35,9 @@
   let showFeedback = $state(false);
   let submitted = $state(false);
   let containerEl = $state<HTMLDivElement | null>(null);
+  // Which apple occupies each bowl slot (-1 = empty)
+  let bowlOccupants = $state<number[]>(Array(10).fill(-1));
 
-  // Initialize apples scattered randomly (avoid bowl area at bottom)
   function initApples() {
     apples = Array.from({ length: target }, (_, i) => ({
       id: i,
@@ -36,6 +46,7 @@
       inBowl: false
     }));
     bowlCount = 0;
+    bowlOccupants = Array(10).fill(-1);
     feedback = 'idle';
     showFeedback = false;
     submitted = false;
@@ -65,7 +76,6 @@
     const containerRect = containerEl?.getBoundingClientRect();
     if (bowlEl && containerRect) {
       const bowlRect = bowlEl.getBoundingClientRect();
-      // Convert bowl rect to container-relative coordinates
       const bowlLeft = bowlRect.left - containerRect.left;
       const bowlRight = bowlRect.right - containerRect.left;
       const bowlTop = bowlRect.top - containerRect.top;
@@ -73,20 +83,25 @@
       if (dragX > bowlLeft && dragX < bowlRight && dragY > bowlTop && dragY < bowlBottom) {
         const apple = apples.find(a => a.id === dragging);
         if (apple && !apple.inBowl) {
-          apple.inBowl = true;
-          bowlCount++;
+          const slotIndex = bowlOccupants.findIndex(o => o === -1);
+          if (slotIndex >= 0) {
+            apple.inBowl = true;
+            bowlOccupants[slotIndex] = apple.id;
+            bowlCount++;
 
-          if (bowlCount === needed) {
-            feedback = 'correct';
-            showFeedback = true;
-            submitted = true;
-            doSubmit();
-          } else if (bowlCount > needed) {
-            feedback = 'tooMany';
-            showFeedback = true;
-            bowlCount--;
-            apple.inBowl = false;
-            setTimeout(() => { showFeedback = false; feedback = 'idle'; }, 1000);
+            if (bowlCount === needed) {
+              feedback = 'correct';
+              showFeedback = true;
+              submitted = true;
+              doSubmit();
+            } else if (bowlCount > needed) {
+              feedback = 'tooMany';
+              showFeedback = true;
+              bowlCount--;
+              apple.inBowl = false;
+              bowlOccupants[slotIndex] = -1;
+              setTimeout(() => { showFeedback = false; feedback = 'idle'; }, 1000);
+            }
           }
         }
       }
@@ -105,12 +120,10 @@
       if (result) {
         setTimeout(() => { onComplete(result); }, 1500);
       } else {
-        // Null result — force recovery
         throw new Error('Empty result from API');
       }
     } catch (err) {
       console.error('Submit failed, resetting:', err);
-      // Recover: reset state so child can try again
       submitted = false;
       feedback = 'idle';
       showFeedback = false;
@@ -134,7 +147,7 @@
     <p class="text-sm text-amber-600 mt-1">碗里：{bowlCount}/{needed}</p>
   </div>
 
-  <!-- Draggable apples -->
+  <!-- Draggable apples (not in bowl) -->
   {#each apples.filter(a => !a.inBowl) as apple (apple.id)}
     <div
       class="absolute w-12 h-12 flex items-center justify-center text-3xl cursor-grab active:cursor-grabbing
@@ -151,7 +164,7 @@
   <!-- Drag-following ghost apple -->
   {#if dragging !== null && !apples.find(a => a.id === dragging)?.inBowl}
     <div
-      class="absolute w-14 h-14 flex items-center justify-center text-4xl z-30 pointer-events-none"
+      class="absolute w-14 h-14 flex items-center justify-center text-4xl z-30 pointer-events-none drop-shadow-lg"
       style="left: {dragX - 28}px; top: {dragY - 28}px;"
     >
       🍎
@@ -163,19 +176,34 @@
     id="bowl-zone"
     class="absolute bottom-8 left-1/2 -translate-x-1/2 w-40 h-28 flex flex-col items-center justify-end
       border-4 border-dashed rounded-b-[80px] transition-all duration-300
-      {bowlCount === needed ? 'border-green-400 bg-green-100/50' : ''}
-      {bowlCount > 0 && bowlCount < needed ? 'border-amber-400 bg-amber-50/50' : ''}
+      {bowlCount === needed ? 'border-green-400 bg-green-100/30' : ''}
+      {bowlCount > 0 && bowlCount < needed ? 'border-amber-400 bg-amber-50/30' : ''}
       {bowlCount === 0 ? 'border-gray-300' : ''}"
   >
-    <span class="text-5xl mb-1">🥣</span>
-    <span class="text-xs text-gray-500 mb-1">拖苹果到这里</span>
-  </div>
-
-  <!-- Bowl apple count -->
-  <div class="absolute bottom-32 left-1/2 -translate-x-1/2 flex gap-1">
-    {#each Array(bowlCount) as _}
-      <span class="text-xl">🍎</span>
+    <!-- Empty slot placeholders -->
+    {#each bowlSlots as slot, i}
+      {#if bowlOccupants[i] === -1}
+        <div
+          class="absolute w-6 h-6 rounded-full border border-dashed border-gray-300/40"
+          style="left: {slot.x - 12}px; top: {slot.y - 12}px;"
+        ></div>
+      {/if}
     {/each}
+
+    <!-- Apples already in bowl -->
+    {#each bowlSlots as slot, i}
+      {#if bowlOccupants[i] !== -1}
+        <div
+          class="absolute w-10 h-10 flex items-center justify-center text-2xl z-5 pointer-events-none animate-bounce-in"
+          style="left: {slot.x - 20}px; top: {slot.y - 20}px; animation-duration: 0.35s;"
+        >
+          🍎
+        </div>
+      {/if}
+    {/each}
+
+    <span class="text-5xl mb-1 relative z-0">🥣</span>
+    <span class="text-xs text-gray-500 mb-1">拖苹果到这里</span>
   </div>
 
   <!-- Feedback overlay -->
