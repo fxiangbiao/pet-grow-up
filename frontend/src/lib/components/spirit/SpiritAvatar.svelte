@@ -7,6 +7,8 @@
     size = 'md',
     animated = true,
     mood = 'idle',
+    personality = 'cheerful',
+    showSpeechBubble = true,
     onclick
   }: {
     species: SpiritSpecies;
@@ -14,8 +16,63 @@
     size?: 'sm' | 'md' | 'lg';
     animated?: boolean;
     mood?: 'idle' | 'happy' | 'excited' | 'hurt';
+    personality?: 'cheerful' | 'gentle' | 'tsundere' | 'brave';
+    showSpeechBubble?: boolean;
     onclick?: () => void;
   } = $props();
+
+  // ── Personality quote library ──
+  const quotes: Record<string, Record<string, string[]>> = {
+    cheerful: {
+      correct: ['太厉害啦！', '我们又变强啦～', '完美！你真是天才！'],
+      combo: ['无敌连击！', '根本停不下来！', '你就是数学之王！'],
+      wrong: ['没关系，再试一次！', '差一点点就对了～', '我们换个思路～'],
+      idle: ['来学习吧！', '今天也要加油哦～', '喵~想你了！']
+    },
+    gentle: {
+      correct: ['做对了呢，真棒', '慢慢来，都会好的', '你进步好大呀'],
+      combo: ['一步一步，稳稳的', '耐心让我们更强'],
+      wrong: ['没关系，我在呢', '别着急，我陪着你', '再试一次好不好？'],
+      idle: ['休息好了吗？', '我在这里等你', '今天的阳光真好']
+    },
+    tsundere: {
+      correct: ['哼，这种题我本来不想帮你的...', '凑巧罢了！', '你、你也没那么差嘛！'],
+      combo: ['别得意！还有更难的呢！', '哼！算你厉害...'],
+      wrong: ['笨蛋！...我是说，再想想', '这不怪你啦...'],
+      idle: ['你、你不来学习我可要生气了！', '才不是想你了...刷题而已！']
+    },
+    brave: {
+      correct: ['我们一起打败难题！', '胜利属于我们！', '冲啊！下一题！'],
+      combo: ['绝招！超级连击！', '热血沸腾！谁来都一样！'],
+      wrong: ['这道题是强敌！再挑战！', '别退缩，我陪你！'],
+      idle: ['冒险还没开始呢！', '强者从不偷懒！', '今天也要征服数学！']
+    }
+  };
+
+  function randomQuote(category: string): string {
+    const pool = quotes[personality]?.[category] || quotes.cheerful[category] || [''];
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // ── Speech bubble state ──
+  let currentQuote = $state('');
+  let showBubble = $state(false);
+  let bubbleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function showQuote(category: string) {
+    currentQuote = randomQuote(category);
+    showBubble = true;
+    if (bubbleTimer) clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(() => { showBubble = false; }, 2500);
+  }
+
+  // Listen to mood changes to trigger quotes
+  $effect(() => {
+    const m = mood;
+    if (m === 'happy') showQuote('correct');
+    else if (m === 'excited') showQuote('combo');
+    else if (m === 'hurt') showQuote('wrong');
+  });
 
   // Image loading
   let imgLoaded = $state(false);
@@ -25,10 +82,11 @@
   const spriteUrl = $derived(species?.spriteUrl || '');
   const useImage = $derived(!!spriteUrl && imgLoaded && !imgError);
 
-  // Click feedback
+  // Click feedback — poke reaction with idle quote
   function handleClick() {
     clicked = true;
-    setTimeout(() => { clicked = false; }, 400);
+    showQuote('idle');
+    setTimeout(() => { clicked = false; }, 600);
     if (onclick) onclick();
   }
 
@@ -131,6 +189,17 @@
   role={onclick ? 'button' : undefined}
   onkeydown={(e) => { if (onclick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleClick(); } }}
 >
+  <!-- ── Speech bubble ── -->
+  {#if showBubble && currentQuote && showSpeechBubble}
+    <div class="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap
+      bg-white/90 backdrop-blur text-xs text-gray-800 px-3 py-1.5 rounded-2xl
+      shadow-md border border-gray-200 animate-fade-in z-10
+      after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2
+      after:border-8 after:border-transparent after:border-t-white/90">
+      {currentQuote}
+    </div>
+  {/if}
+
   {#if useImage}
     <!-- Real sprite image -->
     <img
@@ -376,5 +445,13 @@
   }
   :global(.animate-shake) {
     animation: shake 0.4s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    0% { opacity: 0; transform: translate(-50%, 8px); }
+    100% { opacity: 1; transform: translate(-50%, 0); }
+  }
+  :global(.animate-fade-in) {
+    animation: fadeInUp 0.3s ease-out;
   }
 </style>
