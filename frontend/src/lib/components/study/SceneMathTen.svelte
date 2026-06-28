@@ -118,7 +118,19 @@
         timeSpent: 0
       });
       if (result) {
-        setTimeout(() => { onComplete(result); }, 1500);
+        setTimeout(() => {
+          try {
+            onComplete(result);
+          } catch (callbackErr) {
+            console.error('onComplete callback failed:', callbackErr);
+            // Force reset on callback failure
+            submitted = false;
+            feedback = 'idle';
+            showFeedback = false;
+            bowlCount = 0;
+            initApples();
+          }
+        }, 1500);
       } else {
         throw new Error('Empty result from API');
       }
@@ -138,7 +150,8 @@
   onpointermove={handlePointerMove}
   onpointerup={handlePointerUp}
   bind:this={containerEl}
->
+  role="application"
+  aria-label="拖苹果凑十法游戏"
   <!-- Pet hint banner -->
   <div class="absolute top-4 left-1/2 -translate-x-1/2 text-center z-10">
     <p class="text-lg font-bold text-amber-800 bg-white/70 rounded-full px-6 py-2 shadow-sm">
