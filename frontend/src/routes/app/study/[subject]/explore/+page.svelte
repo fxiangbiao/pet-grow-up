@@ -384,6 +384,7 @@
           playerHp={hp}
           answerResult={lastResult}
           answerTimeMs={bossAnswerTimeMs}
+          sceneMode={question.questionType === 'SCENE_DRAG'}
           onBossDefeated={() => {
             bossDefeated = true;
             bossBattleResolved = true;
