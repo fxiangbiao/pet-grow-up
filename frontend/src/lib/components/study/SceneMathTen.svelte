@@ -152,6 +152,7 @@
   bind:this={containerEl}
   role="application"
   aria-label="拖苹果凑十法游戏"
+>
   <!-- Pet hint banner -->
   <div class="absolute top-4 left-1/2 -translate-x-1/2 text-center z-10">
     <p class="text-lg font-bold text-amber-800 bg-white/70 rounded-full px-6 py-2 shadow-sm">
