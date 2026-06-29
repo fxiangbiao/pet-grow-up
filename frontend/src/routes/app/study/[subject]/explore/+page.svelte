@@ -229,30 +229,61 @@
   }
 
   let parsedOptions = $derived.by(() => {
-    if (!question?.options) return [];
-    try {
-      return JSON.parse(question.options) as Array<{ key: string; text: string }>;
-    } catch {
-      return [];
+    const opts = question?.options;
+    if (!opts) return [];
+    // Already an array (MySQL JSON column may be auto-deserialized by JDBC driver)
+    if (Array.isArray(opts)) return opts as Array<{ key: string; text: string }>;
+    // JSON string (standard case)
+    if (typeof opts === 'string') {
+      try {
+        const parsed = JSON.parse(opts);
+        if (Array.isArray(parsed)) return parsed as Array<{ key: string; text: string }>;
+      } catch { /* fall through to empty */ }
     }
+    // Object with numeric keys or other format — try to convert
+    if (typeof opts === 'object' && opts !== null) {
+      try {
+        const arr = Object.entries(opts).map(([k, v]) => ({ key: k, text: String(v) }));
+        if (arr.length > 0) return arr;
+      } catch { /* empty */ }
+    }
+    console.warn('[explore] Cannot parse options:', typeof opts, opts);
+    return [];
   });
 
   let parsedVocabOptions = $derived.by(() => {
     if (!question?.options || question.questionType !== 'VOCAB_MATCH') return null;
+    const opts = question.options;
     try {
-      return JSON.parse(question.options) as { left: Array<{ id: string; text: string }>; right: Array<{ id: string; text: string }> };
-    } catch {
-      return null;
-    }
+      // Already an object (MySQL JSON column auto-deserialized)
+      if (typeof opts === 'object' && opts !== null && !Array.isArray(opts)) {
+        const o = opts as any;
+        if (o.left && o.right) return o as { left: Array<{ id: string; text: string }>; right: Array<{ id: string; text: string }> };
+      }
+      // JSON string
+      if (typeof opts === 'string') {
+        const parsed = JSON.parse(opts);
+        if (parsed && parsed.left && parsed.right) return parsed as { left: Array<{ id: string; text: string }>; right: Array<{ id: string; text: string }> };
+      }
+    } catch { /* fall through */ }
+    console.warn('[explore] Cannot parse vocab options:', typeof question.options, question.options);
+    return null;
   });
 
   let parsedPoemLines = $derived.by(() => {
     if (!question?.options || question.questionType !== 'POEM_SEQUENCE') return [];
+    const opts = question.options;
     try {
-      return JSON.parse(question.options) as string[];
-    } catch {
-      return [];
-    }
+      // Already an array (MySQL JSON column auto-deserialized)
+      if (Array.isArray(opts)) return opts as string[];
+      // JSON string
+      if (typeof opts === 'string') {
+        const parsed = JSON.parse(opts);
+        if (Array.isArray(parsed)) return parsed as string[];
+      }
+    } catch { /* fall through */ }
+    console.warn('[explore] Cannot parse poem lines:', typeof question.options, question.options);
+    return [];
   });
 
   function onNewTypeAnswer(answer: string) {
@@ -462,16 +493,24 @@
           <h2 class="text-base font-medium text-gray-800 mb-4">{question.questionText}</h2>
 
           {#if question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'SCENE_TAP'}
-            <div class="space-y-2">
-              {#each parsedOptions as opt}
-                <button onclick={() => selectAnswer(opt.key)} disabled={submitted}
-                  class={['w-full text-left px-4 py-3 rounded-xl border-2 transition text-sm',
-                    selectedAnswer === opt.key ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
-                  ].join(' ')}>
-                  <span class="font-medium">{opt.key}.</span> {opt.text}
-                </button>
-              {/each}
-            </div>
+            {#if parsedOptions.length > 0}
+              <div class="space-y-2">
+                {#each parsedOptions as opt}
+                  <button onclick={() => selectAnswer(opt.key)} disabled={submitted}
+                    class={['w-full text-left px-4 py-3 rounded-xl border-2 transition text-sm',
+                      selectedAnswer === opt.key ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
+                    ].join(' ')}>
+                    <span class="font-medium">{opt.key}.</span> {opt.text}
+                  </button>
+                {/each}
+              </div>
+            {:else}
+              <!-- Fallback: options failed to parse — show text input -->
+              <p class="text-xs text-amber-600 mb-2">⚠️ 选项加载异常，请直接输入答案</p>
+              <input type="text" bind:value={selectedAnswer} disabled={submitted}
+                     placeholder="输入你的答案（如：5）..."
+                     class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-indigo-500 outline-none transition" />
+            {/if}
           {:else if question.questionType === 'FILL_BLANK'}
             <input type="text" bind:value={selectedAnswer} disabled={submitted}
                    placeholder="输入你的答案..."
@@ -519,12 +558,24 @@
               </button>
             </div>
           {:else if question.questionType === 'POEM_SEQUENCE'}
-            <PoemSequence options={parsedPoemLines} disabled={submitted} onSelect={onNewTypeAnswer} />
+            {#if parsedPoemLines.length > 0}
+              <PoemSequence options={parsedPoemLines} disabled={submitted} onSelect={onNewTypeAnswer} />
+            {:else}
+              <p class="text-xs text-amber-600 mb-2">⚠️ 诗句加载异常，请直接输入答案</p>
+              <input type="text" bind:value={selectedAnswer} disabled={submitted}
+                     placeholder="输入你的答案..."
+                     class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-indigo-500 outline-none transition" />
+            {/if}
           {:else if question.questionType === 'MATH_INPUT'}
             <MathInput disabled={submitted} onSelect={(v) => { selectedAnswer = v; }} />
           {:else if question.questionType === 'VOCAB_MATCH'}
             {#if parsedVocabOptions}
               <VocabMatch options={parsedVocabOptions} disabled={submitted} onSelect={onNewTypeAnswer} />
+            {:else}
+              <p class="text-xs text-amber-600 mb-2">⚠️ 配对数据加载异常，请直接输入答案</p>
+              <input type="text" bind:value={selectedAnswer} disabled={submitted}
+                     placeholder="输入你的答案..."
+                     class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-indigo-500 outline-none transition" />
             {/if}
           {:else}
             <!-- Fallback for unrecognized question types: text input -->
@@ -534,6 +585,24 @@
           {/if}
 
           {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH' && question.questionType !== 'SCENE_MATCH'}
+            <button onclick={handleSubmit} disabled={!selectedAnswer}
+                    class="mt-4 w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 text-white text-lg font-black rounded-xl
+                      hover:from-amber-300 hover:via-orange-300 hover:to-red-400
+                      disabled:from-gray-300 disabled:via-gray-300 disabled:to-gray-300 disabled:text-gray-400
+                      transition-all active:scale-95 shadow-lg">
+              ⚔️ 攻击！
+            </button>
+          {:else if !submitted && question.questionType === 'POEM_SEQUENCE' && parsedPoemLines.length === 0}
+            <!-- Fallback submit button when poem parsing failed -->
+            <button onclick={handleSubmit} disabled={!selectedAnswer}
+                    class="mt-4 w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 text-white text-lg font-black rounded-xl
+                      hover:from-amber-300 hover:via-orange-300 hover:to-red-400
+                      disabled:from-gray-300 disabled:via-gray-300 disabled:to-gray-300 disabled:text-gray-400
+                      transition-all active:scale-95 shadow-lg">
+              ⚔️ 攻击！
+            </button>
+          {:else if !submitted && question.questionType === 'VOCAB_MATCH' && !parsedVocabOptions}
+            <!-- Fallback submit button when vocab parsing failed -->
             <button onclick={handleSubmit} disabled={!selectedAnswer}
                     class="mt-4 w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 text-white text-lg font-black rounded-xl
                       hover:from-amber-300 hover:via-orange-300 hover:to-red-400
