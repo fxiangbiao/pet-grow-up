@@ -11,10 +11,37 @@
     onComplete: (result: AnswerResult) => void;
   } = $props();
 
-  // Parse "凑十法：8 + ? = 10" → start=8, target=10, needed=2
-  const target = 10;
-  const start = parseInt(question.questionText.match(/(\d+)\s*\+/)?.[1] || '0');
-  const needed = target - start;
+  // Parse question text flexibly for various SCENE_DRAG formats:
+  //   "凑十法：8 + ? = 10" → start=8, target=10, needed=2
+  //   "凑十法：? + 3 = 10" → start=3, needed=7 (reverse)
+  //   "拖5个苹果"          → needed=5
+  const target = 10; // default 凑十 target
+
+  function parseQuestion(qText: string): { needed: number; parseOk: boolean } {
+    // Try "X + ? = Y" or "X + ？= Y" format (with optional 凑十法 prefix)
+    let m = qText.match(/(\d+)\s*\+\s*[？?]\s*=\s*(\d+)/);
+    if (m) {
+      const start = parseInt(m[1]);
+      const tgt = parseInt(m[2]);
+      const n = tgt - start;
+      if (n > 0 && n <= tgt) return { needed: n, parseOk: true };
+    }
+    // Try "? + X = Y" format (reversed)
+    m = qText.match(/[？?]\s*\+\s*(\d+)\s*=\s*(\d+)/);
+    if (m) {
+      const start = parseInt(m[1]);
+      const tgt = parseInt(m[2]);
+      const n = tgt - start;
+      if (n > 0 && n <= tgt) return { needed: n, parseOk: true };
+    }
+    // Fallback: just drag N items (from any number in text)
+    m = qText.match(/拖\s*(\d+)/);
+    if (m) return { needed: parseInt(m[1]), parseOk: true };
+
+    return { needed: 5, parseOk: false };
+  }
+
+  const { needed, parseOk } = parseQuestion(question.questionText || '');
 
   // Slot positions relative to bowl center (bowl is 160×112, center at 80,56)
   // Arranged bottom-to-top for natural pile look
@@ -38,8 +65,11 @@
   // Which apple occupies each bowl slot (-1 = empty)
   let bowlOccupants = $state<number[]>(Array(10).fill(-1));
 
+  // Total apples to show (at least needed, max 10)
+  const totalApples = $derived(Math.max(needed, Math.min(target, 10)));
+
   function initApples() {
-    apples = Array.from({ length: target }, (_, i) => ({
+    apples = Array.from({ length: totalApples }, (_, i) => ({
       id: i,
       x: 15 + Math.random() * 70,
       y: 10 + Math.random() * 50,
@@ -54,9 +84,16 @@
   initApples();
 
   // Drag handlers
+  let pointerMoved = $state(false);
+  let pointerStartX = $state(0);
+  let pointerStartY = $state(0);
+
   function handlePointerDown(id: number, e: PointerEvent) {
     if (submitted) return;
     dragging = id;
+    pointerMoved = false;
+    pointerStartX = e.clientX;
+    pointerStartY = e.clientY;
     const rect = containerEl?.getBoundingClientRect();
     dragX = e.clientX - (rect?.left ?? 0);
     dragY = e.clientY - (rect?.top ?? 0);
@@ -65,6 +102,11 @@
 
   function handlePointerMove(e: PointerEvent) {
     if (dragging === null) return;
+    const dx = e.clientX - pointerStartX;
+    const dy = e.clientY - pointerStartY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      pointerMoved = true;
+    }
     const rect = containerEl?.getBoundingClientRect();
     dragX = e.clientX - (rect?.left ?? 0);
     dragY = e.clientY - (rect?.top ?? 0);
@@ -72,6 +114,37 @@
 
   function handlePointerUp() {
     if (dragging === null || submitted) return;
+
+    // Tap-to-add fallback: if pointer barely moved (< 5px), treat as tap → auto-add to bowl
+    if (!pointerMoved) {
+      const apple = apples.find(a => a.id === dragging);
+      if (apple && !apple.inBowl) {
+        const slotIndex = bowlOccupants.findIndex(o => o === -1);
+        if (slotIndex >= 0) {
+          apple.inBowl = true;
+          bowlOccupants[slotIndex] = apple.id;
+          bowlCount++;
+
+          if (bowlCount === needed) {
+            feedback = 'correct';
+            showFeedback = true;
+            submitted = true;
+            doSubmit();
+          } else if (bowlCount > needed) {
+            feedback = 'tooMany';
+            showFeedback = true;
+            bowlCount--;
+            apple.inBowl = false;
+            bowlOccupants[slotIndex] = -1;
+            setTimeout(() => { showFeedback = false; feedback = 'idle'; }, 1000);
+          }
+        }
+      }
+      dragging = null;
+      return;
+    }
+
+    // Drag-to-bowl: check drop zone
     const bowlEl = document.getElementById('bowl-zone');
     const containerRect = containerEl?.getBoundingClientRect();
     if (bowlEl && containerRect) {
@@ -114,7 +187,7 @@
       const result = await submitAnswer({
         sessionId,
         questionId: question.questionId,
-        answer: String(needed),
+        answer: String(parseOk ? needed : bowlCount),
         timeSpent: 0
       });
       if (result) {
@@ -146,7 +219,8 @@
 </script>
 
 <div
-  class="relative w-full h-full min-h-[480px] bg-gradient-to-b from-amber-50 to-orange-100 overflow-hidden select-none touch-none"
+  class="relative w-full h-full min-h-[480px] bg-gradient-to-b from-amber-50 to-orange-100 overflow-hidden select-none"
+  style="touch-action: none;"
   onpointermove={handlePointerMove}
   onpointerup={handlePointerUp}
   bind:this={containerEl}
@@ -155,10 +229,18 @@
 >
   <!-- Pet hint banner -->
   <div class="absolute top-4 left-1/2 -translate-x-1/2 text-center z-10">
-    <p class="text-lg font-bold text-amber-800 bg-white/70 rounded-full px-6 py-2 shadow-sm">
-      🐱「帮我凑 {needed} 个苹果到碗里！」
-    </p>
-    <p class="text-sm text-amber-600 mt-1">碗里：{bowlCount}/{needed}</p>
+    {#if parseOk}
+      <p class="text-lg font-bold text-amber-800 bg-white/70 rounded-full px-6 py-2 shadow-sm">
+        🐱「帮我凑 {needed} 个苹果到碗里！」
+      </p>
+      <p class="text-sm text-amber-600 mt-1">碗里：{bowlCount}/{needed}</p>
+    {:else}
+      <p class="text-lg font-bold text-amber-800 bg-white/70 rounded-full px-6 py-2 shadow-sm">
+        🐱「拖苹果到碗里吧！」
+      </p>
+      <p class="text-sm text-amber-600 mt-1">碗里：{bowlCount}</p>
+      <p class="text-xs text-red-500 mt-1">（题目解析异常，请拖放任意数量苹果后自动提交）</p>
+    {/if}
   </div>
 
   <!-- Draggable apples (not in bowl) -->
@@ -166,7 +248,7 @@
     <div
       class="absolute w-12 h-12 flex items-center justify-center text-3xl cursor-grab active:cursor-grabbing
         {dragging === apple.id ? 'scale-125 z-20' : 'hover:scale-110'} transition-transform"
-      style="left: {apple.x}%; top: {apple.y}%;"
+      style="left: {apple.x}%; top: {apple.y}%; touch-action: none;"
       onpointerdown={(e) => handlePointerDown(apple.id, e)}
       role="button"
       tabindex="0"
@@ -217,7 +299,7 @@
     {/each}
 
     <span class="text-5xl mb-1 relative z-0">🥣</span>
-    <span class="text-xs text-gray-500 mb-1">拖苹果到这里</span>
+    <span class="text-xs text-gray-500 mb-1">拖放或点击苹果</span>
   </div>
 
   <!-- Feedback overlay -->

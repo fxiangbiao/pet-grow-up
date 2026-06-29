@@ -445,7 +445,7 @@
       </div>
 
       <!-- Question area -->
-      {#if question.questionType === 'SCENE_DRAG' && question.questionText?.includes('凑十法')}
+      {#if question.questionType === 'SCENE_DRAG'}
         <SceneMathTen question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
       {:else}
         <div class="mb-3">
@@ -462,10 +462,29 @@
                 </button>
               {/each}
             </div>
-          {:else if question.questionType === 'FILL_BLANK' || question.questionType === 'SCENE_MATCH'}
+          {:else if question.questionType === 'FILL_BLANK'}
             <input type="text" bind:value={selectedAnswer} disabled={submitted}
                    placeholder="输入你的答案..."
                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
+          {:else if question.questionType === 'SCENE_MATCH'}
+            <!-- Shape recognition: clickable options with emoji hints, auto-submit on click -->
+            {@const shapeOptions = [
+              { key: 'CIRCLE', label: '圆形', emoji: '⚪' },
+              { key: 'SQUARE', label: '正方形', emoji: '🟫' },
+              { key: 'TRIANGLE', label: '三角形', emoji: '🔺' },
+              { key: 'RECTANGLE', label: '长方形', emoji: '⬛' }
+            ]}
+            <div class="grid grid-cols-2 gap-3">
+              {#each shapeOptions as shape}
+                <button onclick={() => onNewTypeAnswer(shape.key)} disabled={submitted}
+                  class={['py-4 rounded-xl border-2 text-center transition',
+                    selectedAnswer === shape.key ? 'border-indigo-500 bg-indigo-50 scale-105' : 'border-gray-200 hover:border-gray-300'
+                  ].join(' ')}>
+                  <span class="text-3xl block mb-1">{shape.emoji}</span>
+                  <span class="text-sm font-medium text-gray-700">{shape.label}</span>
+                </button>
+              {/each}
+            </div>
           {:else if question.questionType === 'TRUE_FALSE'}
             <div class="grid grid-cols-2 gap-4">
               <button onclick={() => selectAnswer('true')} disabled={submitted}
@@ -487,9 +506,14 @@
             {#if parsedVocabOptions}
               <VocabMatch options={parsedVocabOptions} disabled={submitted} onSelect={onNewTypeAnswer} />
             {/if}
+          {:else}
+            <!-- Fallback for unrecognized question types: text input -->
+            <input type="text" bind:value={selectedAnswer} disabled={submitted}
+                   placeholder="输入你的答案..."
+                   class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
           {/if}
 
-          {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH'}
+          {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH' && question.questionType !== 'SCENE_MATCH'}
             <button onclick={handleSubmit} disabled={!selectedAnswer}
                     class="mt-4 w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 text-white text-lg font-black rounded-xl
                       hover:from-amber-300 hover:via-orange-300 hover:to-red-400
