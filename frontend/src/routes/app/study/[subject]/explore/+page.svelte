@@ -201,8 +201,16 @@
         // For boss battle, BossBattle callbacks handle the transition
         if (!result.isLastQuestion || bossBattleResolved || adventureEnded) {
           setTimeout(() => { phase = 'result'; }, 2000);
+        } else {
+          // Last question boss battle still active — wait for callback
+          // Safety fallback: force result after 10 seconds
+          setTimeout(() => {
+            if (phase === 'playing') {
+              bossBattleResolved = true;
+              phase = 'result';
+            }
+          }, 10000);
         }
-        // If boss battle is still active, callbacks will trigger result transition
       } else if (result.nextQuestion) {
         const nextQ = result.nextQuestion;
         setTimeout(() => {
@@ -417,11 +425,13 @@
           onBossAttackPlayer={() => {
             battleState = 'enemy_attack';
             setTimeout(() => { battleState = 'idle'; }, 600);
+            bossBattleResolved = true;
+            // Boss attacked — encounter is over regardless of remaining HP.
+            // Always transition to result (session complete after boss question).
             if (hp <= 0) {
               adventureEnded = true;
-              bossBattleResolved = true;
-              setTimeout(() => { phase = 'result'; }, 2000);
             }
+            setTimeout(() => { phase = 'result'; }, 2500);
           }}
           onBossEscaped={() => {
             bossBattleResolved = true;
@@ -467,20 +477,30 @@
                    placeholder="输入你的答案..."
                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
           {:else if question.questionType === 'SCENE_MATCH'}
-            <!-- Shape recognition: clickable options with emoji hints, auto-submit on click -->
+            <!-- Shape recognition: clickable buttons with CSS-drawn shapes, auto-submit on click -->
             {@const shapeOptions = [
-              { key: 'CIRCLE', label: '圆形', emoji: '⚪' },
-              { key: 'SQUARE', label: '正方形', emoji: '🟫' },
-              { key: 'TRIANGLE', label: '三角形', emoji: '🔺' },
-              { key: 'RECTANGLE', label: '长方形', emoji: '⬛' }
+              { key: 'CIRCLE', label: '圆形', cssShape: 'circle' },
+              { key: 'SQUARE', label: '正方形', cssShape: 'square' },
+              { key: 'TRIANGLE', label: '三角形', cssShape: 'triangle' },
+              { key: 'RECTANGLE', label: '长方形', cssShape: 'rectangle' }
             ]}
             <div class="grid grid-cols-2 gap-3">
               {#each shapeOptions as shape}
                 <button onclick={() => onNewTypeAnswer(shape.key)} disabled={submitted}
-                  class={['py-4 rounded-xl border-2 text-center transition',
+                  class={['py-4 rounded-xl border-2 text-center transition flex flex-col items-center gap-2',
                     selectedAnswer === shape.key ? 'border-indigo-500 bg-indigo-50 scale-105' : 'border-gray-200 hover:border-gray-300'
                   ].join(' ')}>
-                  <span class="text-3xl block mb-1">{shape.emoji}</span>
+                  <span class="inline-flex items-center justify-center w-12 h-12">
+                    {#if shape.cssShape === 'circle'}
+                      <span class="block w-10 h-10 rounded-full bg-sky-400 border-2 border-sky-600"></span>
+                    {:else if shape.cssShape === 'square'}
+                      <span class="block w-10 h-10 rounded-sm bg-amber-400 border-2 border-amber-600"></span>
+                    {:else if shape.cssShape === 'triangle'}
+                      <span class="block w-0 h-0 border-solid" style="border-left: 22px solid transparent; border-right: 22px solid transparent; border-bottom: 38px solid #f87171;"></span>
+                    {:else if shape.cssShape === 'rectangle'}
+                      <span class="block rounded-sm bg-emerald-400 border-2 border-emerald-600" style="width: 44px; height: 24px;"></span>
+                    {/if}
+                  </span>
                   <span class="text-sm font-medium text-gray-700">{shape.label}</span>
                 </button>
               {/each}

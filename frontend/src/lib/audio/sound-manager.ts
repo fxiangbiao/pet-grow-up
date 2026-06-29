@@ -84,15 +84,17 @@ export const soundManager = {
   },
 
   // ============================
-  // Subject-specific BGM
+  // Subject-specific BGM (procedural music box / cartoon style)
   // ============================
 
   /**
    * Start background music for a subject.
-   * Each subject has a distinct musical style:
-   * - chinese: pentatonic ambient (古典五声音阶)
-   * - math: electronic arpeggiated
-   * - english: magical shimmer
+   * Uses only sine & triangle waves for warm, pleasant tones — no harsh square/sawtooth.
+   *
+   * Style per subject:
+   * - chinese: gentle pentatonic melody with soft harmonic pads
+   * - math: playful music-box arpeggios with bell-like tones
+   * - english: dreamy ambient with slow shimmering chords
    */
   playBGM(subject: string) {
     if (!enabled) return;
@@ -102,83 +104,131 @@ export const soundManager = {
 
     const c = getContext();
     bgmGain = c.createGain();
-    bgmGain.gain.setValueAtTime(0.035, c.currentTime); // very quiet ambient
+    bgmGain.gain.setValueAtTime(0.04, c.currentTime); // quiet ambient level
     bgmGain.connect(c.destination);
 
     if (subject === 'chinese') {
-      // Pentatonic ambient — slow cycling through notes
-      for (let i = 0; i < 3; i++) {
-        const osc = c.createOscillator();
-        osc.type = 'sine';
-        const baseFreq = PENTATONIC[i % PENTATONIC.length];
-        osc.frequency.setValueAtTime(baseFreq * 0.5, c.currentTime);
-
-        // Slow LFO-style pitch drift
-        const lfo = c.createOscillator();
-        lfo.frequency.setValueAtTime(0.05 + i * 0.02, c.currentTime);
-        const lfoGain = c.createGain();
-        lfoGain.gain.setValueAtTime(3 + i * 2, c.currentTime);
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc.frequency);
-        lfo.start();
-
-        const noteGain = c.createGain();
-        noteGain.gain.setValueAtTime(0.15, c.currentTime);
-        osc.connect(noteGain);
-        noteGain.connect(bgmGain);
-        osc.start();
-        bgmOscillators.push(osc, lfo);
+      // ── Gentle pentatonic melody loop ──
+      // Soft sine-wave harmonic pad (root + fifth)
+      for (let oct = 0; oct < 2; oct++) {
+        [262, 392].forEach(freq => {
+          const osc = c.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq * (0.5 + oct * 0.5), c.currentTime);
+          const g = c.createGain();
+          g.gain.setValueAtTime(0.06, c.currentTime);
+          osc.connect(g);
+          g.connect(bgmGain);
+          osc.start();
+          bgmOscillators.push(osc);
+        });
       }
-    } else if (subject === 'math') {
-      // Arpeggiated tech — short repeating pulses
-      const pulseRate = 4; // Hz
-      for (let i = 0; i < 4; i++) {
-        const osc = c.createOscillator();
-        osc.type = 'square';
-        const freqIdx = (i * 2) % MAJOR.length;
-        osc.frequency.setValueAtTime(MAJOR[freqIdx] * 0.25, c.currentTime);
 
-        const ampEnv = c.createGain();
-        ampEnv.gain.setValueAtTime(0, c.currentTime);
-        // Pulse modulation
-        const lfo = c.createOscillator();
-        lfo.type = 'sawtooth';
-        lfo.frequency.setValueAtTime(pulseRate + i * 0.5, c.currentTime);
-        const lfoGain = c.createGain();
-        lfoGain.gain.setValueAtTime(0.12, c.currentTime);
-        lfo.connect(lfoGain);
-        lfoGain.connect(ampEnv.gain);
-        lfo.start();
-
-        osc.connect(ampEnv);
-        ampEnv.connect(bgmGain);
-        osc.start();
-        bgmOscillators.push(osc, lfo);
-      }
-    } else if (subject === 'english') {
-      // Magical shimmer — high soft tones with vibrato
-      for (let i = 0; i < 5; i++) {
+      // Slow pentatonic melody cycle (C D E G A C')
+      const melody = [523, 587, 659, 784, 880, 1047, 880, 784, 659, 587];
+      const cycleTime = 16; // seconds per full loop
+      melody.forEach((freq, i) => {
         const osc = c.createOscillator();
         osc.type = 'triangle';
-        const freq = 300 + i * 100;
-        osc.frequency.setValueAtTime(freq * 1.5, c.currentTime);
+        osc.frequency.setValueAtTime(freq, c.currentTime + i * (cycleTime / melody.length));
+        // Each note fades in/out smoothly
+        const g = c.createGain();
+        const noteStart = c.currentTime + i * (cycleTime / melody.length);
+        const noteLen = cycleTime / melody.length;
+        g.gain.setValueAtTime(0, noteStart);
+        g.gain.linearRampToValueAtTime(0.07, noteStart + noteLen * 0.2);
+        g.gain.setValueAtTime(0.07, noteStart + noteLen * 0.7);
+        g.gain.linearRampToValueAtTime(0, noteStart + noteLen);
+        osc.connect(g);
+        g.connect(bgmGain);
+        osc.start(noteStart);
+        osc.stop(noteStart + noteLen + 0.1);
+        bgmOscillators.push(osc);
+      });
 
-        // Vibrato
+    } else if (subject === 'math') {
+      // ── Playful music-box arpeggios ──
+      // Soft bell-like pad
+      [262, 330, 392].forEach((freq, i) => {
+        const osc = c.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq * 0.5, c.currentTime);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.05, c.currentTime);
+        osc.connect(g);
+        g.connect(bgmGain);
+        osc.start();
+        bgmOscillators.push(osc);
+      });
+
+      // Ascending/descending arpeggio loop — music box style
+      const arpNotes = [523, 659, 784, 1047, 784, 659, 523, 392, 523, 659, 784, 880, 784, 659, 523, 392];
+      const arpCycle = 12; // seconds
+      arpNotes.forEach((freq, i) => {
+        const osc = c.createOscillator();
+        osc.type = 'triangle'; // soft, bell-like
+        osc.frequency.setValueAtTime(freq, c.currentTime + i * (arpCycle / arpNotes.length));
+
+        const g = c.createGain();
+        const t = c.currentTime + i * (arpCycle / arpNotes.length);
+        const len = arpCycle / arpNotes.length;
+        // Pluck-like envelope: quick attack, fast decay, quiet sustain
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.1, t + len * 0.05);
+        g.gain.exponentialRampToValueAtTime(0.015, t + len * 0.4);
+        g.gain.linearRampToValueAtTime(0, t + len);
+
+        osc.connect(g);
+        g.connect(bgmGain);
+        osc.start(t);
+        osc.stop(t + len + 0.1);
+        bgmOscillators.push(osc);
+      });
+
+    } else if (subject === 'english') {
+      // ── Dreamy ambient with slow shimmering chords ──
+      // Gentle chord pad: Cmaj7 (C E G B)
+      [262, 330, 392, 494].forEach(freq => {
+        const osc = c.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq * 0.5, c.currentTime);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.04, c.currentTime);
+        osc.connect(g);
+        g.connect(bgmGain);
+        osc.start();
+        bgmOscillators.push(osc);
+      });
+
+      // Slow shimmering high notes with gentle vibrato
+      [784, 880, 988, 784, 880].forEach((freq, i) => {
+        const osc = c.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, c.currentTime);
+
+        // Soft vibrato
         const vib = c.createOscillator();
-        vib.frequency.setValueAtTime(5 + i * 0.5, c.currentTime);
+        vib.type = 'sine';
+        vib.frequency.setValueAtTime(3.5 + i * 0.7, c.currentTime);
         const vibGain = c.createGain();
-        vibGain.gain.setValueAtTime(15, c.currentTime);
+        vibGain.gain.setValueAtTime(8, c.currentTime);
         vib.connect(vibGain);
         vibGain.connect(osc.frequency);
         vib.start();
 
-        const noteGain = c.createGain();
-        noteGain.gain.setValueAtTime(0.1, c.currentTime);
-        osc.connect(noteGain);
-        noteGain.connect(bgmGain);
+        const g = c.createGain();
+        const t = c.currentTime + i * 3.5;
+        const len = 6;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.06, t + 1.5);
+        g.gain.setValueAtTime(0.06, t + len - 1.5);
+        g.gain.linearRampToValueAtTime(0, t + len);
+
+        osc.connect(g);
+        g.connect(bgmGain);
         osc.start();
         bgmOscillators.push(osc, vib);
-      }
+      });
     }
   },
 
