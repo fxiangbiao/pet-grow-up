@@ -8,6 +8,9 @@
   import PoemSequence from '$lib/components/study/PoemSequence.svelte';
   import MathInput from '$lib/components/study/MathInput.svelte';
   import VocabMatch from '$lib/components/study/VocabMatch.svelte';
+  import SceneMathTen from '$lib/components/study/SceneMathTen.svelte';
+  import SceneTap from '$lib/components/study/SceneTap.svelte';
+  import SceneMatch from '$lib/components/study/SceneMatch.svelte';
   import HpBar from '$lib/components/study/HpBar.svelte';
   import ComboCounter from '$lib/components/study/ComboCounter.svelte';
   import AdventurePath from '$lib/components/study/AdventurePath.svelte';
@@ -201,6 +204,58 @@
     selectedAnswer = answer;
     handleSubmit();
   }
+
+  // Scene component result handler — processes AnswerResult from Scene* components
+  async function handleSceneResult(result: AnswerResult) {
+    if (!result) {
+      errorMsg = '场景提交失败';
+      phase = 'error';
+      return;
+    }
+
+    submitted = true;
+    lastResult = result;
+    results[answeredCount] = result.isCorrect;
+
+    if (result.isCorrect) {
+      combo++;
+      maxCombo = Math.max(maxCombo, combo);
+      if (combo >= 2 && combo % 2 === 0) {
+        treasuresFound++;
+        soundManager.playTreasure();
+      }
+      if (result.isLastQuestion && result.isCorrect) {
+        bossDefeated = true;
+        soundManager.playBossDefeated();
+      }
+    } else {
+      combo = 0;
+      if (result.isLastQuestion) {
+        hp -= 2;
+      } else {
+        hp -= 1;
+      }
+      if (hp <= 0) {
+        adventureEnded = true;
+        setTimeout(finish, 2000);
+        return;
+      }
+    }
+
+    if (result.isSessionComplete) {
+      setTimeout(finish, 2000);
+    } else if (result.nextQuestion) {
+      const nextQ = result.nextQuestion;
+      setTimeout(() => {
+        question = nextQ;
+        answeredCount = nextQ.answeredCount ?? answeredCount + 1;
+        submitted = false;
+        selectedAnswer = '';
+        lastResult = null;
+        questionStartTime = Date.now();
+      }, 1500);
+    }
+  }
 </script>
 
 <!-- Loading -->
@@ -250,7 +305,15 @@
     {/if}
 
     <!-- Question -->
+    {#key question.questionId}
     <div class="px-4 pb-4">
+      {#if question.questionType === 'SCENE_DRAG'}
+        <SceneMathTen question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_TAP'}
+        <SceneTap question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_MATCH'}
+        <SceneMatch question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else}
       <p class="text-sm font-medium text-gray-800 mb-3">{question.questionText}</p>
 
       {#if question.questionType === 'MULTIPLE_CHOICE'}
@@ -290,14 +353,16 @@
           <VocabMatch options={parsedVocabOptions} disabled={submitted} onSelect={onNewTypeAnswer} />
         {/if}
       {/if}
+      {/if}
 
-      {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH'}
+      {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH' && question.questionType !== 'SCENE_DRAG' && question.questionType !== 'SCENE_TAP' && question.questionType !== 'SCENE_MATCH'}
         <button onclick={handleSubmit} disabled={!selectedAnswer}
                 class="mt-3 w-full py-2.5 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 disabled:opacity-50 transition text-sm">
           提交答案
         </button>
       {/if}
     </div>
+    {/key}
   </div>
 
   <!-- Feedback -->

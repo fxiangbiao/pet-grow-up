@@ -14,11 +14,11 @@
 
 ## 项目状态
 
-当前处于 **实现阶段**。前后端代码均已完整，P0/P1 子系统全部落地，仅 P2
-（时空裂隙系统）尚未实现。代码已纳入 Git 版本控制（2026-06-27 完成 initial commit）。
-
-> 设计文档（v1.0, 2026-04-20）位于 `游戏化宠物养成系统设计方案.md`；
-> 冒险模式改造方案见 `冒险模式设计方案.md`，且**已全栈实现**。
+实现阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
+- Sprint 1（2026-06-29）：双路径「凑十法」Demo 对比，**选定 Svelte 路径继续**。
+- Sprint 2（2026-06-30）：场景组件扩充（SceneTap/SceneMatch）+ 题库 45→77 + 剧情模式接入场景题型。
+- 下一计划：Sprint A — 6 个新场景组件 + 题库 77→188 + 音频动画升级 + 冒险模式渐进演化。
+  计划文档见 `.plans/`，v2 设计方案见 `游戏化学习系统设计方案-v2.md`。
 
 ## 已实现子系统
 
@@ -48,6 +48,26 @@
 - `study/dto/SessionResultDTO.java` —— 含 `maxCombo`、`bossDefeated`、`comboBonusEnergy`
 - 前端组件：`AdventurePath` / `ComboCounter` / `BossBattle` / `HpBar` / `TreasureChest` 等
   （见 `frontend/src/lib/components/study/`）
+
+### 场景化题型组件（Sprint 1-2 新增）
+
+9 种题型中，6 种已有专属交互组件，场景类题型遵循 `$props({ question, sessionId, onComplete })` 自提交模式：
+
+| 题型 | 组件 | 学科 | 玩法 |
+|------|------|------|------|
+| `SCENE_DRAG` | `SceneMathTen.svelte` | 数学 | 拖苹果到碗凑十 |
+| `SCENE_TAP` | `SceneTap.svelte` | 数学/语文/英语 | 浮动泡泡点击答题 |
+| `SCENE_MATCH` | `SceneMatch.svelte` | 数学/英语 | 图形/卡片配对识别 |
+| `POEM_SEQUENCE` | `PoemSequence.svelte` | 语文 | 诗句拖拽排序 |
+| `MATH_INPUT` | `MathInput.svelte` | 数学 | 数字键盘输入 |
+| `VOCAB_MATCH` | `VocabMatch.svelte` | 英语 | 单词释义配对 |
+
+### 音频系统
+
+`frontend/src/lib/audio/sound-manager.ts` — Web Audio API 合成，无外部音频文件依赖。
+- 3 首学科 BGM（sine + triangle 波形）：中国风五声音阶 / 音乐盒琶音 / Cmaj7 和弦垫
+- 音效：`playCorrect` / `playWrong` / `playClick` / `playTreasure` / `playCelebrate` / `playFeed` / `playEvolve`
+- Boss 相关音效（待 v2 重构移除）
 
 ## 技术栈
 
@@ -97,8 +117,9 @@ pet-grow-up/
 │           ├── api/             # Fetch 封装 + 各模块 API client
 │           └── types/           # TypeScript 接口
 ├── docker-compose.yml           # MySQL 8.0（仅数据库，无后端/前端容器化）
-├── 游戏化宠物养成系统设计方案.md   # 产品设计文档 v1.0
-├── 冒险模式设计方案.md           # 冒险模式改造方案（已实现）
+├── 游戏化宠物养成系统设计方案-v1.md   # 产品设计文档 v1.0
+├── 游戏化学习系统设计方案-v2.md    # 沉浸式重构方案 v2.0（2026-06-27）
+├── .plans/                      # Sprint 计划文档
 └── .gitignore
 ```
 
@@ -126,7 +147,8 @@ cd frontend && npm install && npm run dev
 - **测试覆盖薄弱**：仅 5 个测试文件，集中在 5 个模块，其余 9 个业务模块无测试。
 - **未容器化后端/前端**：`docker-compose.yml` 仅含 MySQL，无应用镜像与发布流程。
 - **P2 时空裂隙系统未实现**：设计文档中唯一缺失的子系统。
-- **学习内容数据**：`data.sql` 种子内容是否充足，需结合实际学科题库评估。
+- **题库对标不足**：当前 77 题，语文/英语内容严重不对标一年级课标。计划 Sprint A 扩充至 ~188 题并重建语文节点。
+- **冒险模式待 v2 重构**：HP/Boss 惩罚机制与 v2「弱化惩罚」原则冲突，计划 Sprint B 渐进演化。
 
 ## 约定
 

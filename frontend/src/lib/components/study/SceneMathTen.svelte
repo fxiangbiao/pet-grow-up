@@ -11,14 +11,9 @@
     onComplete: (result: AnswerResult) => void;
   } = $props();
 
-  // Parse question text flexibly for various SCENE_DRAG formats:
-  //   "凑十法：8 + ? = 10" → start=8, target=10, needed=2
-  //   "凑十法：? + 3 = 10" → start=3, needed=7 (reverse)
-  //   "拖5个苹果"          → needed=5
-  const target = 10; // default 凑十 target
+  const target = 10;
 
   function parseQuestion(qText: string): { needed: number; parseOk: boolean } {
-    // Try "X + ? = Y" or "X + ？= Y" format (with optional 凑十法 prefix)
     let m = qText.match(/(\d+)\s*\+\s*[？?]\s*=\s*(\d+)/);
     if (m) {
       const start = parseInt(m[1]);
@@ -26,7 +21,6 @@
       const n = tgt - start;
       if (n > 0 && n <= tgt) return { needed: n, parseOk: true };
     }
-    // Try "? + X = Y" format (reversed)
     m = qText.match(/[？?]\s*\+\s*(\d+)\s*=\s*(\d+)/);
     if (m) {
       const start = parseInt(m[1]);
@@ -34,25 +28,15 @@
       const n = tgt - start;
       if (n > 0 && n <= tgt) return { needed: n, parseOk: true };
     }
-    // Fallback: just drag N items (from any number in text)
     m = qText.match(/拖\s*(\d+)/);
     if (m) return { needed: parseInt(m[1]), parseOk: true };
 
     return { needed: 5, parseOk: false };
   }
 
-  const { needed, parseOk } = parseQuestion(question.questionText || '');
-
-  // Slot positions relative to bowl center (bowl is 160×112, center at 80,56)
-  // Arranged bottom-to-top for natural pile look
-  const bowlSlots = [
-    { x: 30, y: 82 }, { x: 60, y: 85 }, { x: 90, y: 82 }, { x: 120, y: 78 },  // bottom row
-    { x: 42, y: 58 }, { x: 72, y: 56 }, { x: 105, y: 54 },                       // middle row
-    { x: 52, y: 34 }, { x: 90, y: 32 },                                           // upper row
-    { x: 72, y: 14 },                                                              // top
-  ];
-
-  // Scene state
+  // ═══ State ═══
+  let needed = $state(5);
+  let parseOk = $state(false);
   let apples = $state<Array<{ id: number; x: number; y: number; inBowl: boolean }>>([]);
   let bowlCount = $state(0);
   let dragging = $state<number | null>(null);
@@ -62,10 +46,19 @@
   let showFeedback = $state(false);
   let submitted = $state(false);
   let containerEl = $state<HTMLDivElement | null>(null);
-  // Which apple occupies each bowl slot (-1 = empty)
   let bowlOccupants = $state<number[]>(Array(10).fill(-1));
+  let pointerMoved = $state(false);
+  let pointerStartX = $state(0);
+  let pointerStartY = $state(0);
 
-  // Total apples to show (at least needed, max 10)
+  // Slot positions relative to bowl center
+  const bowlSlots = [
+    { x: 30, y: 82 }, { x: 60, y: 85 }, { x: 90, y: 82 }, { x: 120, y: 78 },
+    { x: 42, y: 58 }, { x: 72, y: 56 }, { x: 105, y: 54 },
+    { x: 52, y: 34 }, { x: 90, y: 32 },
+    { x: 72, y: 14 },
+  ];
+
   const totalApples = $derived(Math.max(needed, Math.min(target, 10)));
 
   function initApples() {
@@ -81,12 +74,16 @@
     showFeedback = false;
     submitted = false;
   }
+
+  // Parse question & init apples on mount.
+  // Parent {#key question.questionId} forces remount on question change.
+  const qText = question.questionText || '';
+  const parsed = parseQuestion(qText);
+  needed = parsed.needed;
+  parseOk = parsed.parseOk;
   initApples();
 
-  // Drag handlers
-  let pointerMoved = $state(false);
-  let pointerStartX = $state(0);
-  let pointerStartY = $state(0);
+  // ── Drag handlers ──
 
   function handlePointerDown(id: number, e: PointerEvent) {
     if (submitted) return;
@@ -115,30 +112,11 @@
   function handlePointerUp() {
     if (dragging === null || submitted) return;
 
-    // Tap-to-add fallback: if pointer barely moved (< 5px), treat as tap → auto-add to bowl
     if (!pointerMoved) {
+      // Tap-to-add: auto-add apple to bowl
       const apple = apples.find(a => a.id === dragging);
       if (apple && !apple.inBowl) {
-        const slotIndex = bowlOccupants.findIndex(o => o === -1);
-        if (slotIndex >= 0) {
-          apple.inBowl = true;
-          bowlOccupants[slotIndex] = apple.id;
-          bowlCount++;
-
-          if (bowlCount === needed) {
-            feedback = 'correct';
-            showFeedback = true;
-            submitted = true;
-            doSubmit();
-          } else if (bowlCount > needed) {
-            feedback = 'tooMany';
-            showFeedback = true;
-            bowlCount--;
-            apple.inBowl = false;
-            bowlOccupants[slotIndex] = -1;
-            setTimeout(() => { showFeedback = false; feedback = 'idle'; }, 1000);
-          }
-        }
+        addAppleToBowl(apple);
       }
       dragging = null;
       return;
@@ -156,30 +134,33 @@
       if (dragX > bowlLeft && dragX < bowlRight && dragY > bowlTop && dragY < bowlBottom) {
         const apple = apples.find(a => a.id === dragging);
         if (apple && !apple.inBowl) {
-          const slotIndex = bowlOccupants.findIndex(o => o === -1);
-          if (slotIndex >= 0) {
-            apple.inBowl = true;
-            bowlOccupants[slotIndex] = apple.id;
-            bowlCount++;
-
-            if (bowlCount === needed) {
-              feedback = 'correct';
-              showFeedback = true;
-              submitted = true;
-              doSubmit();
-            } else if (bowlCount > needed) {
-              feedback = 'tooMany';
-              showFeedback = true;
-              bowlCount--;
-              apple.inBowl = false;
-              bowlOccupants[slotIndex] = -1;
-              setTimeout(() => { showFeedback = false; feedback = 'idle'; }, 1000);
-            }
-          }
+          addAppleToBowl(apple);
         }
       }
     }
     dragging = null;
+  }
+
+  function addAppleToBowl(apple: { id: number; x: number; y: number; inBowl: boolean }) {
+    const slotIndex = bowlOccupants.findIndex(o => o === -1);
+    if (slotIndex < 0) return;
+    apple.inBowl = true;
+    bowlOccupants[slotIndex] = apple.id;
+    bowlCount++;
+
+    if (bowlCount === needed) {
+      feedback = 'correct';
+      showFeedback = true;
+      submitted = true;
+      doSubmit();
+    } else if (bowlCount > needed) {
+      feedback = 'tooMany';
+      showFeedback = true;
+      bowlCount--;
+      apple.inBowl = false;
+      bowlOccupants[slotIndex] = -1;
+      setTimeout(() => { showFeedback = false; feedback = 'idle'; }, 1000);
+    }
   }
 
   async function doSubmit() {
@@ -187,28 +168,18 @@
       const result = await submitAnswer({
         sessionId,
         questionId: question.questionId,
-        answer: String(parseOk ? needed : bowlCount),
+        answer: String(bowlCount),
         timeSpent: 0
       });
       if (result) {
         setTimeout(() => {
-          try {
-            onComplete(result);
-          } catch (callbackErr) {
-            console.error('onComplete callback failed:', callbackErr);
-            // Force reset on callback failure
-            submitted = false;
-            feedback = 'idle';
-            showFeedback = false;
-            bowlCount = 0;
-            initApples();
-          }
+          try { onComplete(result); } catch (e) { console.error('onComplete failed:', e); }
         }, 1500);
       } else {
-        throw new Error('Empty result from API');
+        throw new Error('Empty API result');
       }
     } catch (err) {
-      console.error('Submit failed, resetting:', err);
+      console.error('[SceneMathTen] Submit failed:', err);
       submitted = false;
       feedback = 'idle';
       showFeedback = false;
@@ -219,7 +190,7 @@
 </script>
 
 <div
-  class="relative w-full h-full min-h-[480px] bg-gradient-to-b from-amber-50 to-orange-100 overflow-hidden select-none"
+  class="relative w-full min-h-[480px] bg-gradient-to-b from-amber-50 to-orange-100 overflow-hidden select-none rounded-xl"
   style="touch-action: none;"
   onpointermove={handlePointerMove}
   onpointerup={handlePointerUp}
@@ -230,12 +201,12 @@
   <!-- Pet hint banner -->
   <div class="absolute top-4 left-1/2 -translate-x-1/2 text-center z-10">
     {#if parseOk}
-      <p class="text-lg font-bold text-amber-800 bg-white/70 rounded-full px-6 py-2 shadow-sm">
+      <p class="text-lg font-bold text-amber-800 bg-white/80 rounded-full px-6 py-2 shadow-sm">
         🐱「帮我凑 {needed} 个苹果到碗里！」
       </p>
       <p class="text-sm text-amber-600 mt-1">碗里：{bowlCount}/{needed}</p>
     {:else}
-      <p class="text-lg font-bold text-amber-800 bg-white/70 rounded-full px-6 py-2 shadow-sm">
+      <p class="text-lg font-bold text-amber-800 bg-white/80 rounded-full px-6 py-2 shadow-sm">
         🐱「拖苹果到碗里吧！」
       </p>
       <p class="text-sm text-amber-600 mt-1">碗里：{bowlCount}</p>
@@ -243,7 +214,7 @@
     {/if}
   </div>
 
-  <!-- Draggable apples (not in bowl) -->
+  <!-- Draggable apples -->
   {#each apples.filter(a => !a.inBowl) as apple (apple.id)}
     <div
       class="absolute w-12 h-12 flex items-center justify-center text-3xl cursor-grab active:cursor-grabbing
@@ -270,23 +241,20 @@
   <!-- Bowl drop zone -->
   <div
     id="bowl-zone"
-    class="absolute bottom-8 left-1/2 -translate-x-1/2 w-40 h-28 flex flex-col items-center justify-end
+    class="absolute bottom-8 left-1/2 -translate-x-1/2 w-44 h-32 flex flex-col items-center justify-end
       border-4 border-dashed rounded-b-[80px] transition-all duration-300
-      {bowlCount === needed ? 'border-green-400 bg-green-100/30' : ''}
-      {bowlCount > 0 && bowlCount < needed ? 'border-amber-400 bg-amber-50/30' : ''}
-      {bowlCount === 0 ? 'border-gray-300' : ''}"
+      {bowlCount === needed ? 'border-green-400 bg-green-100/40' : ''}
+      {bowlCount > 0 && bowlCount < needed ? 'border-amber-400 bg-amber-50/40' : ''}
+      {bowlCount === 0 ? 'border-gray-400 bg-white/30' : ''}"
   >
-    <!-- Empty slot placeholders -->
     {#each bowlSlots as slot, i}
       {#if bowlOccupants[i] === -1}
         <div
-          class="absolute w-6 h-6 rounded-full border border-dashed border-gray-300/40"
+          class="absolute w-6 h-6 rounded-full border border-dashed border-gray-300/50"
           style="left: {slot.x - 12}px; top: {slot.y - 12}px;"
         ></div>
       {/if}
     {/each}
-
-    <!-- Apples already in bowl -->
     {#each bowlSlots as slot, i}
       {#if bowlOccupants[i] !== -1}
         <div

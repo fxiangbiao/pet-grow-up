@@ -153,6 +153,72 @@ INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, 
 ((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'VOCAB_MATCH', 1, '请将左边的英文单词与右边的中文释义配对', '{"left":[{"id":"A","text":"red"},{"id":"B","text":"blue"},{"id":"C","text":"green"}],"right":[{"id":"1","text":"绿色"},{"id":"2","text":"红色"},{"id":"3","text":"蓝色"}]}', 'A2,B3,C1', 'red=红色, blue=蓝色, green=绿色', 10);
 
 -- ============================================================
+-- Sprint 2: Expanded Content
+-- ============================================================
+
+-- Math: More SCENE_DRAG (凑十法) for math_intro
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_DRAG', 1, '凑十法：4 + ? = 10', NULL, '6', '拖6个苹果到碗里！4+6=10', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_DRAG', 1, '凑十法：3 + ? = 10', NULL, '7', '拖7个苹果到碗里！3+7=10', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_DRAG', 1, '凑十法：2 + ? = 10', NULL, '8', '拖8个苹果到碗里！2+8=10', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_DRAG', 1, '凑十法：1 + ? = 10', NULL, '9', '拖9个苹果到碗里！1+9=10', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_DRAG', 1, '凑十法：0 + ? = 10', NULL, '10', '拖10个苹果到碗里！0+10=10', 10);
+
+-- Math: More SCENE_TAP (10以内加减) for math_intro
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_TAP', 1, '5 + 4 = ?', '[{"key":"A","text":"8"},{"key":"B","text":"9"},{"key":"C","text":"10"}]', 'B', '5+4=9', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_TAP', 1, '9 - 3 = ?', '[{"key":"A","text":"5"},{"key":"B","text":"6"},{"key":"C","text":"7"}]', 'B', '9-3=6', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_TAP', 1, '8 - 2 = ?', '[{"key":"A","text":"5"},{"key":"B","text":"6"},{"key":"C","text":"7"}]', 'B', '8-2=6', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_intro'), 'SCENE_TAP', 1, '4 + 5 = ?', '[{"key":"A","text":"8"},{"key":"B","text":"9"},{"key":"C","text":"10"}]', 'B', '4+5=9', 10);
+
+-- Math: More SCENE_TAP (20以内加减) for math_addsub20
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_TAP', 2, '7 + 8 = ?', '[{"key":"A","text":"14"},{"key":"B","text":"15"},{"key":"C","text":"16"}]', 'B', '7+8=15，7和3凑成10，加剩下的5', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_TAP', 2, '6 + 5 = ?', '[{"key":"A","text":"10"},{"key":"B","text":"11"},{"key":"C","text":"12"}]', 'B', '6+5=11，6和4凑成10，加剩下的1', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_TAP', 2, '17 - 9 = ?', '[{"key":"A","text":"7"},{"key":"B","text":"8"},{"key":"C","text":"9"}]', 'B', '17-9=8，破十法：10-9=1，1+7=8', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_TAP', 2, '11 - 3 = ?', '[{"key":"A","text":"7"},{"key":"B","text":"8"},{"key":"C","text":"9"}]', 'B', '11-3=8，破十法：10-3=7，7+1=8', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_TAP', 2, '14 + 3 = ?', '[{"key":"A","text":"16"},{"key":"B","text":"17"},{"key":"C","text":"18"}]', 'B', '14+3=17，十位不变个位加', 10);
+
+-- Math: More MATH_INPUT for math_addsub20
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'MATH_INPUT', 2, '8 + 5 = ?', NULL, '13', '8+5=13，8和2凑成10，加剩下的3', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'MATH_INPUT', 2, '16 - 7 = ?', NULL, '9', '16-7=9，破十法：10-7=3，3+6=9', 10);
+
+-- Math: More SCENE_MATCH for math_geometry (color + size matching)
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是红色的圆形？', '[{"key":"RED_CIRCLE","label":"红色圆形","cssShape":"circle","color":"rose"},{"key":"BLUE_SQUARE","label":"蓝色正方形","cssShape":"square","color":"sky"},{"key":"GREEN_TRIANGLE","label":"绿色三角形","cssShape":"triangle","color":"emerald"},{"key":"YELLOW_RECTANGLE","label":"黄色长方形","cssShape":"rectangle","color":"amber"}]', 'RED_CIRCLE', '红色+圆形=红色圆形', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是绿色的三角形？', '[{"key":"RED_CIRCLE","label":"红色圆形","cssShape":"circle","color":"rose"},{"key":"BLUE_SQUARE","label":"蓝色正方形","cssShape":"square","color":"sky"},{"key":"GREEN_TRIANGLE","label":"绿色三角形","cssShape":"triangle","color":"emerald"},{"key":"YELLOW_RECTANGLE","label":"黄色长方形","cssShape":"rectangle","color":"amber"}]', 'GREEN_TRIANGLE', '绿色+三角形=绿色三角形', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是蓝色的正方形？', '[{"key":"RED_CIRCLE","label":"红色圆形","cssShape":"circle","color":"rose"},{"key":"BLUE_SQUARE","label":"蓝色正方形","cssShape":"square","color":"sky"},{"key":"GREEN_TRIANGLE","label":"绿色三角形","cssShape":"triangle","color":"emerald"},{"key":"YELLOW_RECTANGLE","label":"黄色长方形","cssShape":"rectangle","color":"amber"}]', 'BLUE_SQUARE', '蓝色+正方形=蓝色正方形', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是黄色的长方形？', '[{"key":"RED_CIRCLE","label":"红色圆形","cssShape":"circle","color":"rose"},{"key":"BLUE_SQUARE","label":"蓝色正方形","cssShape":"square","color":"sky"},{"key":"GREEN_TRIANGLE","label":"绿色三角形","cssShape":"triangle","color":"emerald"},{"key":"YELLOW_RECTANGLE","label":"黄色长方形","cssShape":"rectangle","color":"amber"}]', 'YELLOW_RECTANGLE', '黄色+长方形=黄色长方形', 10);
+
+-- Math: More SCENE_TAP for math_geometry (图形计数)
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_TAP', 3, '一个正方形有( )条边？', '[{"key":"A","text":"3"},{"key":"B","text":"4"},{"key":"C","text":"5"}]', 'B', '正方形有4条一样长的边', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_TAP', 3, '一个三角形有( )个角？', '[{"key":"A","text":"2"},{"key":"B","text":"3"},{"key":"C","text":"4"}]', 'B', '三角形有3个角', 10);
+
+-- Chinese: SCENE_TAP (汉字部首识别) for chinese_intro
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'SCENE_TAP', 1, '"河"字的偏旁是什么？', '[{"key":"A","text":"氵"},{"key":"B","text":"亻"},{"key":"C","text":"口"}]', 'A', '河是水字旁（氵），表示和水有关', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'SCENE_TAP', 1, '"花"字的偏旁是什么？', '[{"key":"A","text":"木"},{"key":"B","text":"艹"},{"key":"C","text":"火"}]', 'B', '花是草字头（艹），表示和植物有关', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'SCENE_TAP', 1, '"打"字的偏旁是什么？', '[{"key":"A","text":"口"},{"key":"B","text":"氵"},{"key":"C","text":"扌"}]', 'C', '打是提手旁（扌），表示和手有关', 10);
+
+-- Chinese: POEM_SEQUENCE for chinese_tang
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_tang'), 'POEM_SEQUENCE', 2, '请将《悯农》的诗句按正确顺序排列', '["锄禾日当午","汗滴禾下土","谁知盘中餐","粒粒皆辛苦"]', '1,2,3,4', '这是李绅《悯农》的正确顺序。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_tang'), 'POEM_SEQUENCE', 2, '请将《望庐山瀑布》的诗句按正确顺序排列', '["疑是银河落九天","飞流直下三千尺","日照香炉生紫烟","遥看瀑布挂前川"]', '3,4,2,1', '日照香炉生紫烟，遥看瀑布挂前川。飞流直下三千尺，疑是银河落九天。', 10);
+
+-- English: SCENE_MATCH (letter-to-picture) for english_intro
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'SCENE_MATCH', 1, '点击图片："A for ___"', '[{"key":"APPLE","label":"🍎 Apple","cssShape":"circle","color":"rose"},{"key":"BOOK","label":"📖 Book","cssShape":"square","color":"sky"},{"key":"CAT","label":"🐱 Cat","cssShape":"triangle","color":"amber"},{"key":"DOG","label":"🐶 Dog","cssShape":"rectangle","color":"emerald"}]', 'APPLE', 'A is for Apple 🍎', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'SCENE_MATCH', 1, '点击图片："B for ___"', '[{"key":"APPLE","label":"🍎 Apple","cssShape":"circle","color":"rose"},{"key":"BOOK","label":"📖 Book","cssShape":"square","color":"sky"},{"key":"CAT","label":"🐱 Cat","cssShape":"triangle","color":"amber"},{"key":"DOG","label":"🐶 Dog","cssShape":"rectangle","color":"emerald"}]', 'BOOK', 'B is for Book 📖', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'SCENE_MATCH', 1, '点击图片："C for ___"', '[{"key":"APPLE","label":"🍎 Apple","cssShape":"circle","color":"rose"},{"key":"BOOK","label":"📖 Book","cssShape":"square","color":"sky"},{"key":"CAT","label":"🐱 Cat","cssShape":"triangle","color":"amber"},{"key":"DOG","label":"🐶 Dog","cssShape":"rectangle","color":"emerald"}]', 'CAT', 'C is for Cat 🐱', 10);
+
+-- English: SCENE_TAP (word-to-picture) for english_vocab
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '哪个是"太阳"的英文？', '[{"key":"A","text":"sun"},{"key":"B","text":"moon"},{"key":"C","text":"star"}]', 'A', '太阳的英文是 sun', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '哪个是"水"的英文？', '[{"key":"A","text":"fire"},{"key":"B","text":"water"},{"key":"C","text":"earth"}]', 'B', '水的英文是 water', 10);
+
+-- ============================================================
 -- Daily Challenge Definitions
 -- ============================================================
 INSERT IGNORE INTO daily_challenge_def (challenge_type, description, target_value, reward_energy, icon_url, display_order) VALUES

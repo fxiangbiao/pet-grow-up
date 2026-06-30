@@ -20,6 +20,8 @@
   import TreasureChest from '$lib/components/study/TreasureChest.svelte';
   import ExploreConfirm from '$lib/components/study/ExploreConfirm.svelte';
   import SceneMathTen from '$lib/components/study/SceneMathTen.svelte';
+  import SceneTap from '$lib/components/study/SceneTap.svelte';
+  import SceneMatch from '$lib/components/study/SceneMatch.svelte';
   import { spiritStore } from '$lib/stores/spirit.svelte';
   import { soundManager } from '$lib/audio/sound-manager';
 
@@ -294,12 +296,12 @@
   // Scene component result handler — processes AnswerResult from SceneMathTen etc.
   async function handleSceneResult(result: AnswerResult) {
     if (!result) {
-      // Safety: force transition if result is null/undefined
       console.error('handleSceneResult: null result, forcing result phase');
       phase = 'result';
       return;
     }
 
+    submitted = true;
     lastResult = result;
     results[answeredCount] = result.isCorrect;
 
@@ -375,6 +377,7 @@
   }
 
   const isLastQuestion = $derived(answeredCount >= totalQuestions - 1);
+
 </script>
 
 <svelte:head>
@@ -445,7 +448,7 @@
           playerHp={hp}
           answerResult={lastResult}
           answerTimeMs={bossAnswerTimeMs}
-          sceneMode={question.questionType === 'SCENE_DRAG'}
+          sceneMode={['SCENE_DRAG', 'SCENE_TAP', 'SCENE_MATCH'].includes(question.questionType)}
           onBossDefeated={() => {
             bossDefeated = true;
             bossBattleResolved = true;
@@ -486,13 +489,18 @@
       </div>
 
       <!-- Question area -->
+      {#key question.questionId}
       {#if question.questionType === 'SCENE_DRAG'}
         <SceneMathTen question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
+      {:else if question.questionType === 'SCENE_TAP'}
+        <SceneTap question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
+      {:else if question.questionType === 'SCENE_MATCH'}
+        <SceneMatch question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
       {:else}
         <div class="mb-3">
           <h2 class="text-base font-medium text-gray-800 mb-4">{question.questionText}</h2>
 
-          {#if question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'SCENE_TAP'}
+          {#if question.questionType === 'MULTIPLE_CHOICE'}
             {#if parsedOptions.length > 0}
               <div class="space-y-2">
                 {#each parsedOptions as opt}
@@ -515,35 +523,6 @@
             <input type="text" bind:value={selectedAnswer} disabled={submitted}
                    placeholder="输入你的答案..."
                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
-          {:else if question.questionType === 'SCENE_MATCH'}
-            <!-- Shape recognition: clickable buttons with CSS-drawn shapes, auto-submit on click -->
-            {@const shapeOptions = [
-              { key: 'CIRCLE', label: '圆形', cssShape: 'circle' },
-              { key: 'SQUARE', label: '正方形', cssShape: 'square' },
-              { key: 'TRIANGLE', label: '三角形', cssShape: 'triangle' },
-              { key: 'RECTANGLE', label: '长方形', cssShape: 'rectangle' }
-            ]}
-            <div class="grid grid-cols-2 gap-3">
-              {#each shapeOptions as shape}
-                <button onclick={() => onNewTypeAnswer(shape.key)} disabled={submitted}
-                  class={['py-4 rounded-xl border-2 text-center transition flex flex-col items-center gap-2',
-                    selectedAnswer === shape.key ? 'border-indigo-500 bg-indigo-50 scale-105' : 'border-gray-200 hover:border-gray-300'
-                  ].join(' ')}>
-                  <span class="inline-flex items-center justify-center w-12 h-12">
-                    {#if shape.cssShape === 'circle'}
-                      <span class="block w-10 h-10 rounded-full bg-sky-400 border-2 border-sky-600"></span>
-                    {:else if shape.cssShape === 'square'}
-                      <span class="block w-10 h-10 rounded-sm bg-amber-400 border-2 border-amber-600"></span>
-                    {:else if shape.cssShape === 'triangle'}
-                      <span class="block w-0 h-0 border-solid" style="border-left: 22px solid transparent; border-right: 22px solid transparent; border-bottom: 38px solid #f87171;"></span>
-                    {:else if shape.cssShape === 'rectangle'}
-                      <span class="block rounded-sm bg-emerald-400 border-2 border-emerald-600" style="width: 44px; height: 24px;"></span>
-                    {/if}
-                  </span>
-                  <span class="text-sm font-medium text-gray-700">{shape.label}</span>
-                </button>
-              {/each}
-            </div>
           {:else if question.questionType === 'TRUE_FALSE'}
             <div class="grid grid-cols-2 gap-4">
               <button onclick={() => selectAnswer('true')} disabled={submitted}
@@ -584,7 +563,7 @@
                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
           {/if}
 
-          {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH' && question.questionType !== 'SCENE_MATCH'}
+          {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH'}
             <button onclick={handleSubmit} disabled={!selectedAnswer}
                     class="mt-4 w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 text-white text-lg font-black rounded-xl
                       hover:from-amber-300 hover:via-orange-300 hover:to-red-400
@@ -613,6 +592,7 @@
           {/if}
         </div>
       {/if}
+      {/key}
     </div>
 
     <!-- Feedback -->
