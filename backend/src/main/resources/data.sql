@@ -219,6 +219,251 @@ INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, 
 ((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '哪个是"水"的英文？', '[{"key":"A","text":"fire"},{"key":"B","text":"water"},{"key":"C","text":"earth"}]', 'B', '水的英文是 water', 10);
 
 -- ============================================================
+-- Sprint A: New Knowledge Nodes (Chinese rebuild + Math expansion + English fix)
+-- ============================================================
+
+-- Chinese: New Grade 1 nodes (pinyin, shizi, kewen) — replace old poetry
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('chinese', 'chinese_pinyin', '拼音入门', '学习声母、韵母和声调，听音识字母', 1, NULL, 4),
+('chinese', 'chinese_shizi', '识字基础', '认识一年级上100个常用汉字，掌握偏旁部首', 1, NULL, 5),
+('chinese', 'chinese_kewen', '课文朗读', '朗读儿歌和课文，背诵经典篇目', 2, NULL, 6);
+
+-- Math: New topic nodes (fill Grade 1 curriculum gaps)
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('math', 'math_count', '数一数', '认识1-20各数，练习数数和写数', 1, NULL, 4),
+('math', 'math_compare', '比多少', '比较大小、多少、高矮、长短', 1, NULL, 5),
+('math', 'math_1to5', '1~5的认识', '认识1~5各数，掌握基数和序数', 1, NULL, 6),
+('math', 'math_6to10', '6~10的认识', '认识6~10各数，理解数位和组成', 1, NULL, 7),
+('math', 'math_11to20', '11~20的认识', '认识11~20各数，理解十位和个位', 1, NULL, 8),
+('math', 'math_clock', '认识钟表', '认识整时（1:00-12:00），会拨钟表', 2, NULL, 9),
+('math', 'math_money', '认识人民币', '认识元币（1元/5元/10元），简单金额计算', 2, NULL, 10),
+('math', 'math_pattern', '找规律', '发现颜色、形状、数字的简单排列规律', 2, NULL, 11);
+
+-- English: New topic node (letters + fix vocab alignment)
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('english', 'english_letters', '字母与发音', '认识26个字母大小写，听音选字母', 1, NULL, 5);
+
+-- ============================================================
+-- Sprint A: Chinese — 拼音入门 (chinese_pinyin) ~20 questions
+-- ============================================================
+
+-- SCENE_PINYIN: 听音选拼音字母
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 b？', '[{"key":"b","text":"b"},{"key":"p","text":"p"},{"key":"d","text":"d"},{"key":"m","text":"m"},{"key":"f","text":"f"},{"key":"t","text":"t"}]', 'b', 'b 是双唇不送气清塞音，发音时双唇闭合然后突然打开', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 p？', '[{"key":"b","text":"b"},{"key":"p","text":"p"},{"key":"d","text":"d"},{"key":"q","text":"q"},{"key":"f","text":"f"},{"key":"t","text":"t"}]', 'p', 'p 是双唇送气清塞音，发音时双唇闭合然后用力送气', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 m？', '[{"key":"n","text":"n"},{"key":"m","text":"m"},{"key":"l","text":"l"},{"key":"h","text":"h"},{"key":"w","text":"w"},{"key":"f","text":"f"}]', 'm', 'm 是双唇鼻音，发音时双唇闭合气流从鼻腔出来', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 d？', '[{"key":"b","text":"b"},{"key":"t","text":"t"},{"key":"d","text":"d"},{"key":"g","text":"g"},{"key":"k","text":"k"},{"key":"p","text":"p"}]', 'd', 'd 是舌尖中不送气清塞音', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 t？', '[{"key":"d","text":"d"},{"key":"t","text":"t"},{"key":"l","text":"l"},{"key":"n","text":"n"},{"key":"g","text":"g"},{"key":"k","text":"k"}]', 't', 't 是舌尖中送气清塞音', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 n？', '[{"key":"m","text":"m"},{"key":"l","text":"l"},{"key":"n","text":"n"},{"key":"r","text":"r"},{"key":"h","text":"h"},{"key":"f","text":"f"}]', 'n', 'n 是舌尖中鼻音', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 l？', '[{"key":"n","text":"n"},{"key":"r","text":"r"},{"key":"l","text":"l"},{"key":"m","text":"m"},{"key":"d","text":"d"},{"key":"t","text":"t"}]', 'l', 'l 是舌尖中边音', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 g？', '[{"key":"k","text":"k"},{"key":"h","text":"h"},{"key":"g","text":"g"},{"key":"d","text":"d"},{"key":"b","text":"b"},{"key":"p","text":"p"}]', 'g', 'g 是舌根不送气清塞音', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 k？', '[{"key":"g","text":"g"},{"key":"k","text":"k"},{"key":"h","text":"h"},{"key":"t","text":"t"},{"key":"d","text":"d"},{"key":"p","text":"p"}]', 'k', 'k 是舌根送气清塞音', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 h？', '[{"key":"g","text":"g"},{"key":"k","text":"k"},{"key":"h","text":"h"},{"key":"f","text":"f"},{"key":"m","text":"m"},{"key":"n","text":"n"}]', 'h', 'h 是舌根清擦音', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 j？', '[{"key":"q","text":"q"},{"key":"x","text":"x"},{"key":"j","text":"j"},{"key":"zh","text":"zh"},{"key":"ch","text":"ch"},{"key":"sh","text":"sh"}]', 'j', 'j 是舌面不送气清塞擦音', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_PINYIN', 1, '听发音，哪个是声母 zh？', '[{"key":"z","text":"z"},{"key":"c","text":"c"},{"key":"zh","text":"zh"},{"key":"ch","text":"ch"},{"key":"sh","text":"sh"},{"key":"s","text":"s"}]', 'zh', 'zh 是舌尖后不送气清塞擦音（翘舌音）', 10);
+
+-- SCENE_TAP: 听音选字母 (pinyin character recognition)
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_TAP', 1, '下面哪个是韵母 a？', '[{"key":"A","text":"a"},{"key":"B","text":"o"},{"key":"C","text":"e"}]', 'A', 'a 是开口呼韵母，嘴巴张得大大的', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_TAP', 1, '下面哪个是韵母 i？', '[{"key":"A","text":"u"},{"key":"B","text":"ü"},{"key":"C","text":"i"}]', 'C', 'i 是齐齿呼韵母，牙齿对齐', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_TAP', 1, '下面哪个是韵母 u？', '[{"key":"A","text":"u"},{"key":"B","text":"ü"},{"key":"C","text":"o"}]', 'A', 'u 是合口呼韵母，嘴巴圆圆的', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_TAP', 1, '"ba" 的声母是？', '[{"key":"A","text":"a"},{"key":"B","text":"b"},{"key":"C","text":"ba"}]', 'B', 'ba 的声母是 b，韵母是 a', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_TAP', 1, '"ma" 的韵母是？', '[{"key":"A","text":"m"},{"key":"B","text":"a"},{"key":"C","text":"ma"}]', 'B', 'ma 的声母是 m，韵母是 a', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_TAP', 1, '一声（阴平）的符号是？', '[{"key":"A","text":"ˊ"},{"key":"B","text":"ˇ"},{"key":"C","text":"ˉ"}]', 'C', '一声用横线ˉ表示，又高又平', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_TAP', 1, '三声（上声）的符号是？', '[{"key":"A","text":"ˉ"},{"key":"B","text":"ˇ"},{"key":"C","text":"ˋ"}]', 'B', '三声用ˇ表示，先降后升', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_pinyin'), 'SCENE_TAP', 1, '"妈"的拼音声调是几声？', '[{"key":"A","text":"一声"},{"key":"B","text":"二声"},{"key":"C","text":"三声"}]', 'A', 'mā（妈）是一声，又高又平', 10);
+
+-- ============================================================
+-- Sprint A: Chinese — 识字基础 (chinese_shizi) ~25 questions
+-- ============================================================
+
+-- SCENE_CHAR_BUILD: 汉字工坊组装汉字
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：亻+ 门 = ？', '{"radical":"亻","phonetic":"门","targetChar":"们"}', '们', '亻（单人旁）+ 门 = 们，表示多人', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：氵+ 可 = ？', '{"radical":"氵","phonetic":"可","targetChar":"河"}', '河', '氵（三点水）+ 可 = 河，表示河流', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：口 + 十 = ？', '{"radical":"口","phonetic":"十","targetChar":"叶"}', '叶', '口 + 十 = 叶，表示叶子', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：木 + 几 = ？', '{"radical":"木","phonetic":"几","targetChar":"机"}', '机', '木 + 几 = 机，表示机器', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：女 + 马 = ？', '{"radical":"女","phonetic":"马","targetChar":"妈"}', '妈', '女 + 马 = 妈，表示妈妈', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：扌+ 丁 = ？', '{"radical":"扌","phonetic":"丁","targetChar":"打"}', '打', '扌（提手旁）+ 丁 = 打，表示击打', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：日 + 月 = ？', '{"radical":"日","phonetic":"月","targetChar":"明"}', '明', '日 + 月 = 明，表示明亮', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：女 + 子 = ？', '{"radical":"女","phonetic":"子","targetChar":"好"}', '好', '女 + 子 = 好，表示美好', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：亻+ 尔 = ？', '{"radical":"亻","phonetic":"尔","targetChar":"你"}', '你', '亻+ 尔 = 你，表示第二人称', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：氵+ 工 = ？', '{"radical":"氵","phonetic":"工","targetChar":"江"}', '江', '氵+ 工 = 江，表示江河', 10);
+
+-- SCENE_TAP: 认字选择
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '下面哪个字是"大"？', '[{"key":"A","text":"大"},{"key":"B","text":"太"},{"key":"C","text":"天"}]', 'A', '大就是大小的大，一个人张开双臂的样子', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '下面哪个字是"小"？', '[{"key":"A","text":"少"},{"key":"B","text":"小"},{"key":"C","text":"水"}]', 'B', '小就是大小的小', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '下面哪个字是"上"？', '[{"key":"A","text":"下"},{"key":"B","text":"上"},{"key":"C","text":"中"}]', 'B', '上表示位置在高处，向上的方向', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '"山"字有几笔？', '[{"key":"A","text":"2笔"},{"key":"B","text":"3笔"},{"key":"C","text":"4笔"}]', 'B', '山字3笔：竖、竖折、竖', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '"水"字有几笔？', '[{"key":"A","text":"3笔"},{"key":"B","text":"4笔"},{"key":"C","text":"5笔"}]', 'B', '水字4笔：竖钩、横撇、撇、捺', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '下面哪个字和"日"有关？', '[{"key":"A","text":"明"},{"key":"B","text":"河"},{"key":"C","text":"打"}]', 'A', '明字含有"日"，表示光亮', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '"人"加一笔变成什么字？', '[{"key":"A","text":"大"},{"key":"B","text":"八"},{"key":"C","text":"入"}]', 'A', '人上面加一横就是大', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '"一"加一笔变成什么字？', '[{"key":"A","text":"三"},{"key":"B","text":"二"},{"key":"C","text":"十"}]', 'B', '一上面再加一横就是二', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '下面哪个字是"火"？', '[{"key":"A","text":"水"},{"key":"B","text":"火"},{"key":"C","text":"木"}]', 'B', '火是火焰的形状，人字加两点', 10);
+
+-- SCENE_MATCH: 翻牌配对（字图配对）
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_MATCH', 1, '哪个是"日"？', '[{"key":"RI","label":"日","cssShape":"circle","color":"amber"},{"key":"YUE","label":"月","cssShape":"circle","color":"sky"},{"key":"SHAN","label":"山","cssShape":"triangle","color":"emerald"},{"key":"SHUI","label":"水","cssShape":"circle","color":"teal"}]', 'RI', '日代表太阳，圆圆的是太阳', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_MATCH', 1, '哪个是"月"？', '[{"key":"RI","label":"日","cssShape":"circle","color":"amber"},{"key":"YUE","label":"月","cssShape":"circle","color":"sky"},{"key":"SHAN","label":"山","cssShape":"triangle","color":"emerald"},{"key":"SHUI","label":"水","cssShape":"circle","color":"teal"}]', 'YUE', '月代表月亮，弯弯的是月亮', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_MATCH', 1, '哪个是"山"？', '[{"key":"RI","label":"日","cssShape":"circle","color":"amber"},{"key":"YUE","label":"月","cssShape":"circle","color":"sky"},{"key":"SHAN","label":"山","cssShape":"triangle","color":"emerald"},{"key":"SHUI","label":"水","cssShape":"circle","color":"teal"}]', 'SHAN', '山像三角形一样尖尖的', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_MATCH', 1, '哪个是"田"？', '[{"key":"TIAN","label":"田","cssShape":"square","color":"emerald"},{"key":"MU","label":"木","cssShape":"rectangle","color":"teal"},{"key":"HUO","label":"火","cssShape":"triangle","color":"rose"},{"key":"TU","label":"土","cssShape":"square","color":"amber"}]', 'TIAN', '田像一块块方方的田地', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_MATCH', 1, '哪个是"木"？', '[{"key":"TIAN","label":"田","cssShape":"square","color":"emerald"},{"key":"MU","label":"木","cssShape":"rectangle","color":"teal"},{"key":"HUO","label":"火","cssShape":"triangle","color":"rose"},{"key":"TU","label":"土","cssShape":"square","color":"amber"}]', 'MU', '木像一棵树，有树干和树枝', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_MATCH', 1, '哪个是"火"？', '[{"key":"TIAN","label":"田","cssShape":"square","color":"emerald"},{"key":"MU","label":"木","cssShape":"rectangle","color":"teal"},{"key":"HUO","label":"火","cssShape":"triangle","color":"rose"},{"key":"TU","label":"土","cssShape":"square","color":"amber"}]', 'HUO', '火像燃烧的火苗，上面尖尖的', 10);
+
+-- ============================================================
+-- Sprint A: Chinese — 课文朗读 (chinese_kewen) ~7 questions
+-- ============================================================
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'SCENE_TAP', 2, '"一去二三里，烟村四五家"是几年级的课文？', '[{"key":"A","text":"一年级"},{"key":"B","text":"二年级"},{"key":"C","text":"三年级"}]', 'A', '这是一年级上册的课文《一去二三里》', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'SCENE_TAP', 2, '"鹅鹅鹅，曲项向天歌"的作者是？', '[{"key":"A","text":"李白"},{"key":"B","text":"骆宾王"},{"key":"C","text":"孟浩然"}]', 'B', '《咏鹅》是骆宾王7岁时写的诗', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'FILL_BLANK', 2, '"春眠不觉晓，处处闻______。" 请填空', NULL, '啼鸟', '出自孟浩然《春晓》：春眠不觉晓，处处闻啼鸟。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'FILL_BLANK', 2, '"______依山尽，黄河入海流。" 请填空', NULL, '白日', '出自王之涣《登鹳雀楼》：白日依山尽，黄河入海流。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'POEM_SEQUENCE', 2, '请将《静夜思》的诗句按正确顺序排列', '["床前明月光","疑是地上霜","举头望明月","低头思故乡"]', '1,2,3,4', '李白《静夜思》：床前明月光，疑是地上霜。举头望明月，低头思故乡。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'POEM_SEQUENCE', 2, '请将《春晓》的诗句按正确顺序排列', '["春眠不觉晓","处处闻啼鸟","夜来风雨声","花落知多少"]', '1,2,3,4', '孟浩然《春晓》：春眠不觉晓，处处闻啼鸟。夜来风雨声，花落知多少。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'FILL_BLANK', 2, '"举头望明月，低头思______。" 请填空', NULL, '故乡', '出自李白《静夜思》：举头望明月，低头思故乡。', 10);
+
+-- ============================================================
+-- Sprint A: Math — 数一数 (math_count) ~5 questions
+-- ============================================================
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_count'), 'SCENE_TAP', 1, '数一数：🐱🐱🐱 有几只小猫？', '[{"key":"A","text":"2"},{"key":"B","text":"3"},{"key":"C","text":"4"}]', 'B', '一个一个数：1、2、3，有3只小猫', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_count'), 'SCENE_TAP', 1, '数一数：🍎🍎🍎🍎🍎 有几个苹果？', '[{"key":"A","text":"4"},{"key":"B","text":"5"},{"key":"C","text":"6"}]', 'B', '数到5：1、2、3、4、5', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_count'), 'SCENE_TAP', 1, '数一数：⭐⭐⭐⭐⭐⭐⭐ 有几颗星星？', '[{"key":"A","text":"6"},{"key":"B","text":"7"},{"key":"C","text":"8"}]', 'B', '一颗一颗数：有7颗星星', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_count'), 'SCENE_TAP', 1, '下面哪个数字是"10"？', '[{"key":"A","text":"01"},{"key":"B","text":"10"},{"key":"C","text":"100"}]', 'B', '10由一个"1"和一个"0"组成', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_count'), 'SCENE_TAP', 1, '一共有多少只蝴蝶？🦋🦋🦋🦋🦋🦋🦋🦋', '[{"key":"A","text":"7"},{"key":"B","text":"8"},{"key":"C","text":"9"}]', 'B', '一行一行数：有8只蝴蝶', 10);
+
+-- ============================================================
+-- Sprint A: Math — 比多少 (math_compare) ~5 questions
+-- ============================================================
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_compare'), 'SCENE_TAP', 1, '🍎🍎🍎 vs 🍊🍊🍊🍊 哪个多？', '[{"key":"A","text":"苹果多"},{"key":"B","text":"橘子多"},{"key":"C","text":"一样多"}]', 'B', '苹果3个，橘子4个，4>3，橘子更多', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_compare'), 'SCENE_TAP', 1, '5 和 8 谁更大？', '[{"key":"A","text":"5大"},{"key":"B","text":"8大"},{"key":"C","text":"一样大"}]', 'B', '8在5的后面，所以8>5', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_compare'), 'SCENE_TAP', 1, '2 < ? 空格里可以填几？', '[{"key":"A","text":"1"},{"key":"B","text":"2"},{"key":"C","text":"3"}]', 'C', '2<3，3大于2', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_compare'), 'SCENE_TAP', 1, '7 > ? 空格里可以填几？', '[{"key":"A","text":"8"},{"key":"B","text":"5"},{"key":"C","text":"9"}]', 'B', '7>5，7比5大', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_compare'), 'SCENE_TAP', 1, '🐶🐶🐶🐶 vs 🐱🐱🐱🐱 谁多？', '[{"key":"A","text":"狗多"},{"key":"B","text":"猫多"},{"key":"C","text":"一样多"}]', 'C', '4=4，一样多', 10);
+
+-- ============================================================
+-- Sprint A: Math — 1~5认识 (math_1to5) ~5 questions
+-- ============================================================
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_1to5'), 'SCENE_TAP', 1, '1 + 2 = ?', '[{"key":"A","text":"2"},{"key":"B","text":"3"},{"key":"C","text":"4"}]', 'B', '1+2=3，伸出1根手指再加2根', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_1to5'), 'SCENE_TAP', 1, '4 - 1 = ?', '[{"key":"A","text":"2"},{"key":"B","text":"3"},{"key":"C","text":"4"}]', 'B', '4-1=3，4个拿走1个还剩3个', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_1to5'), 'SCENE_TAP', 1, '3 + 2 = ?', '[{"key":"A","text":"4"},{"key":"B","text":"5"},{"key":"C","text":"6"}]', 'B', '3+2=5', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_1to5'), 'SCENE_TAP', 1, '5 - 3 = ?', '[{"key":"A","text":"1"},{"key":"B","text":"2"},{"key":"C","text":"3"}]', 'B', '5-3=2，5个拿走3个还剩2个', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_1to5'), 'SCENE_TAP', 1, '第3只小动物是什么？🐶🐱🐰🐹🐻', '[{"key":"A","text":"🐱"},{"key":"B","text":"🐰"},{"key":"C","text":"🐹"}]', 'B', '从左往右数：第1🐶、第2🐱、第3🐰', 10);
+
+-- ============================================================
+-- Sprint A: Math — 6~10认识 (math_6to10) ~5 questions
+-- ============================================================
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_6to10'), 'SCENE_TAP', 1, '6可以分成 3 和 几？', '[{"key":"A","text":"2"},{"key":"B","text":"3"},{"key":"C","text":"4"}]', 'B', '3+3=6，6可以分成3和3', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_6to10'), 'SCENE_TAP', 1, '8 - 4 = ?', '[{"key":"A","text":"3"},{"key":"B","text":"4"},{"key":"C","text":"5"}]', 'B', '8-4=4', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_6to10'), 'SCENE_TAP', 1, '7 + 2 = ?', '[{"key":"A","text":"8"},{"key":"B","text":"9"},{"key":"C","text":"10"}]', 'B', '7+2=9', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_6to10'), 'SCENE_TAP', 1, '10 - 3 = ?', '[{"key":"A","text":"6"},{"key":"B","text":"7"},{"key":"C","text":"8"}]', 'B', '10-3=7', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_6to10'), 'SCENE_TAP', 1, '9 的相邻数是？', '[{"key":"A","text":"7和8"},{"key":"B","text":"8和10"},{"key":"C","text":"10和11"}]', 'B', '9的前面是8，后面是10', 10);
+
+-- ============================================================
+-- Sprint A: Math — 11~20认识 (math_11to20) ~5 questions
+-- ============================================================
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_11to20'), 'SCENE_TAP', 1, '15 是由几个十和几个一组成的？', '[{"key":"A","text":"1个十和5个一"},{"key":"B","text":"5个十和1个一"},{"key":"C","text":"1个十和1个一"}]', 'A', '15的十位是1（1个十），个位是5（5个一）', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_11to20'), 'SCENE_TAP', 1, '1个十和3个一组成？', '[{"key":"A","text":"10"},{"key":"B","text":"13"},{"key":"C","text":"31"}]', 'B', '1个十=10，3个一=3，10+3=13', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_11to20'), 'SCENE_TAP', 1, '18 的十位上的数字是？', '[{"key":"A","text":"1"},{"key":"B","text":"8"},{"key":"C","text":"18"}]', 'A', '18的十位是1，个位是8', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_11to20'), 'SCENE_TAP', 1, '10 + 7 = ?', '[{"key":"A","text":"16"},{"key":"B","text":"17"},{"key":"C","text":"18"}]', 'B', '10+7=17，1个十加7个一', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_11to20'), 'SCENE_TAP', 1, '20 里面有几个十？', '[{"key":"A","text":"1个"},{"key":"B","text":"2个"},{"key":"C","text":"0个"}]', 'B', '20=2个十+0个一', 10);
+
+-- ============================================================
+-- Sprint A: Math — 认识钟表 (math_clock) ~8 questions (SCENE_CLOCK)
+-- ============================================================
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_clock'), 'SCENE_CLOCK', 2, '请把时针拨到 7:00', '{"hour":7}', '7', '7:00 该起床啦！时针指向7，分针指向12', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_clock'), 'SCENE_CLOCK', 2, '请把时针拨到 8:00', '{"hour":8}', '8', '8:00 上学啦！时针指向8，分针指向12', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_clock'), 'SCENE_CLOCK', 2, '请把时针拨到 12:00', '{"hour":12}', '12', '12:00 吃午饭啦！时针和分针都指向12', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_clock'), 'SCENE_CLOCK', 2, '请把时针拨到 3:00', '{"hour":3}', '3', '3:00 下午活动时间！时针指向3', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_clock'), 'SCENE_CLOCK', 2, '请把时针拨到 6:00', '{"hour":6}', '6', '6:00 吃晚饭啦！时针指向6', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_clock'), 'SCENE_CLOCK', 2, '请把时针拨到 9:00', '{"hour":9}', '9', '9:00 该睡觉了！时针指向9', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_clock'), 'SCENE_CLOCK', 2, '请把时针拨到 1:00', '{"hour":1}', '1', '1:00 午休时间！时针指向1', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_clock'), 'SCENE_CLOCK', 2, '请把时针拨到 4:00', '{"hour":4}', '4', '4:00 放学啦！时针指向4', 10);
+
+-- ============================================================
+-- Sprint A: Math — 认识人民币 (math_money) ~6 questions (SCENE_SHOP)
+-- ============================================================
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_money'), 'SCENE_SHOP', 2, '请付 3 元买苹果', '{"price":3,"itemName":"苹果"}', '3', '拿出3张1元或选择合适的纸币凑3元', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_money'), 'SCENE_SHOP', 2, '请付 5 元买面包', '{"price":5,"itemName":"面包"}', '5', '可以付1张5元或5张1元', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_money'), 'SCENE_SHOP', 2, '请付 8 元买铅笔盒', '{"price":8,"itemName":"铅笔盒"}', '8', '可以付5元+1元+1元+1元=8元', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_money'), 'SCENE_SHOP', 2, '请付 10 元买故事书', '{"price":10,"itemName":"故事书"}', '10', '可以付1张10元', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_money'), 'SCENE_SHOP', 2, '请付 6 元买彩笔', '{"price":6,"itemName":"彩笔"}', '6', '5元+1元=6元', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_money'), 'SCENE_SHOP', 2, '请付 4 元买橡皮', '{"price":4,"itemName":"橡皮"}', '4', '1元+1元+1元+1元=4元', 10);
+
+-- ============================================================
+-- Sprint A: Math — 找规律 (math_pattern) ~5 questions (SCENE_MATCH)
+-- ============================================================
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_pattern'), 'SCENE_MATCH', 2, '🔴🔵🔴🔵🔴？下一个是什么颜色？', '[{"key":"RED","label":"🔴 红色","cssShape":"circle","color":"rose"},{"key":"BLUE","label":"🔵 蓝色","cssShape":"circle","color":"sky"}]', 'BLUE', '规律是红蓝交替：红蓝红蓝红→下一个是蓝', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_pattern'), 'SCENE_MATCH', 2, '⬜🟨⬜🟨⬜？下一个是什么？', '[{"key":"WHITE","label":"⬜ 白色","cssShape":"square","color":"sky"},{"key":"YELLOW","label":"🟨 黄色","cssShape":"square","color":"amber"}]', 'YELLOW', '规律是白黄交替', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_pattern'), 'SCENE_MATCH', 2, '🔺🔺🟢🔺🔺🟢🔺？下一个是什么？', '[{"key":"TRI","label":"🔺 三角形","cssShape":"triangle","color":"rose"},{"key":"CIRC","label":"🟢 圆形","cssShape":"circle","color":"emerald"}]', 'TRI', '规律是两个三角形一个圆形：🔺🔺🟢/🔺🔺🟢/🔺→下一个是🔺', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_pattern'), 'SCENE_MATCH', 2, '1 2 1 2 1？接下来是什么数字？', '[{"key":"ONE","label":"1","cssShape":"circle","color":"rose"},{"key":"TWO","label":"2","cssShape":"circle","color":"sky"}]', 'TWO', '规律是1、2交替', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_pattern'), 'SCENE_MATCH', 2, '⭐🌙⭐🌙⭐🌙？接下来是什么？', '[{"key":"STAR","label":"⭐ 星星","cssShape":"circle","color":"amber"},{"key":"MOON","label":"🌙 月亮","cssShape":"circle","color":"violet"}]', 'STAR', '规律是星星月亮交替：星星月亮星星月亮星星月亮→下一个是星星', 10);
+
+-- ============================================================
+-- Sprint A: English — 字母与发音 (english_letters) ~18 questions
+-- ============================================================
+
+-- SCENE_MATCH: 字母选图 (letter-to-picture matching)
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_MATCH', 1, 'A is for ___?', '[{"key":"APPLE","label":"🍎 Apple","cssShape":"circle","color":"rose"},{"key":"BALL","label":"⚽ Ball","cssShape":"circle","color":"sky"},{"key":"CAR","label":"🚗 Car","cssShape":"circle","color":"amber"},{"key":"DOG","label":"🐶 Dog","cssShape":"circle","color":"emerald"}]', 'APPLE', 'A is for Apple — 苹果', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_MATCH', 1, 'B is for ___?', '[{"key":"APPLE","label":"🍎 Apple","cssShape":"circle","color":"rose"},{"key":"BALL","label":"⚽ Ball","cssShape":"circle","color":"sky"},{"key":"CAR","label":"🚗 Car","cssShape":"circle","color":"amber"},{"key":"DOG","label":"🐶 Dog","cssShape":"circle","color":"emerald"}]', 'BALL', 'B is for Ball — 球', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_MATCH', 1, 'C is for ___?', '[{"key":"APPLE","label":"🍎 Apple","cssShape":"circle","color":"rose"},{"key":"BALL","label":"⚽ Ball","cssShape":"circle","color":"sky"},{"key":"CAR","label":"🚗 Car","cssShape":"circle","color":"amber"},{"key":"DOG","label":"🐶 Dog","cssShape":"circle","color":"emerald"}]', 'CAR', 'C is for Car — 汽车', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_MATCH', 1, 'D is for ___?', '[{"key":"APPLE","label":"🍎 Apple","cssShape":"circle","color":"rose"},{"key":"BALL","label":"⚽ Ball","cssShape":"circle","color":"sky"},{"key":"CAR","label":"🚗 Car","cssShape":"circle","color":"amber"},{"key":"DOG","label":"🐶 Dog","cssShape":"circle","color":"emerald"}]', 'DOG', 'D is for Dog — 狗', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_MATCH', 1, 'E is for ___?', '[{"key":"EGG","label":"🥚 Egg","cssShape":"circle","color":"amber"},{"key":"FISH","label":"🐟 Fish","cssShape":"circle","color":"sky"},{"key":"GOAT","label":"🐐 Goat","cssShape":"circle","color":"emerald"},{"key":"HAT","label":"🎩 Hat","cssShape":"circle","color":"violet"}]', 'EGG', 'E is for Egg — 鸡蛋', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_MATCH', 1, 'F is for ___?', '[{"key":"EGG","label":"🥚 Egg","cssShape":"circle","color":"amber"},{"key":"FISH","label":"🐟 Fish","cssShape":"circle","color":"sky"},{"key":"GOAT","label":"🐐 Goat","cssShape":"circle","color":"emerald"},{"key":"HAT","label":"🎩 Hat","cssShape":"circle","color":"violet"}]', 'FISH', 'F is for Fish — 鱼', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_MATCH', 1, 'G is for ___?', '[{"key":"EGG","label":"🥚 Egg","cssShape":"circle","color":"amber"},{"key":"FISH","label":"🐟 Fish","cssShape":"circle","color":"sky"},{"key":"GOAT","label":"🐐 Goat","cssShape":"circle","color":"emerald"},{"key":"HAT","label":"🎩 Hat","cssShape":"circle","color":"violet"}]', 'GOAT', 'G is for Goat — 山羊', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_MATCH', 1, 'H is for ___?', '[{"key":"EGG","label":"🥚 Egg","cssShape":"circle","color":"amber"},{"key":"FISH","label":"🐟 Fish","cssShape":"circle","color":"sky"},{"key":"GOAT","label":"🐐 Goat","cssShape":"circle","color":"emerald"},{"key":"HAT","label":"🎩 Hat","cssShape":"circle","color":"violet"}]', 'HAT', 'H is for Hat — 帽子', 10);
+
+-- SCENE_TAP: 听音选字母 + 选单词
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_TAP', 1, '下面哪个是大写字母 A？', '[{"key":"A","text":"A"},{"key":"B","text":"a"},{"key":"C","text":"B"}]', 'A', '大写 A 像一座尖尖的山', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_TAP', 1, '下面哪个是小写字母 b？', '[{"key":"A","text":"d"},{"key":"B","text":"p"},{"key":"C","text":"b"}]', 'C', '小写 b 圆圈在右边', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_TAP', 1, '下面哪个是小写字母 d？', '[{"key":"A","text":"b"},{"key":"B","text":"d"},{"key":"C","text":"q"}]', 'B', '小写 d 圆圈在左边', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_TAP', 1, '"cat" 的第一个字母是？', '[{"key":"A","text":"a"},{"key":"B","text":"c"},{"key":"C","text":"t"}]', 'B', 'cat 以字母 c 开头', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_TAP', 1, '哪个字母在大写字母表里排第一？', '[{"key":"A","text":"A"},{"key":"B","text":"B"},{"key":"C","text":"Z"}]', 'A', 'A 是字母表的第一个字母', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_TAP', 1, '"dog" 的最后一个字母是？', '[{"key":"A","text":"d"},{"key":"B","text":"o"},{"key":"C","text":"g"}]', 'C', 'dog 以字母 g 结尾', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_TAP', 1, '下面哪个是字母 M？', '[{"key":"A","text":"N"},{"key":"B","text":"M"},{"key":"C","text":"W"}]', 'B', 'M 像两座山连在一起', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_letters'), 'SCENE_TAP', 1, '下面哪个是字母 W？', '[{"key":"A","text":"M"},{"key":"B","text":"V"},{"key":"C","text":"W"}]', 'C', 'W 像倒过来的 M，像波浪', 10);
+
+-- ============================================================
+-- Sprint A: English — 词汇扩充 (english_intro + english_vocab) ~14 questions
+-- ============================================================
+
+-- SCENE_MATCH: 单词选图
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'SCENE_MATCH', 1, 'Which one is "sun"?', '[{"key":"SUN","label":"☀️ sun","cssShape":"circle","color":"amber"},{"key":"MOON","label":"🌙 moon","cssShape":"circle","color":"violet"},{"key":"STAR","label":"⭐ star","cssShape":"circle","color":"sky"},{"key":"CLOUD","label":"☁️ cloud","cssShape":"circle","color":"teal"}]', 'SUN', 'sun = 太阳 ☀️', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'SCENE_MATCH', 1, 'Which one is "book"?', '[{"key":"BOOK","label":"📖 book","cssShape":"rectangle","color":"sky"},{"key":"PEN","label":"🖊️ pen","cssShape":"rectangle","color":"amber"},{"key":"BAG","label":"🎒 bag","cssShape":"rectangle","color":"emerald"},{"key":"DESK","label":"🪑 desk","cssShape":"rectangle","color":"rose"}]', 'BOOK', 'book = 书 📖', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'SCENE_MATCH', 1, 'Which one is "eye"?', '[{"key":"EAR","label":"👂 ear","cssShape":"circle","color":"rose"},{"key":"EYE","label":"👁️ eye","cssShape":"circle","color":"sky"},{"key":"NOSE","label":"👃 nose","cssShape":"triangle","color":"amber"},{"key":"MOUTH","label":"👄 mouth","cssShape":"circle","color":"pink"}]', 'EYE', 'eye = 眼睛 👁️', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'SCENE_MATCH', 1, 'Which one is "hand"?', '[{"key":"HEAD","label":"🗣️ head","cssShape":"circle","color":"amber"},{"key":"HAND","label":"✋ hand","cssShape":"circle","color":"sky"},{"key":"FOOT","label":"🦶 foot","cssShape":"rectangle","color":"emerald"},{"key":"ARM","label":"💪 arm","cssShape":"rectangle","color":"rose"}]', 'HAND', 'hand = 手 ✋', 10);
+
+-- SCENE_TAP: 选单词 + 学校/身体主题
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '哪个是"学校"的英文？', '[{"key":"A","text":"school"},{"key":"B","text":"home"},{"key":"C","text":"park"}]', 'A', '学校的英文是 school', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '哪个是"老师"的英文？', '[{"key":"A","text":"student"},{"key":"B","text":"teacher"},{"key":"C","text":"doctor"}]', 'B', '老师的英文是 teacher', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '"head" 的中文意思是？', '[{"key":"A","text":"手"},{"key":"B","text":"脚"},{"key":"C","text":"头"}]', 'C', 'head = 头', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '"mouth" 的中文意思是？', '[{"key":"A","text":"眼睛"},{"key":"B","text":"嘴巴"},{"key":"C","text":"耳朵"}]', 'B', 'mouth = 嘴巴', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '哪个颜色是"green"？', '[{"key":"A","text":"绿色"},{"key":"B","text":"蓝色"},{"key":"C","text":"黄色"}]', 'A', 'green = 绿色', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '"I ___ a boy." 填什么？', '[{"key":"A","text":"am"},{"key":"B","text":"is"},{"key":"C","text":"are"}]', 'A', 'I 后面用 am', 10);
+
+-- VOCAB_MATCH: 主题配对
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'VOCAB_MATCH', 2, '请将左边的英文单词与右边的中文释义配对（学校主题）', '{"left":[{"id":"A","text":"pencil"},{"id":"B","text":"eraser"},{"id":"C","text":"ruler"}],"right":[{"id":"1","text":"尺子"},{"id":"2","text":"铅笔"},{"id":"3","text":"橡皮"}]}', 'A2,B3,C1', 'pencil=铅笔, eraser=橡皮, ruler=尺子', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'VOCAB_MATCH', 2, '请将左边的英文单词与右边的中文释义配对（身体主题）', '{"left":[{"id":"A","text":"nose"},{"id":"B","text":"ear"},{"id":"C","text":"hair"}],"right":[{"id":"1","text":"头发"},{"id":"2","text":"鼻子"},{"id":"3","text":"耳朵"}]}', 'A2,B3,C1', 'nose=鼻子, ear=耳朵, hair=头发', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'VOCAB_MATCH', 2, '请将左边的英文单词与右边的中文释义配对（食物主题）', '{"left":[{"id":"A","text":"milk"},{"id":"B","text":"bread"},{"id":"C","text":"egg"}],"right":[{"id":"1","text":"鸡蛋"},{"id":"2","text":"牛奶"},{"id":"3","text":"面包"}]}', 'A2,B3,C1', 'milk=牛奶, bread=面包, egg=鸡蛋', 10);
+
+-- FILL_BLANK: 简单拼写
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'FILL_BLANK', 2, '请拼写"狗"的英文单词', NULL, 'dog', '狗的英文是 d-o-g', 10);
+
+-- ============================================================
 -- Daily Challenge Definitions
 -- ============================================================
 INSERT IGNORE INTO daily_challenge_def (challenge_type, description, target_value, reward_energy, icon_url, display_order) VALUES

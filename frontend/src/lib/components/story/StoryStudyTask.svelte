@@ -11,6 +11,12 @@
   import SceneMathTen from '$lib/components/study/SceneMathTen.svelte';
   import SceneTap from '$lib/components/study/SceneTap.svelte';
   import SceneMatch from '$lib/components/study/SceneMatch.svelte';
+  import SceneWhackMole from '$lib/components/study/SceneWhackMole.svelte';
+  import SceneShapePuzzle from '$lib/components/study/SceneShapePuzzle.svelte';
+  import SceneClock from '$lib/components/study/SceneClock.svelte';
+  import SceneShop from '$lib/components/study/SceneShop.svelte';
+  import ScenePinyinBubble from '$lib/components/study/ScenePinyinBubble.svelte';
+  import SceneCharBuild from '$lib/components/study/SceneCharBuild.svelte';
   import HpBar from '$lib/components/study/HpBar.svelte';
   import ComboCounter from '$lib/components/study/ComboCounter.svelte';
   import AdventurePath from '$lib/components/study/AdventurePath.svelte';
@@ -154,7 +160,7 @@
           selectedAnswer = '';
           lastResult = null;
           questionStartTime = Date.now();
-        }, 1500);
+        }, 800);
       }
     } catch (e: any) {
       errorMsg = e.message;
@@ -304,15 +310,27 @@
       </div>
     {/if}
 
-    <!-- Question -->
+    <!-- Question with crossfade transition -->
     {#key question.questionId}
-    <div class="px-4 pb-4">
+    <div class="px-4 pb-4 question-fade">
       {#if question.questionType === 'SCENE_DRAG'}
         <SceneMathTen question={question} {sessionId} onComplete={handleSceneResult} />
       {:else if question.questionType === 'SCENE_TAP'}
         <SceneTap question={question} {sessionId} onComplete={handleSceneResult} />
       {:else if question.questionType === 'SCENE_MATCH'}
         <SceneMatch question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_WHACK_MOLE'}
+        <SceneWhackMole question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_SHAPE_PUZZLE'}
+        <SceneShapePuzzle question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_CLOCK'}
+        <SceneClock question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_SHOP'}
+        <SceneShop question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_PINYIN'}
+        <ScenePinyinBubble question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_CHAR_BUILD'}
+        <SceneCharBuild question={question} {sessionId} onComplete={handleSceneResult} />
       {:else}
       <p class="text-sm font-medium text-gray-800 mb-3">{question.questionText}</p>
 
@@ -355,7 +373,7 @@
       {/if}
       {/if}
 
-      {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH' && question.questionType !== 'SCENE_DRAG' && question.questionType !== 'SCENE_TAP' && question.questionType !== 'SCENE_MATCH'}
+      {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH' && question.questionType !== 'SCENE_DRAG' && question.questionType !== 'SCENE_TAP' && question.questionType !== 'SCENE_MATCH' && question.questionType !== 'SCENE_WHACK_MOLE' && question.questionType !== 'SCENE_SHAPE_PUZZLE' && question.questionType !== 'SCENE_CLOCK' && question.questionType !== 'SCENE_SHOP' && question.questionType !== 'SCENE_PINYIN' && question.questionType !== 'SCENE_CHAR_BUILD'}
         <button onclick={handleSubmit} disabled={!selectedAnswer}
                 class="mt-3 w-full py-2.5 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 disabled:opacity-50 transition text-sm">
           提交答案
@@ -376,3 +394,13 @@
     </div>
   {/if}
 {/if}
+
+<style>
+  @keyframes qFadeIn {
+    0% { opacity: 0; transform: scale(0.96) translateY(6px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  :global(.question-fade) {
+    animation: qFadeIn 0.3s ease-out;
+  }
+</style>

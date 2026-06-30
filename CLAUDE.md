@@ -17,7 +17,7 @@
 实现阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 - Sprint 1（2026-06-29）：双路径「凑十法」Demo 对比，**选定 Svelte 路径继续**。
 - Sprint 2（2026-06-30）：场景组件扩充（SceneTap/SceneMatch）+ 题库 45→77 + 剧情模式接入场景题型。
-- 下一计划：Sprint A — 6 个新场景组件 + 题库 77→188 + 音频动画升级 + 冒险模式渐进演化。
+- Sprint A（2026-06-30）：6 个新场景组件 + 题库 77→~200 + 音频动画升级 + 冒险模式渐进演化。
   计划文档见 `.plans/`，v2 设计方案见 `游戏化学习系统设计方案-v2.md`。
 
 ## 已实现子系统
@@ -49,24 +49,31 @@
 - 前端组件：`AdventurePath` / `ComboCounter` / `BossBattle` / `HpBar` / `TreasureChest` 等
   （见 `frontend/src/lib/components/study/`）
 
-### 场景化题型组件（Sprint 1-2 新增）
+### 场景化题型组件（Sprint 1-2 + Sprint A）
 
-9 种题型中，6 种已有专属交互组件，场景类题型遵循 `$props({ question, sessionId, onComplete })` 自提交模式：
+12 种题型全部拥有专属交互组件，场景类题型遵循 `$props({ question, sessionId, onComplete })` 自提交模式：
 
 | 题型 | 组件 | 学科 | 玩法 |
 |------|------|------|------|
 | `SCENE_DRAG` | `SceneMathTen.svelte` | 数学 | 拖苹果到碗凑十 |
 | `SCENE_TAP` | `SceneTap.svelte` | 数学/语文/英语 | 浮动泡泡点击答题 |
 | `SCENE_MATCH` | `SceneMatch.svelte` | 数学/英语 | 图形/卡片配对识别 |
+| `SCENE_WHACK_MOLE` | `SceneWhackMole.svelte` | 数学 | 打地鼠·20以内加减 |
+| `SCENE_SHAPE_PUZZLE` | `SceneShapePuzzle.svelte` | 数学 | 拼图工坊·认识图形 |
+| `SCENE_CLOCK` | `SceneClock.svelte` | 数学 | 拨钟表·认识整时 |
+| `SCENE_SHOP` | `SceneShop.svelte` | 数学 | 宠物商店·认识人民币 |
+| `SCENE_PINYIN` | `ScenePinyinBubble.svelte` | 语文 | 拼音泡泡·听音识字母 |
+| `SCENE_CHAR_BUILD` | `SceneCharBuild.svelte` | 语文 | 汉字工坊·组字寻宝 |
 | `POEM_SEQUENCE` | `PoemSequence.svelte` | 语文 | 诗句拖拽排序 |
 | `MATH_INPUT` | `MathInput.svelte` | 数学 | 数字键盘输入 |
 | `VOCAB_MATCH` | `VocabMatch.svelte` | 英语 | 单词释义配对 |
 
-### 音频系统
+### 音频系统（Sprint A v3 升级）
 
 `frontend/src/lib/audio/sound-manager.ts` — Web Audio API 合成，无外部音频文件依赖。
-- 3 首学科 BGM（sine + triangle 波形）：中国风五声音阶 / 音乐盒琶音 / Cmaj7 和弦垫
-- 音效：`playCorrect` / `playWrong` / `playClick` / `playTreasure` / `playCelebrate` / `playFeed` / `playEvolve`
+- **9 首 BGM**（3学科×3场景）：探索通用 / 拼音+钟表+字母 / 识字+商店+词汇
+- **11 个场景专属音效**：`playMoleAppear` / `playMoleWhack` / `playMoleMiss` / `playPuzzleSnap` / `playClockTick` / `playClockChime` / `playCoinDrop` / `playPurchase` / `playBubblePop` / `playCharGlow` / `playCardFlip`
+- **5 个宠物情感音效**：`playPetGreet` / `playPetEncourage` / `playPetCelebrate` / `playPetSleepy` / `playPetEat`
 - Boss 相关音效（待 v2 重构移除）
 
 ## 技术栈
@@ -147,8 +154,8 @@ cd frontend && npm install && npm run dev
 - **测试覆盖薄弱**：仅 5 个测试文件，集中在 5 个模块，其余 9 个业务模块无测试。
 - **未容器化后端/前端**：`docker-compose.yml` 仅含 MySQL，无应用镜像与发布流程。
 - **P2 时空裂隙系统未实现**：设计文档中唯一缺失的子系统。
-- **题库对标不足**：当前 77 题，语文/英语内容严重不对标一年级课标。计划 Sprint A 扩充至 ~188 题并重建语文节点。
-- **冒险模式待 v2 重构**：HP/Boss 惩罚机制与 v2「弱化惩罚」原则冲突，计划 Sprint B 渐进演化。
+- **题库扩充至 ~200 题**（Sprint A 已完成）：含拼音/识字/钟表/人民币/找规律/字母等新题型，11 个新知识节点。后续需持续对标一年级下、二年级课标。
+- **冒险模式待 v2 重构**（Sprint B）：HP/Boss 惩罚机制与 v2「弱化惩罚」原则冲突，需全面重构为能量条+鼓励系统。
 
 ## 约定
 

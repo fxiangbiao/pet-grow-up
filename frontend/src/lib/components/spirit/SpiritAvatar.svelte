@@ -79,6 +79,46 @@
   let imgError = $state(false);
   let clicked = $state(false);
 
+  // ── Blink animation ──
+  let blinking = $state(false);
+  let blinkTimer: ReturnType<typeof setInterval> | null = null;
+
+  function scheduleBlink() {
+    if (blinkTimer) clearInterval(blinkTimer);
+    blinkTimer = setInterval(() => {
+      blinking = true;
+      setTimeout(() => { blinking = false; }, 120);
+    }, 2500 + Math.random() * 3500); // every 2.5–6 seconds
+  }
+
+  $effect(() => {
+    scheduleBlink();
+    return () => { if (blinkTimer) clearInterval(blinkTimer); };
+  });
+
+  // ── Eye tracking (follow cursor) ──
+  let eyeOffsetX = $state(0);
+  let eyeOffsetY = $state(0);
+  let avatarEl: HTMLDivElement | null = null;
+
+  function handleMouseMove(e: MouseEvent) {
+    if (!avatarEl) return;
+    const rect = avatarEl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    // Max pupil offset ~3px in SVG coordinate space
+    const maxOffset = 3;
+    const dx = ((e.clientX - cx) / (rect.width / 2)) * maxOffset;
+    const dy = ((e.clientY - cy) / (rect.height / 2)) * maxOffset;
+    eyeOffsetX = Math.max(-maxOffset, Math.min(maxOffset, dx));
+    eyeOffsetY = Math.max(-maxOffset, Math.min(maxOffset, dy));
+  }
+
+  function handleMouseLeave() {
+    eyeOffsetX = 0;
+    eyeOffsetY = 0;
+  }
+
   const spriteUrl = $derived(species?.spriteUrl || '');
   const useImage = $derived(!!spriteUrl && imgLoaded && !imgError);
 
@@ -188,6 +228,9 @@
   onclick={handleClick}
   role={onclick ? 'button' : undefined}
   onkeydown={(e) => { if (onclick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleClick(); } }}
+  bind:this={avatarEl}
+  onmousemove={handleMouseMove}
+  onmouseleave={handleMouseLeave}
 >
   <!-- ── Speech bubble ── -->
   {#if showBubble && currentQuote && showSpeechBubble}
@@ -355,16 +398,20 @@
           <path d="M{cx + eyeSpacing - eyeR},{eyeY + 2} Q{cx + eyeSpacing},{eyeY - eyeR * 1.2} {cx + eyeSpacing + eyeR},{eyeY + 2}"
             fill="none" stroke={primaryHex} stroke-width="2" stroke-linecap="round" opacity="0.9" />
         {:else}
-          <!-- Normal idle eyes (circles with subtle blink) -->
-          <ellipse cx={cx - eyeSpacing} cy={eyeY} rx={eyeR} ry={eyeR * 0.9}
-            fill={primaryHex} opacity="0.7" />
-          <ellipse cx={cx + eyeSpacing} cy={eyeY} rx={eyeR} ry={eyeR * 0.9}
-            fill={primaryHex} opacity="0.7" />
-          <!-- Eye shine -->
-          <circle cx={cx - eyeSpacing + eyeR * 0.3} cy={eyeY - eyeR * 0.3} r={eyeR * 0.35}
-            fill="white" opacity="0.8" />
-          <circle cx={cx + eyeSpacing + eyeR * 0.3} cy={eyeY - eyeR * 0.3} r={eyeR * 0.35}
-            fill="white" opacity="0.8" />
+          <!-- Normal idle eyes (circles with blink + eye tracking) -->
+          <g style="transform-origin: {cx - eyeSpacing}px {eyeY}px; transform: scaleY({blinking ? 0.05 : 1}); transition: transform {blinking ? '0.05s' : '0.15s'} ease-out;">
+            <ellipse cx={cx - eyeSpacing} cy={eyeY} rx={eyeR} ry={eyeR * 0.9}
+              fill={primaryHex} opacity="0.7" />
+            <!-- Eye shine follows cursor -->
+            <circle cx={cx - eyeSpacing + eyeR * 0.3 + eyeOffsetX} cy={eyeY - eyeR * 0.3 + eyeOffsetY} r={eyeR * 0.35}
+              fill="white" opacity="0.8" />
+          </g>
+          <g style="transform-origin: {cx + eyeSpacing}px {eyeY}px; transform: scaleY({blinking ? 0.05 : 1}); transition: transform {blinking ? '0.05s' : '0.15s'} ease-out;">
+            <ellipse cx={cx + eyeSpacing} cy={eyeY} rx={eyeR} ry={eyeR * 0.9}
+              fill={primaryHex} opacity="0.7" />
+            <circle cx={cx + eyeSpacing + eyeR * 0.3 + eyeOffsetX} cy={eyeY - eyeR * 0.3 + eyeOffsetY} r={eyeR * 0.35}
+              fill="white" opacity="0.8" />
+          </g>
         {/if}
 
         <!-- Mouth -->

@@ -22,6 +22,12 @@
   import SceneMathTen from '$lib/components/study/SceneMathTen.svelte';
   import SceneTap from '$lib/components/study/SceneTap.svelte';
   import SceneMatch from '$lib/components/study/SceneMatch.svelte';
+  import SceneWhackMole from '$lib/components/study/SceneWhackMole.svelte';
+  import SceneShapePuzzle from '$lib/components/study/SceneShapePuzzle.svelte';
+  import SceneClock from '$lib/components/study/SceneClock.svelte';
+  import SceneShop from '$lib/components/study/SceneShop.svelte';
+  import ScenePinyinBubble from '$lib/components/study/ScenePinyinBubble.svelte';
+  import SceneCharBuild from '$lib/components/study/SceneCharBuild.svelte';
   import { spiritStore } from '$lib/stores/spirit.svelte';
   import { soundManager } from '$lib/audio/sound-manager';
 
@@ -222,7 +228,7 @@
           selectedAnswer = '';
           lastResult = null;
           questionStartTime = Date.now();
-        }, 1500);
+        }, 800);
       }
     } catch (e: any) {
       error = e.message;
@@ -368,7 +374,7 @@
         selectedAnswer = '';
         lastResult = null;
         questionStartTime = Date.now();
-      }, 1500);
+      }, 800);
     } else {
       // Safety: no next question but session not complete — force advance
       console.error('handleSceneResult: no nextQuestion and session not complete, forcing result');
@@ -448,7 +454,7 @@
           playerHp={hp}
           answerResult={lastResult}
           answerTimeMs={bossAnswerTimeMs}
-          sceneMode={['SCENE_DRAG', 'SCENE_TAP', 'SCENE_MATCH'].includes(question.questionType)}
+          sceneMode={['SCENE_DRAG', 'SCENE_TAP', 'SCENE_MATCH', 'SCENE_WHACK_MOLE', 'SCENE_SHAPE_PUZZLE', 'SCENE_CLOCK', 'SCENE_SHOP', 'SCENE_PINYIN', 'SCENE_CHAR_BUILD'].includes(question.questionType)}
           onBossDefeated={() => {
             bossDefeated = true;
             bossBattleResolved = true;
@@ -488,7 +494,8 @@
         />
       </div>
 
-      <!-- Question area -->
+      <!-- Question area with crossfade transition -->
+      <div class="question-fade" style="animation: qFadeIn 0.3s ease-out;">
       {#key question.questionId}
       {#if question.questionType === 'SCENE_DRAG'}
         <SceneMathTen question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
@@ -496,6 +503,18 @@
         <SceneTap question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
       {:else if question.questionType === 'SCENE_MATCH'}
         <SceneMatch question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
+      {:else if question.questionType === 'SCENE_WHACK_MOLE'}
+        <SceneWhackMole question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
+      {:else if question.questionType === 'SCENE_SHAPE_PUZZLE'}
+        <SceneShapePuzzle question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
+      {:else if question.questionType === 'SCENE_CLOCK'}
+        <SceneClock question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
+      {:else if question.questionType === 'SCENE_SHOP'}
+        <SceneShop question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
+      {:else if question.questionType === 'SCENE_PINYIN'}
+        <ScenePinyinBubble question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
+      {:else if question.questionType === 'SCENE_CHAR_BUILD'}
+        <SceneCharBuild question={question} {sessionId} onComplete={(result) => handleSceneResult(result)} />
       {:else}
         <div class="mb-3">
           <h2 class="text-base font-medium text-gray-800 mb-4">{question.questionText}</h2>
@@ -593,6 +612,7 @@
         </div>
       {/if}
       {/key}
+      </div>
     </div>
 
     <!-- Feedback -->
@@ -628,3 +648,13 @@
   {/if}
   </div>
 </div>
+
+<style>
+  @keyframes qFadeIn {
+    0% { opacity: 0; transform: scale(0.96) translateY(6px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  :global(.question-fade) {
+    animation: qFadeIn 0.3s ease-out;
+  }
+</style>
