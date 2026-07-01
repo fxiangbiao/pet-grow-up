@@ -31,9 +31,7 @@ UPDATE spirit_species SET evolves_from_id = (SELECT t.id FROM (SELECT id FROM sp
 
 -- Knowledge Nodes: Chinese (诗词大陆)
 INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
-('chinese', 'chinese_intro', '诗词入门', '了解古诗词的基本格律和韵律', 1, NULL, 1),
-('chinese', 'chinese_tang', '唐诗鉴赏', '欣赏唐代著名诗人的代表作品', 2, NULL, 2),
-('chinese', 'chinese_song', '宋词赏析', '品味宋代词人的婉约与豪放', 3, NULL, 3);
+('chinese', 'chinese_intro', '拼音与识字', '认识拼音字母和基础汉字', 1, NULL, 1);
 
 -- Knowledge Nodes: Math (智慧王国) — 一年级数学（人教2024版）
 INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
@@ -44,20 +42,9 @@ INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficu
 -- Knowledge Nodes: English (魔法学院)
 INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
 ('english', 'english_intro', '字母与发音', '掌握26个字母和基础发音', 1, NULL, 1),
-('english', 'english_vocab', '词汇积累', '学习日常生活中的常用词汇', 2, NULL, 2),
-('english', 'english_grammar', '语法基础', '了解基本语法规则和句型结构', 3, NULL, 3);
+('english', 'english_vocab', '词汇积累', '学习日常生活中的常用词汇', 2, NULL, 2);
 
--- Quiz Questions: Chinese
-INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'MULTIPLE_CHOICE', 1, '"床前明月光"的下一句是什么？', '[{"key":"A","text":"疑是地上霜"},{"key":"B","text":"举头望明月"},{"key":"C","text":"低头思故乡"},{"key":"D","text":"处处闻啼鸟"}]', 'A', '出自李白的《静夜思》，全诗为：床前明月光，疑是地上霜。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'MULTIPLE_CHOICE', 1, '下列哪位诗人被称为"诗仙"？', '[{"key":"A","text":"杜甫"},{"key":"B","text":"白居易"},{"key":"C","text":"李白"},{"key":"D","text":"王维"}]', 'C', '李白被称为"诗仙"，杜甫被称为"诗圣"。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'FILL_BLANK', 1, '"春眠不觉晓，处处闻啼鸟"出自哪首诗？', NULL, '春晓', '出自孟浩然的《春晓》。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_tang'), 'MULTIPLE_CHOICE', 2, '王之涣《登鹳雀楼》中"欲穷千里目"的下一句是？', '[{"key":"A","text":"黄河入海流"},{"key":"B","text":"更上一层楼"},{"key":"C","text":"春风不度玉门关"},{"key":"D","text":"一片孤城万仞山"}]', 'B', '全诗：白日依山尽，黄河入海流。欲穷千里目，更上一层楼。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_tang'), 'MULTIPLE_CHOICE', 2, '"独在异乡为异客，每逢佳节倍思亲"是王维在哪个节日所作？', '[{"key":"A","text":"春节"},{"key":"B","text":"重阳节"},{"key":"C","text":"中秋节"},{"key":"D","text":"端午节"}]', 'B', '出自王维《九月九日忆山东兄弟》，九月九日即重阳节。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_tang'), 'TRUE_FALSE', 2, '"大漠孤烟直，长河落日圆"是王维的诗句。', NULL, 'true', '正确，出自王维的《使至塞上》。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_song'), 'MULTIPLE_CHOICE', 3, '苏轼《水调歌头》中"但愿人长久"的下一句是？', '[{"key":"A","text":"千里共婵娟"},{"key":"B","text":"低头思故乡"},{"key":"C","text":"此事古难全"},{"key":"D","text":"月有阴晴圆缺"}]', 'A', '出自苏轼《水调歌头·明月几时有》。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_song'), 'MULTIPLE_CHOICE', 3, '李清照是什么词派的代表人物？', '[{"key":"A","text":"豪放派"},{"key":"B","text":"婉约派"},{"key":"C","text":"花间派"},{"key":"D","text":"边塞派"}]', 'B', '李清照是宋代婉约词派的代表词人。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_song'), 'FILL_BLANK', 3, '"众里寻他千百度，蓦然回首，那人却在，______。"', NULL, '灯火阑珊处', '出自辛弃疾的《青玉案·元夕》。', 10);
+-- Quiz Questions: Chinese (Sprint A: old poetry questions removed — see Sprint A pinyin/shizi/kewen sections below)
 
 -- Quiz Questions: Math (一年级数学 — 人教2024版)
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
@@ -84,17 +71,10 @@ INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, 
 ((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是三角形？', NULL, 'TRIANGLE', '三条边、三个角', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是长方形？', NULL, 'RECTANGLE', '对边相等，四个角一样大', 10);
 
--- Quiz Questions: English
+-- Quiz Questions: English (Sprint A: grammar + too-advanced vocab removed — see Sprint A letters/vocab sections)
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
-((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'MULTIPLE_CHOICE', 1, '英语字母表中有多少个字母？', '[{"key":"A","text":"24"},{"key":"B","text":"26"},{"key":"C","text":"28"},{"key":"D","text":"25"}]', 'B', '英语字母表共有26个字母。', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'MULTIPLE_CHOICE', 1, '"apple"的中文意思是？', '[{"key":"A","text":"香蕉"},{"key":"B","text":"橘子"},{"key":"C","text":"苹果"},{"key":"D","text":"葡萄"}]', 'C', 'apple 意为苹果。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'FILL_BLANK', 1, '英语中"猫"的单词是？', NULL, 'cat', '猫的英文是 cat。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'MULTIPLE_CHOICE', 2, '"beautiful"的反义词是？', '[{"key":"A","text":"handsome"},{"key":"B","text":"ugly"},{"key":"C","text":"pretty"},{"key":"D","text":"lovely"}]', 'B', 'beautiful 意为美丽的，反义词是 ugly（丑陋的）。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'MULTIPLE_CHOICE', 2, '下列哪个是"星期二"的正确缩写？', '[{"key":"A","text":"Mon"},{"key":"B","text":"Tue"},{"key":"C","text":"Wed"},{"key":"D","text":"Thu"}]', 'B', '星期二 Tuesday 的缩写是 Tue。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'TRUE_FALSE', 2, '"Library"的意思是"书店"。', NULL, 'false', 'Library 意为图书馆，书店是 bookstore。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'english_grammar'), 'MULTIPLE_CHOICE', 3, 'I ___ a student.', '[{"key":"A","text":"is"},{"key":"B","text":"am"},{"key":"C","text":"are"},{"key":"D","text":"be"}]', 'B', '第一人称单数 I 使用 am。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'english_grammar'), 'MULTIPLE_CHOICE', 3, '下列哪个是过去式？', '[{"key":"A","text":"go"},{"key":"B","text":"going"},{"key":"C","text":"went"},{"key":"D","text":"goes"}]', 'C', 'go 的过去式是 went。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'english_grammar'), 'FILL_BLANK', 3, '"She ___ (read) books every day." 用正确的形式填空。', NULL, 'reads', '第三人称单数一般现在时，动词加 s。', 10);
+((SELECT id FROM knowledge_node WHERE node_key = 'english_intro'), 'FILL_BLANK', 1, '英语中"猫"的单词是？', NULL, 'cat', '猫的英文是 cat。', 10);
 
 -- Achievement definitions
 INSERT IGNORE INTO achievement_def (achievement_key, category, name, description, icon_url, rarity, requirement_type, requirement_threshold, subject, reward_energy, reward_item_key, reward_title, display_order, is_hidden) VALUES
@@ -134,11 +114,6 @@ INSERT IGNORE INTO item_def (item_key, name, description, category, effect_type,
 -- ============================================================
 -- Subject-Specific Question Types
 -- ============================================================
--- Chinese: POEM_SEQUENCE
-INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'POEM_SEQUENCE', 1, '请将《春晓》的诗句按正确顺序排列', '["春眠不觉晓","处处闻啼鸟","夜来风雨声","花落知多少"]', '1,2,3,4', '这是孟浩然《春晓》的正确顺序。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'POEM_SEQUENCE', 1, '请将《静夜思》的诗句按正确顺序排列', '["举头望明月","床前明月光","低头思故乡","疑是地上霜"]', '2,4,1,3', '床前明月光，疑是地上霜。举头望明月，低头思故乡。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'POEM_SEQUENCE', 1, '请将《登鹳雀楼》的诗句按正确顺序排列', '["更上一层楼","白日依山尽","欲穷千里目","黄河入海流"]', '2,4,3,1', '白日依山尽，黄河入海流。欲穷千里目，更上一层楼。', 10);
 
 -- Math: MATH_INPUT (一年级 20以内加减)
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
@@ -201,11 +176,6 @@ INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, 
 ((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'SCENE_TAP', 1, '"河"字的偏旁是什么？', '[{"key":"A","text":"氵"},{"key":"B","text":"亻"},{"key":"C","text":"口"}]', 'A', '河是水字旁（氵），表示和水有关', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'SCENE_TAP', 1, '"花"字的偏旁是什么？', '[{"key":"A","text":"木"},{"key":"B","text":"艹"},{"key":"C","text":"火"}]', 'B', '花是草字头（艹），表示和植物有关', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'SCENE_TAP', 1, '"打"字的偏旁是什么？', '[{"key":"A","text":"口"},{"key":"B","text":"氵"},{"key":"C","text":"扌"}]', 'C', '打是提手旁（扌），表示和手有关', 10);
-
--- Chinese: POEM_SEQUENCE for chinese_tang
-INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_tang'), 'POEM_SEQUENCE', 2, '请将《悯农》的诗句按正确顺序排列', '["锄禾日当午","汗滴禾下土","谁知盘中餐","粒粒皆辛苦"]', '1,2,3,4', '这是李绅《悯农》的正确顺序。', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'chinese_tang'), 'POEM_SEQUENCE', 2, '请将《望庐山瀑布》的诗句按正确顺序排列', '["疑是银河落九天","飞流直下三千尺","日照香炉生紫烟","遥看瀑布挂前川"]', '3,4,2,1', '日照香炉生紫烟，遥看瀑布挂前川。飞流直下三千尺，疑是银河落九天。', 10);
 
 -- English: SCENE_MATCH (letter-to-picture) for english_intro
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
@@ -559,3 +529,32 @@ INSERT IGNORE INTO story_chapter (chapter_number, title, narrative, npc_name, np
  '黑暗暂时退去了，但更大的挑战正在远方酝酿。你已经证明了自己是一名真正的学习守护者——你拯救了精灵，点亮了三个世界，创造了连续学习的奇迹。但这只是开始，更多的冒险在等待着你！',
  '我准备好了！新的征程开始了！',
  'ACHIEVEMENT_COUNT', 3, 80, 12);
+
+-- ============================================================
+-- Sprint A Cleanup: Remove old Grade-1-misaligned content
+-- Runs AFTER all INSERTs so old data is cleaned regardless of seed state
+-- ============================================================
+
+-- Chinese: Delete Tang/Song poetry nodes (not Grade 1 curriculum) — CASCADE removes their questions
+DELETE FROM knowledge_node WHERE node_key IN ('chinese_tang', 'chinese_song');
+
+-- Chinese: Delete poetry-focused questions under chinese_intro (keep pinyin/literacy ones)
+DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro')
+  AND question_type = 'POEM_SEQUENCE';
+DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro')
+  AND question_text LIKE '%床前明月光%';
+DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro')
+  AND question_text LIKE '%诗仙%';
+DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro')
+  AND question_text LIKE '%春眠不觉晓%';
+
+-- English: Delete grammar node (past tense, third-person singular — Grade 3+ content)
+DELETE FROM knowledge_node WHERE node_key = 'english_grammar';
+
+-- English: Delete too-advanced vocabulary questions
+DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'english_vocab')
+  AND question_text LIKE '%beautiful%';
+DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'english_vocab')
+  AND question_text LIKE '%Library%';
+DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'english_intro')
+  AND question_text LIKE '%字母表中有多少个字母%';
