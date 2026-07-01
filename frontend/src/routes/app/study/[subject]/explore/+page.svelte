@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { onDestroy } from 'svelte';
   import { startSession, submitAnswer } from '$lib/api/study';
   import { subscribeToSession } from '$lib/api/study-ws';
   import type { QuestionDTO, AnswerResult } from '$lib/api/study';
@@ -145,6 +146,18 @@
       loading = false;
     }
   }
+
+  // Stop BGM when leaving the page
+  onDestroy(() => {
+    soundManager.stopBGM();
+  });
+
+  // Stop BGM when session ends (transition to result phase)
+  $effect(() => {
+    if (phase === 'result') {
+      soundManager.stopBGM();
+    }
+  });
 
   function selectAnswer(answer: string) {
     if (submitted) return;

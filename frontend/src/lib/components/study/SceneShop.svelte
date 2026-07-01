@@ -159,25 +159,25 @@
 </script>
 
 <div
-  class="relative w-full min-h-[440px] bg-gradient-to-b from-yellow-50 via-amber-50 to-orange-100 overflow-hidden select-none rounded-xl"
+  class="relative w-full min-h-[520px] bg-gradient-to-b from-yellow-50 via-amber-50 to-orange-100 overflow-hidden select-none rounded-xl"
   style="touch-action: manipulation;"
   role="application"
   aria-label="宠物商店付款"
 >
   <!-- Hint -->
-  <div class="absolute top-3 left-1/2 -translate-x-1/2 text-center z-10">
-    <p class="text-lg font-bold text-amber-800 bg-white/80 rounded-full px-5 py-1.5 shadow-sm">
+  <div class="absolute top-2 left-1/2 -translate-x-1/2 text-center z-10">
+    <p class="text-base font-bold text-amber-800 bg-white/80 rounded-full px-4 py-1 shadow-sm">
       🐱「{question.questionText || `请付 ${targetPrice} 元买${itemName}！`}」
     </p>
   </div>
 
-  <div class="absolute inset-x-0 top-16 bottom-4 px-3 flex flex-col gap-3">
-    <!-- Shelf: item + price tag -->
-    <div class="flex items-center justify-center gap-3 bg-white/70 rounded-2xl p-3 border-2 border-amber-200">
-      <div class="text-5xl">{itemEmoji[targetPrice] || '🎁'}</div>
+  <div class="absolute inset-x-0 top-14 bottom-2 px-3 flex flex-col gap-2">
+    <!-- Shelf: item + price tag — compact -->
+    <div class="flex items-center justify-center gap-2 bg-white/70 rounded-xl p-2 border-2 border-amber-200 shrink-0">
+      <div class="text-4xl">{itemEmoji[targetPrice] || '🎁'}</div>
       <div class="text-center">
-        <p class="text-sm font-semibold text-gray-600">{itemName}</p>
-        <p class="text-2xl font-black text-amber-600">¥{targetPrice}</p>
+        <p class="text-xs font-semibold text-gray-600">{itemName}</p>
+        <p class="text-xl font-black text-amber-600">¥{targetPrice}</p>
       </div>
     </div>
 
@@ -186,38 +186,37 @@
       ondrop={handleDropOnPayment}
       ondragover={handleDragOver}
       class={[
-        'flex-1 min-h-[90px] bg-white/60 rounded-2xl border-2 border-dashed p-3 flex flex-wrap items-start gap-2 content-start',
+        'flex-1 min-h-[80px] bg-white/60 rounded-xl border-2 border-dashed p-2 flex flex-wrap items-start gap-1.5 content-start',
         isExact ? 'border-green-400 bg-green-50' : isOver ? 'border-red-300 bg-red-50' : 'border-amber-300',
       ].join(' ')}
     >
-      <p class="w-full text-xs text-gray-400 text-center mb-1">💰 付款区 — 把纸币拖到这里</p>
+      <p class="w-full text-[11px] text-gray-400 text-center mb-0.5">💰 付款区 — 把纸币拖到这里</p>
       {#each paidBills as bill (bill.id + '_paid')}
         <button
           onclick={() => removeBill(bill.id)}
           disabled={submitted}
-          class="px-2 py-1 bg-white rounded-lg border-2 border-amber-400 shadow-sm text-lg
+          class="px-2 py-0.5 bg-white rounded-lg border-2 border-amber-400 shadow-sm text-base
             hover:scale-110 active:scale-95 transition cursor-pointer"
           aria-label={'移除' + bill.label}>
           {bill.emoji}
-          <span class="text-xs font-bold text-amber-700 ml-0.5">{bill.value}元</span>
+          <span class="text-[11px] font-bold text-amber-700 ml-0.5">{bill.value}元</span>
         </button>
       {/each}
-      <!-- Total display -->
       {#if paidBills.length > 0}
         <div class={[
-          'ml-auto text-lg font-black px-3 py-1 rounded-lg self-end',
+          'ml-auto text-base font-black px-2 py-0.5 rounded-lg self-end',
           isExact ? 'text-green-600 bg-green-100' : isOver ? 'text-red-600 bg-red-100' : 'text-amber-600 bg-amber-100',
         ].join(' ')}>
           合计: ¥{paidAmount}
-          {#if isOver}<span class="text-xs ml-1">多了 ¥{paidAmount - targetPrice}</span>{/if}
+          {#if isOver}<span class="text-[11px] ml-1">多了 ¥{paidAmount - targetPrice}</span>{/if}
         </div>
       {/if}
     </div>
 
-    <!-- Wallet area -->
-    <div class="bg-white/70 rounded-2xl p-3 border-2 border-amber-200">
-      <p class="text-xs text-gray-400 mb-2">👛 我的钱包 — 点击或拖拽纸币付款</p>
-      <div class="flex flex-wrap gap-2">
+    <!-- Wallet area — compact -->
+    <div class="bg-white/70 rounded-xl p-2 border-2 border-amber-200 shrink-0">
+      <p class="text-[11px] text-gray-400 mb-1">👛 我的钱包 — 点击或拖拽纸币付款</p>
+      <div class="flex flex-wrap gap-1.5">
         {#each walletBills as bill (bill.id)}
           <button
             draggable="true"
@@ -225,26 +224,26 @@
             ondragend={handleDragEnd}
             onclick={() => tapBill(bill.id)}
             disabled={submitted}
-            class="px-2 py-1 bg-amber-50 rounded-lg border-2 border-amber-300 shadow-sm text-lg
+            class="px-1.5 py-0.5 bg-amber-50 rounded-lg border-2 border-amber-300 shadow-sm text-base
               hover:scale-110 active:scale-95 transition cursor-pointer hover:bg-amber-100"
             aria-label={bill.label}>
             {bill.emoji}
-            <span class="text-xs font-bold text-amber-700 ml-0.5">{bill.value}元</span>
+            <span class="text-[11px] font-bold text-amber-700 ml-0.5">{bill.value}元</span>
           </button>
         {/each}
       </div>
     </div>
 
-    <!-- Action buttons -->
-    <div class="flex gap-2">
+    <!-- Action buttons — compact -->
+    <div class="flex gap-2 shrink-0">
       {#if !submitted}
         <button onclick={handleReset}
-          class="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-300 transition">
+          class="px-3 py-2 bg-gray-200 text-gray-700 rounded-xl text-xs font-medium hover:bg-gray-300 transition">
           🔄 重新来
         </button>
         <button onclick={handlePay}
           disabled={!isExact}
-          class="flex-1 py-2.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl font-bold
+          class="flex-1 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-xl font-bold text-sm
             hover:from-amber-300 hover:to-orange-400 disabled:from-gray-300 disabled:to-gray-300 disabled:text-gray-400
             transition shadow-md">
           {isOver ? '💰 太多了，退回一些' : isExact ? '✅ 付款！' : `还差 ¥${targetPrice - paidAmount}`}

@@ -18,20 +18,28 @@
   const MINUTE_HAND_LENGTH = 75;
   const CENTER = CLOCK_RADIUS + 20;
 
-  // Parse target hour from question (e.g., option key "7" or "7:00")
+  // Parse target hour from question options (e.g., {"hour":7} or {"key":"7"})
   function parseTargetHour(): number {
     const opts = question.options;
-    let raw = '';
+    let parsed: any = null;
+
     if (typeof opts === 'string') {
-      try {
-        const parsed = JSON.parse(opts);
-        raw = Array.isArray(parsed) ? parsed[0]?.key || '' : parsed?.key || '';
-      } catch { raw = opts; }
-    } else if (Array.isArray(opts)) {
-      raw = (opts as any[])[0]?.key || '';
+      try { parsed = JSON.parse(opts); } catch { /* raw string like "7" */ }
     } else if (typeof opts === 'object' && opts !== null) {
-      raw = (opts as any).key || '';
+      parsed = opts;
     }
+
+    // Check for hour field first (new format)
+    if (parsed?.hour !== undefined) {
+      return typeof parsed.hour === 'number' ? parsed.hour : parseInt(String(parsed.hour));
+    }
+    // Check for key field
+    if (parsed?.key !== undefined) {
+      const match = String(parsed.key).match(/(\d+)/);
+      if (match) return parseInt(match[1]);
+    }
+    // Fallback: try to extract number from raw options
+    const raw = typeof opts === 'string' ? opts : JSON.stringify(opts || '');
     const match = raw.match(/(\d+)/);
     return match ? parseInt(match[1]) : 3;
   }
@@ -187,8 +195,14 @@
     {/if}
   </div>
 
-  <!-- Clock face -->
-  <div class="absolute inset-0 flex items-center justify-center" bind:this={clockEl}>
+  <!-- Clock face — pointermove/pointerup on container so drag works even if pointer leaves the hand -->
+  <div
+    class="absolute inset-0 flex items-center justify-center"
+    bind:this={clockEl}
+    onpointermove={handlePointerMove}
+    onpointerup={handlePointerUp}
+    onpointerleave={handlePointerUp}
+  >
     <svg
       width={svgSize}
       height={svgSize}
@@ -221,7 +235,7 @@
       <line x1={CENTER} y1={CENTER} x2={minuteEnd.x} y2={minuteEnd.y}
         stroke="#94a3b8" stroke-width="3" stroke-linecap="round" opacity="0.6" />
 
-      <!-- Hour hand (draggable) -->
+      <!-- Hour hand (draggable) — pointerdown only, move/up handled by container -->
       <line x1={CENTER} y1={CENTER} x2={hourEnd.x} y2={hourEnd.y}
         stroke={dragging ? '#6366f1' : '#1e293b'}
         stroke-width={dragging ? '7' : '6'}
@@ -229,8 +243,6 @@
         class="transition-colors duration-150"
         style="cursor: {submitted ? 'default' : 'grab'};"
         onpointerdown={handlePointerDown}
-        onpointermove={handlePointerMove}
-        onpointerup={handlePointerUp}
       />
 
       <!-- Center dot -->
@@ -243,8 +255,6 @@
         class="transition-colors duration-150"
         style="cursor: {submitted ? 'default' : 'grab'};"
         onpointerdown={handlePointerDown}
-        onpointermove={handlePointerMove}
-        onpointerup={handlePointerUp}
       />
     </svg>
   </div>

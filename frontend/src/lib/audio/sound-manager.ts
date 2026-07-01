@@ -221,33 +221,40 @@ function playMathShop(c: AudioContext) {
 }
 
 function playEnglishExplore(c: AudioContext) {
-  // Dreamy Cmaj7 shimmer (existing, refined)
+  // Warm ambient: soft low chord pad + gentle slow melody
+  // Low Cmaj7 pad (C3 E3 G3 B3) — warm, not piercing
   bgmOscillators.push(
-    startPadOsc(c, 262 * 0.5, 0.04),
-    startPadOsc(c, 330 * 0.5, 0.04),
-    startPadOsc(c, 392 * 0.5, 0.04),
-    startPadOsc(c, 494 * 0.5, 0.04),
+    startPadOsc(c, 131, 0.06),  // C3
+    startPadOsc(c, 165, 0.05),  // E3
+    startPadOsc(c, 196, 0.05),  // G3
+    startPadOsc(c, 247, 0.04),  // B3
   );
-  // Slow shimmering with vibrato
-  [784, 880, 988, 784, 880].forEach((freq, i) => {
+
+  // Gentle mid-range melody — sine wave, slow attack, very soft
+  // Using lower octave: G4-A4-B4 (~392-494 Hz) instead of G5-A5-B5 (784-988 Hz)
+  [392, 440, 494, 392, 440].forEach((freq, i) => {
     const osc = c.createOscillator();
-    osc.type = 'triangle';
+    osc.type = 'sine'; // sine is smoother than triangle
     osc.frequency.setValueAtTime(freq, c.currentTime);
+
+    // Very subtle vibrato
     const vib = c.createOscillator();
     vib.type = 'sine';
-    vib.frequency.setValueAtTime(3.5 + i * 0.7, c.currentTime);
+    vib.frequency.setValueAtTime(2.5 + i * 0.5, c.currentTime);
     const vibGain = c.createGain();
-    vibGain.gain.setValueAtTime(8, c.currentTime);
+    vibGain.gain.setValueAtTime(3, c.currentTime); // reduced from 8
     vib.connect(vibGain);
     vibGain.connect(osc.frequency);
     vib.start();
+
     const g = c.createGain();
-    const t = c.currentTime + i * 3.5;
-    const len = 6;
+    const t = c.currentTime + i * 4;
+    const len = 7;
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.06, t + 1.5);
-    g.gain.setValueAtTime(0.06, t + len - 1.5);
+    g.gain.linearRampToValueAtTime(0.03, t + 2); // slower attack, lower peak
+    g.gain.setValueAtTime(0.03, t + len - 2);
     g.gain.linearRampToValueAtTime(0, t + len);
+
     osc.connect(g);
     g.connect(bgmGain!);
     osc.start();
@@ -279,21 +286,21 @@ function playEnglishVocab(c: AudioContext) {
   groove.forEach((freq, i) => {
     bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / groove.length), cycle / groove.length, 'triangle', 0.07, 0.012));
   });
-  // Animal-call-like chirps
+  // Soft bird-like chirps — lower frequency range, gentler
   for (let i = 0; i < 4; i++) {
     const t = c.currentTime + i * 3.5 + 1;
     const osc = c.createOscillator();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(1100 + i * 100, t);
-    osc.frequency.exponentialRampToValueAtTime(1500 + i * 80, t + 0.08);
+    osc.frequency.setValueAtTime(600 + i * 60, t);
+    osc.frequency.exponentialRampToValueAtTime(800 + i * 50, t + 0.1);
     const g = c.createGain();
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.04, t + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    g.gain.linearRampToValueAtTime(0.02, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
     osc.connect(g);
     g.connect(bgmGain!);
     osc.start(t);
-    osc.stop(t + 0.2);
+    osc.stop(t + 0.25);
     bgmOscillators.push(osc);
   }
 }

@@ -51,13 +51,28 @@
   let pointerStartX = $state(0);
   let pointerStartY = $state(0);
 
-  // Slot positions relative to bowl center
+  // Slot positions inside the SVG bowl (viewBox 0 0 200 160)
+  // Bowl interior safe zone: x≈45-155, y≈45-125
   const bowlSlots = [
-    { x: 30, y: 82 }, { x: 60, y: 85 }, { x: 90, y: 82 }, { x: 120, y: 78 },
-    { x: 42, y: 58 }, { x: 72, y: 56 }, { x: 105, y: 54 },
-    { x: 52, y: 34 }, { x: 90, y: 32 },
-    { x: 72, y: 14 },
+    // Row 1 — near bowl opening
+    { x: 58, y: 52 },  { x: 88, y: 48 },  { x: 118, y: 48 },  { x: 148, y: 52 },
+    // Row 2 — middle of bowl
+    { x: 64, y: 78 },  { x: 96, y: 75 },  { x: 126, y: 75 },  { x: 152, y: 78 },
+    // Row 3 — deeper in bowl
+    { x: 82, y: 102 }, { x: 132, y: 102 },
   ];
+
+  // Bowl state-driven classes
+  const bowlStroke = $derived(
+    bowlCount === needed ? '#4ade80' :
+    bowlCount > 0 ? '#fbbf24' :
+    '#d1d5db'
+  );
+  const bowlFill = $derived(
+    bowlCount === needed ? 'rgba(74,222,128,0.15)' :
+    bowlCount > 0 ? 'rgba(251,191,36,0.08)' :
+    'rgba(255,255,255,0.25)'
+  );
 
   const totalApples = $derived(Math.max(needed, Math.min(target, 10)));
 
@@ -238,36 +253,66 @@
     </div>
   {/if}
 
-  <!-- Bowl drop zone -->
+  <!-- Bowl drop zone — SVG bowl where dashed stroke IS the bowl edge -->
   <div
     id="bowl-zone"
-    class="absolute bottom-8 left-1/2 -translate-x-1/2 w-44 h-32 flex flex-col items-center justify-end
-      border-4 border-dashed rounded-b-[80px] transition-all duration-300
-      {bowlCount === needed ? 'border-green-400 bg-green-100/40' : ''}
-      {bowlCount > 0 && bowlCount < needed ? 'border-amber-400 bg-amber-50/40' : ''}
-      {bowlCount === 0 ? 'border-gray-400 bg-white/30' : ''}"
+    class="absolute bottom-4 left-1/2 -translate-x-1/2"
+    style="width: 200px; height: 160px;"
   >
-    {#each bowlSlots as slot, i}
-      {#if bowlOccupants[i] === -1}
-        <div
-          class="absolute w-6 h-6 rounded-full border border-dashed border-gray-300/50"
-          style="left: {slot.x - 12}px; top: {slot.y - 12}px;"
-        ></div>
-      {/if}
-    {/each}
-    {#each bowlSlots as slot, i}
-      {#if bowlOccupants[i] !== -1}
-        <div
-          class="absolute w-10 h-10 flex items-center justify-center text-2xl z-5 pointer-events-none animate-bounce-in"
-          style="left: {slot.x - 20}px; top: {slot.y - 20}px; animation-duration: 0.35s;"
-        >
-          🍎
-        </div>
-      {/if}
-    {/each}
+    <svg viewBox="0 0 200 160" class="w-full h-full overflow-visible">
+      <!-- Bowl shadow -->
+      <ellipse cx="100" cy="148" rx="75" ry="8" fill="rgba(0,0,0,0.08)" />
 
-    <span class="text-5xl mb-1 relative z-0">🥣</span>
-    <span class="text-xs text-gray-500 mb-1">拖放或点击苹果</span>
+      <!-- Bowl body — dashed stroke IS the bowl outline -->
+      <path
+        d="M 25,35 Q 100,12 175,35 Q 192,135 100,152 Q 8,135 25,35 Z"
+        fill={bowlFill}
+        stroke={bowlStroke}
+        stroke-width="4"
+        stroke-dasharray="10,5"
+        stroke-linecap="round"
+        class="transition-all duration-300"
+      />
+
+      <!-- Bowl rim highlight -->
+      <path
+        d="M 25,35 Q 100,12 175,35"
+        fill="none"
+        stroke={bowlStroke}
+        stroke-width="5"
+        stroke-linecap="round"
+        class="transition-all duration-300"
+      />
+
+      <!-- Empty slot indicators — large, clearly visible circles -->
+      {#each bowlSlots as slot, i}
+        {#if bowlOccupants[i] === -1}
+          <circle cx={slot.x} cy={slot.y} r="15"
+            fill="rgba(255,255,255,0.5)" stroke="#94a3b8" stroke-width="2"
+            stroke-dasharray="6,4" opacity="0.7" />
+          <text x={slot.x} y={slot.y + 1} text-anchor="middle" dominant-baseline="central"
+            font-size="12" fill="#94a3b8" opacity="0.5" class="select-none pointer-events-none">
+            ?
+          </text>
+        {/if}
+      {/each}
+
+      <!-- Apple emojis in occupied slots -->
+      {#each bowlSlots as slot, i}
+        {#if bowlOccupants[i] !== -1}
+          <text x={slot.x} y={slot.y + 2} text-anchor="middle" dominant-baseline="central"
+            font-size="26" class="pointer-events-none animate-bounce-in-svg">
+            🍎
+          </text>
+        {/if}
+      {/each}
+
+      <!-- Bowl label -->
+      <text x="100" y="140" text-anchor="middle" font-size="9" fill="#9ca3af"
+        class="select-none pointer-events-none">
+        拖放苹果到这里
+      </text>
+    </svg>
   </div>
 
   <!-- Feedback overlay -->
@@ -295,6 +340,15 @@
   }
   :global(.animate-bounce-in) {
     animation: bounceIn 0.5s ease-out;
+  }
+  @keyframes bounceInSvg {
+    0% { transform: scale(0.3); transform-origin: center; opacity: 0; }
+    50% { transform: scale(1.15); transform-origin: center; }
+    70% { transform: scale(0.85); transform-origin: center; }
+    100% { transform: scale(1); transform-origin: center; opacity: 1; }
+  }
+  :global(.animate-bounce-in-svg) {
+    animation: bounceInSvg 0.35s ease-out;
   }
   @keyframes shake {
     0%, 100% { transform: translateX(0); }

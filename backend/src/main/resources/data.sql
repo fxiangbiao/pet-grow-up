@@ -31,7 +31,7 @@ UPDATE spirit_species SET evolves_from_id = (SELECT t.id FROM (SELECT id FROM sp
 
 -- Knowledge Nodes: Chinese (诗词大陆)
 INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
-('chinese', 'chinese_intro', '拼音与识字', '认识拼音字母和基础汉字', 1, NULL, 1);
+('chinese', 'chinese_intro', '语文入门', '认识拼音字母和基础汉字，朗读儿歌和古诗', 1, NULL, 1);
 
 -- Knowledge Nodes: Math (智慧王国) — 一年级数学（人教2024版）
 INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
@@ -420,7 +420,7 @@ INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, 
 ((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '哪个是"老师"的英文？', '[{"key":"A","text":"student"},{"key":"B","text":"teacher"},{"key":"C","text":"doctor"}]', 'B', '老师的英文是 teacher', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '"head" 的中文意思是？', '[{"key":"A","text":"手"},{"key":"B","text":"脚"},{"key":"C","text":"头"}]', 'C', 'head = 头', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '"mouth" 的中文意思是？', '[{"key":"A","text":"眼睛"},{"key":"B","text":"嘴巴"},{"key":"C","text":"耳朵"}]', 'B', 'mouth = 嘴巴', 10),
-((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '哪个颜色是"green"？', '[{"key":"A","text":"绿色"},{"key":"B","text":"蓝色"},{"key":"C","text":"黄色"}]', 'A', 'green = 绿色', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '哪个颜色是"green"？', '[{"key":"A","text":"绿色","color":"green"},{"key":"B","text":"蓝色","color":"blue"},{"key":"C","text":"黄色","color":"yellow"}]', 'A', 'green = 绿色', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'english_vocab'), 'SCENE_TAP', 2, '"I ___ a boy." 填什么？', '[{"key":"A","text":"am"},{"key":"B","text":"is"},{"key":"C","text":"are"}]', 'A', 'I 后面用 am', 10);
 
 -- VOCAB_MATCH: 主题配对
@@ -531,30 +531,56 @@ INSERT IGNORE INTO story_chapter (chapter_number, title, narrative, npc_name, np
  'ACHIEVEMENT_COUNT', 3, 80, 12);
 
 -- ============================================================
--- Sprint A Cleanup: Remove old Grade-1-misaligned content
--- Runs AFTER all INSERTs so old data is cleaned regardless of seed state
+-- Sprint A follow-up: Restore Grade 1 poems + text comprehension + more characters
 -- ============================================================
 
--- Chinese: Delete Tang/Song poetry nodes (not Grade 1 curriculum) — CASCADE removes their questions
-DELETE FROM knowledge_node WHERE node_key IN ('chinese_tang', 'chinese_song');
+-- ── 古诗恢复：一年级必背古诗 ──
 
--- Chinese: Delete poetry-focused questions under chinese_intro (keep pinyin/literacy ones)
-DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro')
-  AND question_type = 'POEM_SEQUENCE';
-DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro')
-  AND question_text LIKE '%床前明月光%';
-DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro')
-  AND question_text LIKE '%诗仙%';
-DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro')
-  AND question_text LIKE '%春眠不觉晓%';
+-- 悯农（李绅）— Grade 1 poem
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'POEM_SEQUENCE', 2, '请将《悯农》的诗句按正确顺序排列', '["锄禾日当午","汗滴禾下土","谁知盘中餐","粒粒皆辛苦"]', '1,2,3,4', '李绅《悯农》：锄禾日当午，汗滴禾下土。谁知盘中餐，粒粒皆辛苦。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'FILL_BLANK', 2, '"谁知盘中餐，______。" 请填空', NULL, '粒粒皆辛苦', '出自李绅《悯农》，告诉我们要珍惜粮食。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'MULTIPLE_CHOICE', 2, '"锄禾日当午"中的"禾"指的是什么？', '[{"key":"A","text":"水稻"},{"key":"B","text":"小麦"},{"key":"C","text":"谷类作物的统称"},{"key":"D","text":"树木"}]', 'C', '禾是谷类作物的统称，农民在田里给庄稼锄草。', 10);
 
--- English: Delete grammar node (past tense, third-person singular — Grade 3+ content)
-DELETE FROM knowledge_node WHERE node_key = 'english_grammar';
+-- 画（王维）
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'FILL_BLANK', 2, '"远看山有色，近听水无声。春去花还在，______。"', NULL, '人来鸟不惊', '出自王维《画》，描写一幅山水画。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'MULTIPLE_CHOICE', 2, '《画》这首诗描写的是什么？', '[{"key":"A","text":"真实的山"},{"key":"B","text":"一幅画"},{"key":"C","text":"一条河"},{"key":"D","text":"一座花园"}]', 'B', '这首诗描写的是一幅山水画中的景物。', 10);
 
--- English: Delete too-advanced vocabulary questions
-DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'english_vocab')
-  AND question_text LIKE '%beautiful%';
-DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'english_vocab')
-  AND question_text LIKE '%Library%';
-DELETE FROM quiz_question WHERE knowledge_node_id = (SELECT id FROM knowledge_node WHERE node_key = 'english_intro')
-  AND question_text LIKE '%字母表中有多少个字母%';
+-- 咏鹅（骆宾王）— fill in blank
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'FILL_BLANK', 2, '"鹅鹅鹅，______。白毛浮绿水，红掌拨清波。"', NULL, '曲项向天歌', '出自骆宾王7岁时写的《咏鹅》。', 10);
+
+-- ── 课文理解：一年级课文 ──
+
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'MULTIPLE_CHOICE', 1, '"一去二三里，烟村四五家"一共有几座房子？', '[{"key":"A","text":"二三座"},{"key":"B","text":"四五座"},{"key":"C","text":"七八座"}]', 'B', '烟村四五家，就是四五户人家。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'MULTIPLE_CHOICE', 1, '《小小的船》中，"弯弯的月儿小小的船"，月儿像什么？', '[{"key":"A","text":"香蕉"},{"key":"B","text":"小船"},{"key":"C","text":"钩子"}]', 'B', '弯弯的月亮像一只小小的船。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'FILL_BLANK', 1, '"小小的船"指的是______。', NULL, '月亮', '弯弯的月儿像小小的船，所以小小的船指的是月亮。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'MULTIPLE_CHOICE', 1, '《四季》中，"草芽尖尖"描写的是哪个季节？', '[{"key":"A","text":"春天"},{"key":"B","text":"夏天"},{"key":"C","text":"秋天"}]', 'A', '草芽尖尖，他对小鸟说：我是春天。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'MULTIPLE_CHOICE', 1, '《四季》中，哪个季节"雪人大肚子一挺"？', '[{"key":"A","text":"秋天"},{"key":"B","text":"冬天"},{"key":"C","text":"春天"}]', 'B', '雪人大肚子一挺，他顽皮地说：我就是冬天。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'FILL_BLANK', 1, '《四季》中，谷穗弯弯，他鞠着躬说：我是______。', NULL, '秋天', '谷穗弯弯代表秋天丰收的季节。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'MULTIPLE_CHOICE', 2, '《日月明》中，"日月明"表示什么意思？', '[{"key":"A","text":"太阳和月亮"},{"key":"B","text":"太阳和月亮组成\"明\"字"},{"key":"C","text":"明天"}]', 'B', '日+月=明，表示光明、明亮。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_kewen'), 'FILL_BLANK', 2, '"魚羊鲜，______。" 请填下一个字', NULL, '小土尘', '《日月明》：日月明，魚羊鲜，小土尘，小大尖。', 10);
+
+-- ── 识字辨字：更多汉字练习 ──
+
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '"天"字有几笔？', '[{"key":"A","text":"3笔"},{"key":"B","text":"4笔"},{"key":"C","text":"5笔"}]', 'B', '天字4笔：横、横、撇、捺。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '"木"字加一笔变成什么字？', '[{"key":"A","text":"本"},{"key":"B","text":"林"},{"key":"C","text":"森"}]', 'A', '木下面加一横就是"本"，表示树根。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '下面哪个字是"目"（眼睛）？', '[{"key":"A","text":"日"},{"key":"B","text":"目"},{"key":"C","text":"口"}]', 'B', '目比日多一横，表示眼睛，目字里面的两横像眼珠。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '"休"字的意思是什么？', '[{"key":"A","text":"休息"},{"key":"B","text":"跑步"},{"key":"C","text":"吃饭"}]', 'A', '亻（人）+ 木（树）= 休，人靠在树上休息。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '"从"字由两个什么字组成？', '[{"key":"A","text":"两个人"},{"key":"B","text":"两个木"},{"key":"C","text":"两个口"}]', 'A', '从=人+人，一个人跟着另一个人，表示跟从。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '"林"字的意思是什么？', '[{"key":"A","text":"一棵树"},{"key":"B","text":"很多树"},{"key":"C","text":"一块石头"}]', 'B', '两个木组成林，表示很多树木。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_TAP', 1, '下面哪个字和"手"有关？', '[{"key":"A","text":"江"},{"key":"B","text":"打"},{"key":"C","text":"河"}]', 'B', '打是提手旁（扌），表示和手有关的动作，如打鼓、打球。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：日 + 十 = ？', '{"radical":"日","phonetic":"十","targetChar":"早"}', '早', '日 + 十 = 早，表示早晨。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_shizi'), 'SCENE_CHAR_BUILD', 1, '拼一拼：口 + 马 = ？', '{"radical":"口","phonetic":"马","targetChar":"吗"}', '吗', '口 + 马 = 吗，表示疑问语气。', 10);
+
+-- ── 综合练习（chinese_intro 补充）──
+
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'MULTIPLE_CHOICE', 1, '下面哪个是整体认读音节？', '[{"key":"A","text":"ba"},{"key":"B","text":"zhi"},{"key":"C","text":"an"}]', 'B', 'zhi是整体认读音节，不能拼读，直接读。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'SCENE_TAP', 1, '"云"字有几笔？', '[{"key":"A","text":"3笔"},{"key":"B","text":"4笔"},{"key":"C","text":"5笔"}]', 'B', '云字4笔：横、横、撇折、点。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'SCENE_TAP', 1, '"风"的第二笔是什么？', '[{"key":"A","text":"撇"},{"key":"B","text":"横折钩"},{"key":"C","text":"点"}]', 'B', '风字笔顺：撇、横折钩、撇、点。', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'chinese_intro'), 'SCENE_TAP', 1, '下面哪个字是"鸟"？', '[{"key":"A","text":"乌"},{"key":"B","text":"鸟"},{"key":"C","text":"马"}]', 'B', '鸟字里面有一点像眼睛，乌没有点（乌鸦太黑看不见眼睛）。', 10);
+

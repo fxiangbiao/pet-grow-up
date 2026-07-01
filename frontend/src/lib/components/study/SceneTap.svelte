@@ -12,14 +12,28 @@
     onComplete: (result: AnswerResult) => void;
   } = $props();
 
-  // ── Parse options (multi-format, same logic as explore page) ──
-  function parseOptions(raw: string | null | Array<{ key: string; text: string }>): Array<{ key: string; text: string }> {
+  // ── Parse options (multi-format, supports optional `color` field) ──
+  interface ParsedOption {
+    key: string;
+    text: string;
+    color?: string; // optional: semantic color name like 'green', 'red'
+  }
+
+  function parseOptions(raw: string | null | Array<any>): ParsedOption[] {
     if (!raw) return [];
-    if (Array.isArray(raw)) return raw as Array<{ key: string; text: string }>;
+    if (Array.isArray(raw)) return raw.map((o: any) => ({
+      key: o.key || '',
+      text: o.text || String(o),
+      color: o.color || undefined,
+    }));
     if (typeof raw === 'string') {
       try {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed as Array<{ key: string; text: string }>;
+        if (Array.isArray(parsed)) return parsed.map((o: any) => ({
+          key: o.key || '',
+          text: o.text || String(o),
+          color: o.color || undefined,
+        }));
       } catch { /* fall through */ }
     }
     if (typeof raw === 'object' && raw !== null) {
@@ -38,8 +52,8 @@
   let feedback = $state<'idle' | 'correct' | 'wrong'>('idle');
   let showFeedback = $state(false);
 
-  // Bubble colors — cheerful palette
-  const bubbleColors = [
+  // Default bubble colors — cheerful palette (used when option has no explicit color)
+  const defaultBubbleColors = [
     { bg: 'bg-sky-100', border: 'border-sky-400', text: 'text-sky-800' },
     { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-800' },
     { bg: 'bg-emerald-100', border: 'border-emerald-400', text: 'text-emerald-800' },
@@ -47,6 +61,27 @@
     { bg: 'bg-violet-100', border: 'border-violet-400', text: 'text-violet-800' },
     { bg: 'bg-rose-100', border: 'border-rose-400', text: 'text-rose-800' },
   ];
+
+  // Semantic color mapping — when option.color is specified
+  const semanticColors: Record<string, { bg: string; border: string; text: string }> = {
+    red:    { bg: 'bg-red-100', border: 'border-red-400', text: 'text-red-800' },
+    orange: { bg: 'bg-orange-100', border: 'border-orange-400', text: 'text-orange-800' },
+    yellow: { bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-800' },
+    green:  { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-800' },
+    blue:   { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-800' },
+    purple: { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-800' },
+    pink:   { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-800' },
+    white:  { bg: 'bg-white', border: 'border-gray-400', text: 'text-gray-800' },
+    black:  { bg: 'bg-gray-200', border: 'border-gray-600', text: 'text-gray-900' },
+    brown:  { bg: 'bg-amber-100', border: 'border-amber-600', text: 'text-amber-900' },
+  };
+
+  function getBubbleColor(opt: ParsedOption, idx: number): { bg: string; border: string; text: string } {
+    if (opt.color && semanticColors[opt.color]) {
+      return semanticColors[opt.color];
+    }
+    return defaultBubbleColors[idx % defaultBubbleColors.length];
+  }
 
   async function handleTap(key: string) {
     if (submitted) return;
@@ -101,7 +136,7 @@
   <!-- Option bubbles -->
   <div class="absolute inset-x-0 top-24 bottom-8 flex flex-wrap items-center justify-center gap-4 px-6 content-center">
     {#each options as opt, i}
-      {@const color = bubbleColors[i % bubbleColors.length]}
+      {@const color = getBubbleColor(opt, i)}
       <button
         onclick={() => handleTap(opt.key)}
         disabled={submitted}
