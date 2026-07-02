@@ -115,16 +115,16 @@
       <!-- Adventure stats -->
       <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 text-xs space-y-1.5 mb-4">
         <div class="flex items-center justify-between gap-4 flex-wrap">
-          <span class="text-gray-500"><span class="mr-1">{cleared ? '🏁' : '💀'}</span>{cleared ? '冒险通关' : '中途倒下'}</span>
-          <span class="text-gray-700 font-medium">{finalHp}/{startHp} ❤️</span>
+          <span class="text-gray-500"><span class="mr-1">🏁</span>冒险完成</span>
+          <span class="text-gray-700 font-medium">⚡ 能量 {finalHp * 20}%</span>
         </div>
         <div class="flex items-center justify-between gap-4 flex-wrap">
           <span class="text-gray-500">🔥 最高 Combo</span>
           <span class="text-orange-500 font-bold">×{maxCombo > 1 ? (maxCombo >= 4 ? 2 : 1.5) : 1}</span>
         </div>
         <div class="flex items-center justify-between gap-4 flex-wrap">
-          <span class="text-gray-500">👑 Boss</span>
-          <span class="{bossDefeated ? 'text-green-600' : 'text-red-500'} font-medium">{bossDefeated ? '✅ 击败' : '❌ 未击败'}</span>
+          <span class="text-gray-500">🛡️ 守护者</span>
+          <span class="{bossDefeated ? 'text-violet-600' : 'text-gray-500'} font-medium">{bossDefeated ? '✅ 已净化' : '💪 再接再厉'}</span>
         </div>
         <div class="flex items-center justify-between gap-4 flex-wrap">
           <span class="text-gray-500">💰 宝箱</span>

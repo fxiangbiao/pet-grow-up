@@ -64,6 +64,15 @@
         {comboTheme.label}
       </span>
     {/if}
+
+    <!-- Star collection (combo >= 5) -->
+    {#if combo >= 5}
+      <div class="flex items-center gap-0.5 -ml-1">
+        {#each Array(Math.min(combo - 4, 3)) as _, i}
+          <span class="text-xs animate-star-pop" style="animation-delay: {i * 0.15}s;">⭐</span>
+        {/each}
+      </div>
+    {/if}
   </div>
 {/if}
 
@@ -76,5 +85,14 @@
   }
   :global(.animate-flame-flicker) {
     animation: flame-flicker 0.6s ease-in-out infinite;
+  }
+  @keyframes star-pop {
+    0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+    60% { transform: scale(1.4) rotate(10deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  :global(.animate-star-pop) {
+    animation: star-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    opacity: 0;
   }
 </style>

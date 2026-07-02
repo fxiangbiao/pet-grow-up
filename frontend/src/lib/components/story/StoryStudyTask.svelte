@@ -19,8 +19,7 @@
   import SceneCharBuild from '$lib/components/study/SceneCharBuild.svelte';
   import HpBar from '$lib/components/study/HpBar.svelte';
   import ComboCounter from '$lib/components/study/ComboCounter.svelte';
-  import AdventurePath from '$lib/components/study/AdventurePath.svelte';
-  import BossSection from '$lib/components/study/BossSection.svelte';
+  import BattleScene from '$lib/components/study/BattleScene.svelte';
   import { spiritStore } from '$lib/stores/spirit.svelte';
   import { soundManager } from '$lib/audio/sound-manager';
 
@@ -50,7 +49,7 @@
   let questionStartTime = $state<number>(0);
   let errorMsg = $state('');
 
-  // Adventure state (3 HP, 3 questions)
+  // Adventure state
   let hp = $state(3);
   let combo = $state(0);
   let maxCombo = $state(0);
@@ -60,12 +59,16 @@
   let results = $state<Array<boolean | null>>([]);
   let adventureEnded = $state(false);
 
+  // Battle scene state
+  let battleState = $state<'idle' | 'player_attack' | 'enemy_attack' | 'enemy_defeated'>('idle');
+  let spiritMood = $state<'idle' | 'happy' | 'excited' | 'hurt'>('idle');
+
   const isLastQuestion = $derived(answeredCount >= totalQuestions - 1);
 
   // Boss theme on last question
   $effect(() => {
     if (isLastQuestion && phase === 'playing' && !bossThemePlayed) {
-      soundManager.playBossTheme();
+      soundManager.playBossTheme?.();
       bossThemePlayed = true;
     }
   });
@@ -111,8 +114,29 @@
     selectedAnswer = answer;
   }
 
+  function triggerBattleAnimation(isCorrect: boolean, isLast: boolean) {
+    if (isCorrect) {
+      battleState = 'player_attack';
+      spiritMood = 'happy';
+      soundManager.playCorrect?.();
+    } else {
+      battleState = 'enemy_attack';
+      spiritMood = 'hurt';
+      soundManager.playWrong?.();
+    }
+    // Reset after animation plays
+    setTimeout(() => {
+      if (isLast && isCorrect) {
+        battleState = 'enemy_defeated';
+      } else if (!isLast || isCorrect) {
+        battleState = 'idle';
+        spiritMood = 'idle';
+      }
+    }, 700);
+  }
+
   async function handleSubmit() {
-    if (!selectedAnswer || submitted || !question || adventureEnded) return;
+    if (!selectedAnswer || submitted || !question) return;
     submitted = true;
     try {
       const result = await submitAnswer({
@@ -124,29 +148,24 @@
       lastResult = result;
       results[answeredCount] = result.isCorrect;
 
+      triggerBattleAnimation(result.isCorrect, result.isLastQuestion);
+
       if (result.isCorrect) {
         combo++;
         maxCombo = Math.max(maxCombo, combo);
+        if (combo >= 3) spiritMood = 'excited';
         if (combo >= 2 && combo % 2 === 0) {
           treasuresFound++;
-          soundManager.playTreasure();
+          soundManager.playTreasure?.();
         }
         if (result.isLastQuestion && result.isCorrect) {
           bossDefeated = true;
-          soundManager.playBossDefeated();
+          soundManager.playBossDefeated?.();
         }
       } else {
         combo = 0;
-        if (result.isLastQuestion) {
-          hp -= 2;
-        } else {
-          hp -= 1;
-        }
-        if (hp <= 0) {
-          adventureEnded = true;
-          setTimeout(finish, 2000);
-          return;
-        }
+        if (result.isLastQuestion) { hp -= 2; } else { hp -= 1; }
+        if (hp <= 0) { adventureEnded = true; setTimeout(finish, 2000); return; }
       }
 
       if (result.isSessionComplete) {
@@ -160,7 +179,7 @@
           selectedAnswer = '';
           lastResult = null;
           questionStartTime = Date.now();
-        }, 800);
+        }, 1000);
       }
     } catch (e: any) {
       errorMsg = e.message;
@@ -211,7 +230,7 @@
     handleSubmit();
   }
 
-  // Scene component result handler — processes AnswerResult from Scene* components
+  // Scene component result handler
   async function handleSceneResult(result: AnswerResult) {
     if (!result) {
       errorMsg = '场景提交失败';
@@ -223,29 +242,24 @@
     lastResult = result;
     results[answeredCount] = result.isCorrect;
 
+    triggerBattleAnimation(result.isCorrect, result.isLastQuestion);
+
     if (result.isCorrect) {
       combo++;
       maxCombo = Math.max(maxCombo, combo);
+      if (combo >= 3) spiritMood = 'excited';
       if (combo >= 2 && combo % 2 === 0) {
         treasuresFound++;
-        soundManager.playTreasure();
+        soundManager.playTreasure?.();
       }
       if (result.isLastQuestion && result.isCorrect) {
         bossDefeated = true;
-        soundManager.playBossDefeated();
+        soundManager.playBossDefeated?.();
       }
     } else {
       combo = 0;
-      if (result.isLastQuestion) {
-        hp -= 2;
-      } else {
-        hp -= 1;
-      }
-      if (hp <= 0) {
-        adventureEnded = true;
-        setTimeout(finish, 2000);
-        return;
-      }
+      if (result.isLastQuestion) { hp -= 2; } else { hp -= 1; }
+      if (hp <= 0) { adventureEnded = true; setTimeout(finish, 2000); return; }
     }
 
     if (result.isSessionComplete) {
@@ -262,6 +276,20 @@
       }, 1500);
     }
   }
+
+  // Is this a scene-type question?
+  const isSceneQuestion = $derived(
+    question?.questionType === 'SCENE_DRAG' || question?.questionType === 'SCENE_TAP' ||
+    question?.questionType === 'SCENE_MATCH' || question?.questionType === 'SCENE_WHACK_MOLE' ||
+    question?.questionType === 'SCENE_SHAPE_PUZZLE' || question?.questionType === 'SCENE_CLOCK' ||
+    question?.questionType === 'SCENE_SHOP' || question?.questionType === 'SCENE_PINYIN' ||
+    question?.questionType === 'SCENE_CHAR_BUILD'
+  );
+
+  const showSubmitBtn = $derived(
+    !submitted && !isSceneQuestion &&
+    question?.questionType !== 'POEM_SEQUENCE' && question?.questionType !== 'VOCAB_MATCH'
+  );
 </script>
 
 <!-- Loading -->
@@ -285,30 +313,38 @@
 <!-- Playing -->
 {:else if phase === 'playing' && question}
   <div class="bg-white rounded-xl border-2 {subjectTheme.border}">
-    <!-- Mini header: HP + Combo -->
+    <!-- Mini header: HP + Combo + Progress dots -->
     <div class="flex items-center justify-between px-4 pt-3 pb-1">
       <HpBar {hp} maxHp={3} />
+      <div class="flex gap-1.5">
+        {#each Array(totalQuestions) as _, i}
+          <div class="w-2 h-2 rounded-full transition-all duration-300"
+               class:bg-indigo-400={i === answeredCount}
+               class:bg-emerald-400={results[i] === true}
+               class:bg-red-400={results[i] === false}
+               class:bg-gray-200={i > answeredCount || (i === answeredCount && results[i] === null)}>
+          </div>
+        {/each}
+      </div>
       <ComboCounter {combo} />
     </div>
 
-    <!-- Adventure path (compact) -->
-    <div class="bg-gray-50 mx-3 rounded-lg mb-2 scale-90 origin-top">
-      <AdventurePath
-        totalQuestions={totalQuestions}
-        currentIndex={answeredCount}
-        results={results}
+    <!-- Battle Scene: pet vs monster (prominent!) -->
+    <div class="px-3 pt-2 pb-1">
+      <BattleScene
+        {subject}
         species={spiritStore.activeSpirit?.species ?? null}
         evolutionStage={spiritStore.activeSpirit?.currentEvolutionStage ?? 1}
-        subjectTheme={subject}
+        mood={spiritMood}
+        currentIndex={answeredCount}
+        {totalQuestions}
+        isBoss={isLastQuestion}
+        bossHp={isLastQuestion ? 3 : 1}
+        bossMaxHp={isLastQuestion ? 3 : 1}
+        {combo}
+        state={battleState}
       />
     </div>
-
-    <!-- Boss section -->
-    {#if isLastQuestion}
-      <div class="mx-3 mb-2">
-        <BossSection visible={true} {bossDefeated} {subject} />
-      </div>
-    {/if}
 
     <!-- Question with crossfade transition -->
     {#key question.questionId}
@@ -373,7 +409,7 @@
       {/if}
       {/if}
 
-      {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH' && question.questionType !== 'SCENE_DRAG' && question.questionType !== 'SCENE_TAP' && question.questionType !== 'SCENE_MATCH' && question.questionType !== 'SCENE_WHACK_MOLE' && question.questionType !== 'SCENE_SHAPE_PUZZLE' && question.questionType !== 'SCENE_CLOCK' && question.questionType !== 'SCENE_SHOP' && question.questionType !== 'SCENE_PINYIN' && question.questionType !== 'SCENE_CHAR_BUILD'}
+      {#if showSubmitBtn}
         <button onclick={handleSubmit} disabled={!selectedAnswer}
                 class="mt-3 w-full py-2.5 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 disabled:opacity-50 transition text-sm">
           提交答案

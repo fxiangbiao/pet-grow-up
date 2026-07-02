@@ -18,6 +18,7 @@
 - Sprint 1（2026-06-29）：双路径「凑十法」Demo 对比，**选定 Svelte 路径继续**。
 - Sprint 2（2026-06-30）：场景组件扩充（SceneTap/SceneMatch）+ 题库 45→77 + 剧情模式接入场景题型。
 - Sprint A（2026-06-30）：6 个新场景组件 + 题库 77→~200 + 音频动画升级 + 冒险模式渐进演化。
+- **Sprint B（2026-07-02）**：宇宙星空冒险地图 + 战斗动画重构 + BGM 柔和化 + 题库扩充至 491 题（年级 1-3）+ 剧情 24 章。
   计划文档见 `.plans/`，v2 设计方案见 `游戏化学习系统设计方案-v2.md`。
 
 ## 已实现子系统
@@ -39,15 +40,34 @@
 | — | 用户中心 | `user` | `lib/api/user.ts` | ✅ |
 | **P2** | 时空裂隙系统 | — | — | ❌ 未实现 |
 
-### 冒险模式（已落地，核心玩法）
+### 冒险模式（Sprint B 重构，核心玩法）
 
 每次答题被改造为一次「小冒险」，前端维护全部实时状态（HP/Combo/Boss/宝箱），
 后端仅在结算时记录 `maxCombo` / `bossDefeated` / `comboBonusEnergy`。关键契约：
 
 - `study/dto/AnswerResultDTO.java` —— 含 `isLastQuestion`（标记 Boss 题）
 - `study/dto/SessionResultDTO.java` —— 含 `maxCombo`、`bossDefeated`、`comboBonusEnergy`
-- 前端组件：`AdventurePath` / `ComboCounter` / `BossBattle` / `HpBar` / `TreasureChest` 等
-  （见 `frontend/src/lib/components/study/`）
+- 探索模式：宇宙星空地图（`AdventureMap.svelte`）→ 怪物节点 → BattleScene 对战 → 答题 → 攻击动画
+- 剧情模式：宇宙星空地图（`StoryMap.svelte`）→ 章节节点 → ChapterDialog → BattleScene 对战
+- 战斗动画状态机：`idle → player_attack → idle`（答对）/ `idle → enemy_attack → idle`（答错）/ `enemy_defeated`（击杀）
+
+**探索模式组件**（`frontend/src/lib/components/study/`）：
+| 组件 | 用途 |
+|------|------|
+| `AdventureMap.svelte` | SVG 星空地图：60 颗闪烁星星 + 星云 + 星座连线 + 怪物节点 + HP 条 + 精灵令牌 |
+| `BattleScene.svelte` | 对战画面：精灵（左）vs 怪物（右），含攻击/受击/击杀动画 + 地面场景 |
+| `EnemySprite.svelte` | SVG 怪物精灵：minion（3 variant）/ boss，含 idle/hit/attacking/defeated 状态 |
+| `HpBar.svelte` | ❤️ HP 红心条 |
+| `ComboCounter.svelte` | 🔥 连击倍率 |
+| `BossBattle.svelte` | Boss 终结战（充能→战斗→终结一击→战利品） |
+| `ExploreConfirm.svelte` | 冒险出发确认弹窗 |
+
+**剧情模式组件**（`frontend/src/lib/components/story/`）：
+| 组件 | 用途 |
+|------|------|
+| `StoryMap.svelte` | SVG 星空剧情地图：自适应行/列，蛇形星座连线，章节节点 + 精灵追踪 |
+| `StoryStudyTask.svelte` | 剧情学习任务：BattleScene 对战 + 题目 + 攻击动画 + HP/Combo |
+| `ChapterDialog.svelte` | 章节弹窗：叙事→对话→选择学科→学习任务→结果 |
 
 ### 场景化题型组件（Sprint 1-2 + Sprint A）
 
@@ -68,13 +88,13 @@
 | `MATH_INPUT` | `MathInput.svelte` | 数学 | 数字键盘输入 |
 | `VOCAB_MATCH` | `VocabMatch.svelte` | 英语 | 单词释义配对 |
 
-### 音频系统（Sprint A v3 升级）
+### 音频系统（Sprint B 柔和化升级）
 
 `frontend/src/lib/audio/sound-manager.ts` — Web Audio API 合成，无外部音频文件依赖。
-- **9 首 BGM**（3学科×3场景）：探索通用 / 拼音+钟表+字母 / 识字+商店+词汇
-- **11 个场景专属音效**：`playMoleAppear` / `playMoleWhack` / `playMoleMiss` / `playPuzzleSnap` / `playClockTick` / `playClockChime` / `playCoinDrop` / `playPurchase` / `playBubblePop` / `playCharGlow` / `playCardFlip`
-- **5 个宠物情感音效**：`playPetGreet` / `playPetEncourage` / `playPetCelebrate` / `playPetSleepy` / `playPetEat`
-- Boss 相关音效（待 v2 重构移除）
+- **9 首 BGM**（3学科×3场景）：全部重写为 sine+triangle 波，自然小调/Dorian 调式，低频旋律（C4-C5），
+  节奏脉冲（volume LFO），主音量降至 0.12。去掉 sawtooth/square 等刺耳波形。
+- **11 个场景专属音效** + **5 个宠物情感音效** + **Boss 音效**（已柔和化）
+- Boss 主题从 sawtooth/square 改为 sine/triangle
 
 ## 技术栈
 
@@ -110,8 +130,8 @@ pet-grow-up/
 │       ├── main/resources/
 │       │   ├── application.yml          # 含开发用 DB 口令（与 docker-compose 一致）
 │       │   ├── application-dev.yml      # dev profile（日志 + CORS）
-│       │   ├── schema.sql               # 20 张表 DDL（336 行）
-│       │   └── data.sql                 # 种子数据（237 行）
+│       │   ├── schema.sql               # 21 张表 DDL（含 grade_level 迁移）
+│       │   └── data.sql                 # 种子数据（1133 行：44 知识节点 + 491 题 + 24 剧情章节）
 │       └── test/                # 仅 5 个测试：auth/spirit/exploration/achievement/EnergyCalculator
 ├── frontend/                    # Vite + SvelteKit
 │   └── src/
@@ -119,10 +139,11 @@ pet-grow-up/
 │       │   ├── (auth)/          # 登录 / 注册
 │       │   └── app/             # 鉴权后主应用（/app, /app/study, /app/spirit ...）
 │       └── lib/
-│           ├── components/      # layout / spirit / study / energy / feedback / shop / social / common
+│           ├── components/      # layout / spirit / study / story / energy / feedback / shop / social / common
 │           ├── stores/          # Svelte 5 rune 状态（auth/spirit/energy/toast/achievement/story）
 │           ├── api/             # Fetch 封装 + 各模块 API client
-│           └── types/           # TypeScript 接口
+│           ├── types/           # TypeScript 接口（含 adventure-map.ts）
+│           └── audio/           # Web Audio API BGM + SFX 合成（sound-manager.ts）
 ├── docker-compose.yml           # MySQL 8.0（仅数据库，无后端/前端容器化）
 ├── 游戏化宠物养成系统设计方案-v1.md   # 产品设计文档 v1.0
 ├── 游戏化学习系统设计方案-v2.md    # 沉浸式重构方案 v2.0（2026-06-27）
@@ -136,6 +157,18 @@ pet-grow-up/
 `data.sql` 播种学科世界、题目、成就定义、商店物品、剧情章节等基础数据。
 开发库口令与 `docker-compose.yml` 保持一致（非生产凭证）。
 
+### 知识图谱（Sprint B 扩展）
+
+`knowledge_node` 表新增 `grade_level` 列（INT 1-6 对应小学年级）：
+
+| 学科 | G1 | G2 | G3 | 合计 |
+|------|:--:|:--:|:--:|:----:|
+| 语文（诗词大陆） | 6 | 5 | 4 | **15** |
+| 数学（智慧王国） | 11 | 6 | 6 | **23** |
+| 英语（魔法学院） | 5 | 4 | 4 | **13** |
+
+题库 491 题，覆盖 12 种题型，剧情章节 24 章（chapter 1-12 为 G1，13-24 为 G2-G3）。
+
 ## 本地运行
 
 ```bash
@@ -143,7 +176,7 @@ pet-grow-up/
 docker compose up -d
 
 # 2. 后端（默认端口 8080，建表+播种自动执行）
-cd backend && ./mvnw spring-boot:run        # 或 mvn spring-boot:run
+cd backend && mvn spring-boot:run
 
 # 3. 前端（默认端口 5173）
 cd frontend && npm install && npm run dev
@@ -154,12 +187,14 @@ cd frontend && npm install && npm run dev
 - **测试覆盖薄弱**：仅 5 个测试文件，集中在 5 个模块，其余 9 个业务模块无测试。
 - **未容器化后端/前端**：`docker-compose.yml` 仅含 MySQL，无应用镜像与发布流程。
 - **P2 时空裂隙系统未实现**：设计文档中唯一缺失的子系统。
-- **题库扩充至 ~200 题**（Sprint A 已完成）：含拼音/识字/钟表/人民币/找规律/字母等新题型，11 个新知识节点。后续需持续对标一年级下、二年级课标。
-- **冒险模式待 v2 重构**（Sprint B）：HP/Boss 惩罚机制与 v2「弱化惩罚」原则冲突，需全面重构为能量条+鼓励系统。
+- **题库需持续对标课标**：当前 491 题覆盖 G1-G3，后续需扩展 G4-G6 及更多题型变体。
+- **知识节点 grade_level 未在 API 暴露**：前端目前未按年级筛选节点，后续需在 SubjectWorld API 中增加年级过滤。
 
 ## 约定
 
-- 前端使用 Svelte 5 runes（`$state` / `$derived`），状态存放于 `lib/stores/*.svelte.ts`。
+- 前端使用 Svelte 5 runes（`$state` / `$derived` / `$derived.by` / `$effect` / `$props`），状态存放于 `lib/stores/*.svelte.ts`。
 - 后端按业务模块分包，每个模块含 `controller / service / mapper / entity / dto` 分层。
 - 统一响应封装 `common/response/ApiResponse`，异常走 `common/exception/GlobalExceptionHandler`。
 - 学习能量计算集中在 `common/util/EnergyCalculator`。
+- 冒险地图/战斗系统全部前端逻辑，后端 API 不变（`startSession` / `submitAnswer` / `getSessionResult`）。
+- SVG 渲染地图（无外部游戏引擎依赖），CSS 动画（闪烁星星、脉冲光环、令牌浮动）。

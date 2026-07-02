@@ -12,7 +12,7 @@ let bgmGain: GainNode | null = null;
 let bgmOscillators: OscillatorNode[] = [];
 let currentBgmSubject = '';
 let currentBgmScene = '';
-let masterVolume = 0.15;
+let masterVolume = 0.12;
 
 function getContext(): AudioContext {
   if (!ctx) {
@@ -57,10 +57,21 @@ function playSequence(notes: Array<{ freq: number; time: number; dur: number; ty
   });
 }
 
-/** Pentatonic scale frequencies (Chinese style) */
+// ── Scale frequencies (all in C4-C5 range for warmth, never piercing) ──
+// Natural minor (Aeolian): C D Eb F G Ab Bb — adventurous, slightly tense
+const MINOR = [262, 294, 311, 349, 392, 415, 466];
+// Harmonic minor: C D Eb F G Ab B — exotic adventure feel
+const HARMONIC_MINOR = [262, 294, 311, 349, 392, 415, 494];
+// Dorian mode: C D Eb F G A Bb — medieval adventure
+const DORIAN = [262, 294, 311, 349, 392, 440, 466];
+// Pentatonic for Chinese feel
 const PENTATONIC = [262, 294, 330, 392, 440]; // C D E G A
-/** Major scale for magic feel */
-const MAJOR = [262, 294, 330, 349, 392, 440, 494, 523];
+
+/** Pick a random note from a scale at a given octave offset (0 = C4, 1 = C5) */
+function pickNote(scale: number[], octaveOffset: number = 0): number {
+  const base = scale[Math.floor(Math.random() * scale.length)];
+  return base * Math.pow(2, octaveOffset);
+}
 
 /**
  * Helper: create a sustained oscillator connected to bgmGain.
@@ -101,158 +112,219 @@ function schedulePluck(
   return osc;
 }
 
-// ── BGM generators per subject/scene ──
+// ═══════════════════════════════════════════════════════════════
+// BGM generators — Soft + Dynamic + Adventurous
+//
+// Philosophy:
+//   - Sine pads only (warm foundation, never harsh)
+//   - Triangle plucks for melody (articulate but soft)
+//   - Natural minor / Dorian scales (adventure feel)
+//   - C3-C5 range (never piercing)
+//   - Subtle rhythmic pulse for "动感"
+//   - Gentle tension via minor intervals + slow filter movement
+// ═══════════════════════════════════════════════════════════════
 
+/**
+ * Create a soft rhythmic pulse — low sine wave that gently oscillates in volume.
+ * Adds the "dynamic/动感" feel without being intrusive.
+ */
+function startPulse(c: AudioContext, freq: number, vol: number, speedHz: number): OscillatorNode {
+  const osc = c.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, c.currentTime);
+
+  // Volume LFO for subtle "breathing" pulse
+  const lfo = c.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.setValueAtTime(speedHz, c.currentTime);
+  const lfoGain = c.createGain();
+  lfoGain.gain.setValueAtTime(vol * 0.3, c.currentTime);
+  lfo.connect(lfoGain);
+
+  const g = c.createGain();
+  g.gain.setValueAtTime(vol, c.currentTime);
+  lfoGain.connect(g.gain);
+
+  osc.connect(g);
+  g.connect(bgmGain!);
+  osc.start();
+  lfo.start();
+  bgmOscillators.push(lfo);
+  return osc;
+}
+
+// ── Chinese Explore: Pentatonic warmth with flowing melody ──
 function playChineseExplore(c: AudioContext) {
-  // Gentle pentatonic pad + slow melody (existing, refined)
-  bgmOscillators.push(
-    startPadOsc(c, 262, 0.06),
-    startPadOsc(c, 392, 0.06),
-  );
-  const melody = [523, 587, 659, 784, 880, 1047, 880, 784, 659, 587];
-  const cycleTime = 16;
+  // Warm low pad
+  bgmOscillators.push(startPadOsc(c, 131, 0.04)); // C3
+  bgmOscillators.push(startPadOsc(c, 196, 0.03)); // G3
+  // Gentle pulse
+  bgmOscillators.push(startPulse(c, 98, 0.03, 0.5));
+
+  // Flowing pentatonic melody — calm but forward-moving
+  const melody = [330, 392, 440, 523, 440, 392, 330, 294, 330, 392, 440, 523, 587, 523, 440, 392];
+  const cycle = 20;
   melody.forEach((freq, i) => {
-    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycleTime / melody.length), cycleTime / melody.length, 'triangle', 0.07, 0.01));
+    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / melody.length), cycle / melody.length, 'triangle', 0.05, 0.008));
   });
 }
 
+// ── Chinese Pinyin: Light, playful, bubble-like ──
 function playChinesePinyin(c: AudioContext) {
-  // Light ABC-song-inspired pentatonic with bubble-like staccato
-  bgmOscillators.push(
-    startPadOsc(c, 330, 0.05),
-    startPadOsc(c, 440, 0.04),
-  );
-  const notes = [523, 587, 659, 523, 659, 784, 880, 784, 659, 523, 587, 659, 587, 523];
-  const cycle = 12;
+  bgmOscillators.push(startPadOsc(c, 165, 0.03)); // E3
+  bgmOscillators.push(startPadOsc(c, 247, 0.025)); // B3
+  bgmOscillators.push(startPulse(c, 82, 0.025, 0.6));
+
+  // Playful staccato melody — pentatonic with bounce
+  const notes = [523, 440, 392, 440, 523, 587, 523, 440, 392, 330, 392, 440, 523, 440, 392, 330, 294, 330];
+  const cycle = 14;
   notes.forEach((freq, i) => {
-    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / notes.length), cycle / notes.length, 'sine', 0.06, 0.008));
+    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / notes.length), cycle / notes.length, 'triangle', 0.045, 0.006));
   });
 }
 
+// ── Chinese Char: Elegant, contemplative, guqin-like ──
 function playChineseChar(c: AudioContext) {
-  // Elegant guqin-style: slow pentatonic with wide reverb-like sustain
-  bgmOscillators.push(
-    startPadOsc(c, 196, 0.06),
-    startPadOsc(c, 294, 0.05),
-    startPadOsc(c, 392, 0.04),
-  );
-  const notes = [330, 392, 440, 523, 440, 392, 330, 294, 262];
-  const cycle = 18;
+  bgmOscillators.push(startPadOsc(c, 98, 0.04));  // G2
+  bgmOscillators.push(startPadOsc(c, 147, 0.03)); // D3
+  bgmOscillators.push(startPadOsc(c, 196, 0.025)); // G3
+
+  // Slow, spacious pentatonic — each note rings
+  const notes = [262, 330, 392, 330, 294, 262, 294, 330, 440, 392, 330, 294, 262];
+  const cycle = 24;
   notes.forEach((freq, i) => {
-    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / notes.length), cycle / notes.length, 'triangle', 0.06, 0.012));
+    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / notes.length), cycle / notes.length, 'triangle', 0.05, 0.012));
   });
 }
 
+// ── Math Explore: Dorian mode arpeggios — medieval adventure quest ──
 function playMathExplore(c: AudioContext) {
-  // Playful music-box arpeggios (existing, refined)
-  bgmOscillators.push(
-    startPadOsc(c, 262 * 0.5, 0.05),
-    startPadOsc(c, 330 * 0.5, 0.05),
-    startPadOsc(c, 392 * 0.5, 0.05),
-  );
-  const arpNotes = [523, 659, 784, 1047, 784, 659, 523, 392, 523, 659, 784, 880, 784, 659, 523, 392];
-  const arpCycle = 12;
-  arpNotes.forEach((freq, i) => {
-    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (arpCycle / arpNotes.length), arpCycle / arpNotes.length, 'triangle', 0.1, 0.015));
-  });
-}
+  // Rich low drone
+  bgmOscillators.push(startPadOsc(c, 131, 0.04)); // C3
+  bgmOscillators.push(startPadOsc(c, 196, 0.03)); // G3
+  bgmOscillators.push(startPulse(c, 65, 0.035, 0.55));
 
-function playMathClock(c: AudioContext) {
-  // Tick-tock rhythm: steady low pulse + clock-like high ticks
-  bgmOscillators.push(
-    startPadOsc(c, 220, 0.04),
-    startPadOsc(c, 330, 0.03),
-  );
-  // Tick-tock: alternating high clicks every beat
-  const beat = 0.8; // seconds per tick (Lento)
-  for (let i = 0; i < 30; i++) {
-    const t = c.currentTime + i * beat;
-    const isTick = i % 2 === 0;
-    const freq = isTick ? 1200 : 1000;
+  // Dorian arpeggio — adventurous, forward momentum
+  const arp = [262, 330, 392, 440, 392, 330, 262, 294, 349, 440, 349, 294, 262, 330, 392, 466, 440, 392, 330, 262];
+  const arpCycle = 16;
+  arp.forEach((freq, i) => {
+    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (arpCycle / arp.length), arpCycle / arp.length, 'triangle', 0.06, 0.01));
+  });
+
+  // Occasional tension note (Ab = 415 Hz — minor 6th interval creates adventure tension)
+  [3, 7, 11].forEach((beat) => {
+    const t = c.currentTime + beat * (arpCycle / 4);
     const osc = c.createOscillator();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, t);
+    osc.frequency.setValueAtTime(415, t);
     const g = c.createGain();
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.04, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    g.gain.linearRampToValueAtTime(0.025, t + 0.3);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
     osc.connect(g);
     g.connect(bgmGain!);
     osc.start(t);
-    osc.stop(t + 0.15);
+    osc.stop(t + 1.6);
     bgmOscillators.push(osc);
-  }
-  // Occasional chime
-  [0, 4, 8, 12].forEach((beatIdx) => {
-    const t = c.currentTime + beatIdx * beat + beat * 0.3;
-    bgmOscillators.push(schedulePluck(c, 880, t, 0.6, 'triangle', 0.05, 0.005));
   });
 }
 
-function playMathShop(c: AudioContext) {
-  // Lively marketplace: bouncy bass + coin-like high notes
-  bgmOscillators.push(
-    startPadOsc(c, 165, 0.05),
-    startPadOsc(c, 330, 0.03),
-  );
-  const bouncyNotes = [392, 440, 523, 440, 392, 349, 330, 349, 392, 440, 523, 587, 523, 440, 392];
-  const cycle = 10;
-  bouncyNotes.forEach((freq, i) => {
-    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / bouncyNotes.length), cycle / bouncyNotes.length, 'triangle', 0.07, 0.01));
+// ── Math Clock: Tick-tock rhythm + dreamy melody ──
+function playMathClock(c: AudioContext) {
+  bgmOscillators.push(startPadOsc(c, 131, 0.03)); // C3
+  bgmOscillators.push(startPadOsc(c, 196, 0.025)); // G3
+
+  // Gentle tick-tock — soft sine clicks, lower frequency
+  const beat = 0.9;
+  for (let i = 0; i < 28; i++) {
+    const t = c.currentTime + i * beat;
+    const osc = c.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(i % 2 === 0 ? 660 : 520, t);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.025, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    osc.connect(g);
+    g.connect(bgmGain!);
+    osc.start(t);
+    osc.stop(t + 0.12);
+    bgmOscillators.push(osc);
+  }
+
+  // Dreamy chimes on the hour
+  [0, 4, 8, 12, 16, 20].forEach((beatIdx) => {
+    const t = c.currentTime + beatIdx * beat + beat * 0.3;
+    bgmOscillators.push(schedulePluck(c, 523, t, 0.7, 'triangle', 0.04, 0.005));
   });
-  // Coin jingles
-  for (let i = 0; i < 5; i++) {
-    const t = c.currentTime + i * 2.5 + 0.5;
-    [1047, 1319, 1568].forEach((freq, j) => {
+}
+
+// ── Math Shop: Bouncy, cheerful, coin-jingle feel ──
+function playMathShop(c: AudioContext) {
+  bgmOscillators.push(startPadOsc(c, 165, 0.03)); // E3
+  bgmOscillators.push(startPadOsc(c, 247, 0.025)); // B3
+  bgmOscillators.push(startPulse(c, 110, 0.03, 0.65));
+
+  // Bouncy major-feel melody (with occasional minor for depth)
+  const bouncy = [392, 440, 392, 349, 330, 349, 392, 440, 523, 440, 392, 349, 330, 294, 330, 349, 392];
+  const cycle = 12;
+  bouncy.forEach((freq, i) => {
+    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / bouncy.length), cycle / bouncy.length, 'triangle', 0.05, 0.008));
+  });
+
+  // Soft coin sparkles
+  for (let i = 0; i < 4; i++) {
+    const t = c.currentTime + i * 3.2 + 0.8;
+    [784, 988, 1175].forEach((freq, j) => {
       const osc = c.createOscillator();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, t + j * 0.06);
+      osc.frequency.setValueAtTime(freq, t + j * 0.07);
       const g = c.createGain();
-      g.gain.setValueAtTime(0, t + j * 0.06);
-      g.gain.linearRampToValueAtTime(0.04, t + j * 0.06 + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.001, t + j * 0.06 + 0.15);
+      g.gain.setValueAtTime(0, t + j * 0.07);
+      g.gain.linearRampToValueAtTime(0.03, t + j * 0.07 + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + j * 0.07 + 0.14);
       osc.connect(g);
       g.connect(bgmGain!);
-      osc.start(t + j * 0.06);
-      osc.stop(t + j * 0.06 + 0.18);
+      osc.start(t + j * 0.07);
+      osc.stop(t + j * 0.07 + 0.16);
       bgmOscillators.push(osc);
     });
   }
 }
 
+// ── English Explore: Warm ambient + gentle adventure melody ──
 function playEnglishExplore(c: AudioContext) {
-  // Warm ambient: soft low chord pad + gentle slow melody
-  // Low Cmaj7 pad (C3 E3 G3 B3) — warm, not piercing
-  bgmOscillators.push(
-    startPadOsc(c, 131, 0.06),  // C3
-    startPadOsc(c, 165, 0.05),  // E3
-    startPadOsc(c, 196, 0.05),  // G3
-    startPadOsc(c, 247, 0.04),  // B3
-  );
+  // Warm Cmaj7 pad — very soft
+  bgmOscillators.push(startPadOsc(c, 131, 0.035)); // C3
+  bgmOscillators.push(startPadOsc(c, 165, 0.03));  // E3
+  bgmOscillators.push(startPadOsc(c, 196, 0.03));  // G3
+  bgmOscillators.push(startPadOsc(c, 247, 0.025)); // B3
+  bgmOscillators.push(startPulse(c, 65, 0.03, 0.45));
 
-  // Gentle mid-range melody — sine wave, slow attack, very soft
-  // Using lower octave: G4-A4-B4 (~392-494 Hz) instead of G5-A5-B5 (784-988 Hz)
-  [392, 440, 494, 392, 440].forEach((freq, i) => {
+  // Gentle melody — C4-C5 range, sine + slow attack = never harsh
+  const melody = [262, 330, 392, 349, 330, 294, 262, 330, 392, 440, 392, 330, 294, 262, 294, 330];
+  const cycle = 28;
+  melody.forEach((freq, i) => {
     const osc = c.createOscillator();
-    osc.type = 'sine'; // sine is smoother than triangle
+    osc.type = 'triangle';
     osc.frequency.setValueAtTime(freq, c.currentTime);
 
-    // Very subtle vibrato
+    // Subtle vibrato
     const vib = c.createOscillator();
     vib.type = 'sine';
-    vib.frequency.setValueAtTime(2.5 + i * 0.5, c.currentTime);
+    vib.frequency.setValueAtTime(3.5, c.currentTime);
     const vibGain = c.createGain();
-    vibGain.gain.setValueAtTime(3, c.currentTime); // reduced from 8
+    vibGain.gain.setValueAtTime(2, c.currentTime);
     vib.connect(vibGain);
     vibGain.connect(osc.frequency);
     vib.start();
 
     const g = c.createGain();
-    const t = c.currentTime + i * 4;
-    const len = 7;
+    const t = c.currentTime + i * (cycle / melody.length);
+    const len = cycle / melody.length * 1.5;
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.03, t + 2); // slower attack, lower peak
-    g.gain.setValueAtTime(0.03, t + len - 2);
+    g.gain.linearRampToValueAtTime(0.025, t + 1.2); // very slow attack
+    g.gain.setValueAtTime(0.025, t + len - 0.8);
     g.gain.linearRampToValueAtTime(0, t + len);
 
     osc.connect(g);
@@ -260,47 +332,67 @@ function playEnglishExplore(c: AudioContext) {
     osc.start();
     bgmOscillators.push(osc, vib);
   });
-}
 
-function playEnglishLetters(c: AudioContext) {
-  // ABC song inspired: simple major scale melody with bell chimes
-  bgmOscillators.push(
-    startPadOsc(c, 262, 0.05),
-    startPadOsc(c, 392, 0.03),
-  );
-  const abcMelody = [262, 262, 294, 262, 349, 330, 262, 262, 294, 262, 392, 349, 262, 262, 523, 440, 349, 330, 294];
-  const cycle = 16;
-  abcMelody.forEach((freq, i) => {
-    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / abcMelody.length), cycle / abcMelody.length, 'sine', 0.06, 0.01));
-  });
-}
-
-function playEnglishVocab(c: AudioContext) {
-  // Cheerful groove: bouncy bass + happy arpeggios
-  bgmOscillators.push(
-    startPadOsc(c, 196, 0.05),
-    startPadOsc(c, 330, 0.04),
-  );
-  const groove = [523, 494, 440, 392, 440, 494, 523, 587, 659, 587, 523, 440, 392, 349, 330, 294];
-  const cycle = 12;
-  groove.forEach((freq, i) => {
-    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / groove.length), cycle / groove.length, 'triangle', 0.07, 0.012));
-  });
-  // Soft bird-like chirps — lower frequency range, gentler
-  for (let i = 0; i < 4; i++) {
-    const t = c.currentTime + i * 3.5 + 1;
+  // Occasional tension swell (Ab in C major context — mysterious)
+  [4, 12, 20].forEach((noteIdx) => {
+    const t = c.currentTime + noteIdx * (cycle / melody.length);
     const osc = c.createOscillator();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(600 + i * 60, t);
-    osc.frequency.exponentialRampToValueAtTime(800 + i * 50, t + 0.1);
+    osc.frequency.setValueAtTime(415, t);
     const g = c.createGain();
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.02, t + 0.03);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    g.gain.linearRampToValueAtTime(0.02, t + 1.5);
+    g.gain.linearRampToValueAtTime(0, t + 4);
     osc.connect(g);
     g.connect(bgmGain!);
     osc.start(t);
-    osc.stop(t + 0.25);
+    osc.stop(t + 4.2);
+    bgmOscillators.push(osc);
+  });
+}
+
+// ── English Letters: ABC-inspired, gentle bell chimes ──
+function playEnglishLetters(c: AudioContext) {
+  bgmOscillators.push(startPadOsc(c, 131, 0.03)); // C3
+  bgmOscillators.push(startPadOsc(c, 196, 0.025)); // G3
+  bgmOscillators.push(startPulse(c, 87, 0.025, 0.5));
+
+  // Simple major melody — bell-like triangle, very soft
+  const abcMelody = [262, 294, 330, 349, 392, 349, 330, 294, 262, 330, 392, 440, 392, 330, 294, 262];
+  const cycle = 18;
+  abcMelody.forEach((freq, i) => {
+    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / abcMelody.length), cycle / abcMelody.length, 'triangle', 0.04, 0.007));
+  });
+}
+
+// ── English Vocab: Cheerful groove with light world-music flavor ──
+function playEnglishVocab(c: AudioContext) {
+  bgmOscillators.push(startPadOsc(c, 147, 0.03)); // D3
+  bgmOscillators.push(startPadOsc(c, 220, 0.025)); // A3
+  bgmOscillators.push(startPulse(c, 73, 0.03, 0.6));
+
+  // Bouncy melody with dorian flavor
+  const groove = [349, 392, 440, 392, 349, 330, 294, 330, 349, 392, 440, 466, 440, 392, 349, 330, 294, 262];
+  const cycle = 14;
+  groove.forEach((freq, i) => {
+    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / groove.length), cycle / groove.length, 'triangle', 0.05, 0.008));
+  });
+
+  // Soft bird-like chirps — very gentle, low frequency
+  for (let i = 0; i < 3; i++) {
+    const t = c.currentTime + i * 4.5 + 1.5;
+    const osc = c.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520 + i * 40, t);
+    osc.frequency.exponentialRampToValueAtTime(660 + i * 30, t + 0.08);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.015, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.connect(g);
+    g.connect(bgmGain!);
+    osc.start(t);
+    osc.stop(t + 0.2);
     bgmOscillators.push(osc);
   }
 }
@@ -396,17 +488,18 @@ export const soundManager = {
   },
 
   // ============================
-  // Boss theme — tense, urgent
+  // Guardian theme — suspenseful but gentle
   // ============================
 
   playBossTheme() {
     if (!enabled) return;
+    // Low drone + slow rising tension — no harsh waves
     playSequence([
-      { freq: 65.41, time: 0, dur: 2, type: 'sawtooth', vol: 0.08 },
-      { freq: 130.81, time: 0, dur: 0.15, type: 'square', vol: 0.06 },
-      { freq: 155.56, time: 0.3, dur: 0.15, type: 'square', vol: 0.06 },
-      { freq: 130.81, time: 0.6, dur: 0.15, type: 'square', vol: 0.06 },
-      { freq: 185.00, time: 0.9, dur: 0.25, type: 'square', vol: 0.06 },
+      { freq: 65.41, time: 0, dur: 2.5, type: 'sine', vol: 0.05 },
+      { freq: 98.00, time: 0, dur: 2.5, type: 'sine', vol: 0.04 },
+      { freq: 130.81, time: 0.6, dur: 0.3, type: 'triangle', vol: 0.04 },
+      { freq: 155.56, time: 1.2, dur: 0.3, type: 'triangle', vol: 0.04 },
+      { freq: 196.00, time: 1.8, dur: 0.4, type: 'triangle', vol: 0.05 },
     ]);
   },
 
@@ -428,9 +521,9 @@ export const soundManager = {
 
   playWrong() {
     playSequence([
-      { freq: 329.63, time: 0, dur: 0.15, type: 'sawtooth', vol: 0.08 },
-      { freq: 261.63, time: 0.1, dur: 0.3, type: 'sawtooth', vol: 0.08 },
-      { freq: 196.00, time: 0.15, dur: 0.2, type: 'sine', vol: 0.05 },
+      { freq: 330, time: 0, dur: 0.15, type: 'triangle', vol: 0.06 },
+      { freq: 262, time: 0.1, dur: 0.25, type: 'triangle', vol: 0.06 },
+      { freq: 196, time: 0.15, dur: 0.2, type: 'sine', vol: 0.04 },
     ]);
   },
 
@@ -501,45 +594,44 @@ export const soundManager = {
     const c = getContext();
     const osc = c.createOscillator();
     const gain = c.createGain();
-    osc.type = 'sawtooth';
+    osc.type = 'sine';
     osc.frequency.setValueAtTime(65.41, c.currentTime);
     osc.frequency.exponentialRampToValueAtTime(130.81, c.currentTime + 2.5);
-    gain.gain.setValueAtTime(0.06, c.currentTime);
+    gain.gain.setValueAtTime(0.04, c.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 3);
     osc.connect(gain);
     gain.connect(c.destination);
     osc.start(c.currentTime);
     osc.stop(c.currentTime + 3);
     playSequence([
-      { freq: 98.00, time: 0.8, dur: 0.08, type: 'square', vol: 0.05 },
-      { freq: 110.00, time: 1.5, dur: 0.08, type: 'square', vol: 0.05 },
-      { freq: 130.81, time: 2.0, dur: 0.15, type: 'square', vol: 0.07 },
+      { freq: 98.00, time: 0.8, dur: 0.1, type: 'triangle', vol: 0.04 },
+      { freq: 110.00, time: 1.5, dur: 0.1, type: 'triangle', vol: 0.04 },
+      { freq: 130.81, time: 2.0, dur: 0.2, type: 'triangle', vol: 0.05 },
     ]);
   },
 
   playBossAttack() {
     playSequence([
-      { freq: 440, time: 0, dur: 0.08, type: 'sawtooth', vol: 0.1 },
-      { freq: 330, time: 0.06, dur: 0.1, type: 'sawtooth', vol: 0.08 },
-      { freq: 220, time: 0.12, dur: 0.2, type: 'square', vol: 0.07 },
+      { freq: 294, time: 0, dur: 0.1, type: 'triangle', vol: 0.06 },
+      { freq: 247, time: 0.08, dur: 0.12, type: 'triangle', vol: 0.05 },
+      { freq: 196, time: 0.16, dur: 0.25, type: 'sine', vol: 0.05 },
     ]);
   },
 
   playBossPhaseChange() {
     playSequence([
-      { freq: 523, time: 0, dur: 0.07, type: 'triangle' },
-      { freq: 659, time: 0.06, dur: 0.07, type: 'triangle' },
-      { freq: 784, time: 0.12, dur: 0.12, type: 'triangle' },
+      { freq: 440, time: 0, dur: 0.08, type: 'triangle', vol: 0.05 },
+      { freq: 523, time: 0.06, dur: 0.08, type: 'triangle', vol: 0.05 },
+      { freq: 659, time: 0.12, dur: 0.15, type: 'sine', vol: 0.05 },
     ]);
   },
 
   playBossShatter() {
     playSequence([
-      { freq: 1319, time: 0, dur: 0.06, type: 'square', vol: 0.08 },
-      { freq: 1175, time: 0.03, dur: 0.06, type: 'square', vol: 0.07 },
-      { freq: 988, time: 0.06, dur: 0.08, type: 'square', vol: 0.06 },
-      { freq: 784, time: 0.09, dur: 0.1, type: 'square', vol: 0.05 },
-      { freq: 523, time: 0.12, dur: 0.3, type: 'triangle', vol: 0.06 },
+      { freq: 784, time: 0, dur: 0.08, type: 'triangle', vol: 0.06 },
+      { freq: 659, time: 0.04, dur: 0.08, type: 'triangle', vol: 0.05 },
+      { freq: 523, time: 0.08, dur: 0.1, type: 'triangle', vol: 0.05 },
+      { freq: 392, time: 0.12, dur: 0.35, type: 'sine', vol: 0.06 },
     ]);
   },
 

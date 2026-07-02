@@ -26,10 +26,10 @@
   } = $props();
 
   const infoItems = [
-    { icon: '🗡', text: '5 场遭遇战' },
-    { icon: '👑', text: '最终 Boss 战' },
-    { icon: '💰', text: '连对 2 题触发宝箱' },
-    { icon: '❤️', text: 'HP 5 | 答错扣 1 | Boss 扣 2' },
+    { icon: '🗺️', text: '冒险地图探索' },
+    { icon: '🛡️', text: '守护者挑战' },
+    { icon: '💎', text: '连击发现宝箱' },
+    { icon: '⚡', text: '答对积攒能量' },
     { icon: '🔥', text: '连击倍率 ×1 → ×1.5 → ×2' },
   ];
 </script>
