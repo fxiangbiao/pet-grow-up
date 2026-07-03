@@ -15,4 +15,6 @@ public class AnswerResultDTO {
     private Boolean isSessionComplete;
     private Boolean isLastQuestion;
     private QuestionDTO nextQuestion;
+    private String sceneRewardItem;
+    private Integer sceneRewardCount;
 }

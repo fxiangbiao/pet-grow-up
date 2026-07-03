@@ -6,10 +6,10 @@
    * States: idle | attacking | hit | defeated
    */
   let {
-    enemyType = 'minion', // 'minion' | 'boss' | 'elite'
+    enemyType = 'minion', // 'minion' | 'boss' | 'elite' | 'guardian'
     subject = 'chinese',
-    variant = 0,          // 0-2 for minions, 0 for boss
-    state = 'idle',       // 'idle' | 'attacking' | 'hit' | 'defeated'
+    variant = 0,          // 0-2 for minions, 0 for boss/guardian
+    state = 'idle',       // 'idle' | 'attacking' | 'hit' | 'defeated' | 'purified'
     size = 'md'           // 'sm' | 'md' | 'lg'
   }: {
     enemyType?: string;
@@ -32,6 +32,7 @@
   const unit = $derived(sizeDim / 20);
 
   const isDefeated = $derived(state === 'defeated');
+  const isPurified = $derived(state === 'purified');
   const isHit = $derived(state === 'hit');
   const isAttacking = $derived(state === 'attacking');
 
@@ -41,19 +42,19 @@
       0: { name: '墨水妖', emoji: '🔵' },
       1: { name: '笔怪', emoji: '🖊' },
       2: { name: '书虫', emoji: '🐛' },
-      3: { name: '黑暗诗魔', emoji: '🐉' }
+      3: { name: '文曲星君', emoji: '🐲' }
     },
     math: {
       0: { name: '三角怪', emoji: '🔺' },
       1: { name: '方块精', emoji: '🟫' },
       2: { name: '圆球魔', emoji: '🟣' },
-      3: { name: '混沌几何体', emoji: '🔮' }
+      3: { name: '几何贤者', emoji: '🦉' }
     },
     english: {
       0: { name: '字母怪', emoji: '🔤' },
       1: { name: '扫帚妖', emoji: '🧹' },
       2: { name: '语法魔', emoji: '📝' },
-      3: { name: '暗影巫师', emoji: '🧙' }
+      3: { name: '字母精灵王', emoji: '🦄' }
     }
   };
 
@@ -61,6 +62,7 @@
 
   const containerClass = $derived(
     isDefeated ? 'opacity-30 grayscale scale-90' :
+    isPurified ? 'opacity-90 scale-105' :
     isHit ? 'animate-shake' :
     isAttacking ? 'animate-bounce-in' :
     'animate-breathe'
@@ -170,6 +172,17 @@
         stroke="#ef4444" stroke-width="2" opacity="0.6" />
       <line x1={cx + unit * 7} y1={cy - unit * 7} x2={cx - unit * 7} y2={cy + unit * 7}
         stroke="#ef4444" stroke-width="2" opacity="0.6" />
+    {/if}
+
+    <!-- Purified marker (white glow ring) -->
+    {#if isPurified}
+      <circle cx={cx} cy={cy} r={unit * 9}
+        fill="none" stroke="#fbbf24" stroke-width="2.5" opacity="0.8" filter="url(#es-glow-{variant})" />
+      <circle cx={cx} cy={cy} r={unit * 10.5}
+        fill="none" stroke="white" stroke-width="1.5" opacity="0.5" stroke-dasharray="4 3">
+        <animate attributeName="r" from={unit * 10} to={unit * 13} dur="2s" repeatCount="indefinite" />
+        <animate attributeName="opacity" from="0.6" to="0" dur="2s" repeatCount="indefinite" />
+      </circle>
     {/if}
 
     <!-- Hit flash -->

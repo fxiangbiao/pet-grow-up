@@ -26,6 +26,7 @@
     playerHp = 5,
     answerResult = null as { isCorrect?: boolean } | null,
     answerTimeMs = 0,
+    sceneMode = false,
     onBossDefeated = () => {},
     onBossAttackPlayer = () => {},
     onBossEscaped = () => {}
@@ -36,6 +37,7 @@
     playerHp?: number;
     answerResult?: { isCorrect?: boolean } | null;
     answerTimeMs?: number;
+    sceneMode?: boolean;
     onBossDefeated?: () => void;
     onBossAttackPlayer?: () => void;
     onBossEscaped?: () => void;
@@ -88,6 +90,8 @@
 
   // ── Damage calculation ─────────────────────────────
   function calculateDamage(answerTime: number, currentCombo: number): number {
+    // Scene-based questions (drag/tap) take longer — always one-shot boss on correct
+    if (sceneMode) return BOSS_MAX_HP;
     const comboMultiplier = currentCombo >= 4 ? 2.0 : currentCombo >= 2 ? 1.5 : 1.0;
     const timeSec = Math.max(answerTime, 500) / 1000;
     const speedBonus = timeSec <= 3 ? 1.5 : timeSec <= 5 ? 1.2 : 1.0;

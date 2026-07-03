@@ -9,16 +9,20 @@
 
 核心设计理念：「一核三柱两环」
 - **1 核**：学习能量系统 —— 一切学习产生能量，一切游戏内容消耗能量
-- **3 柱**：探索/战斗系统、情感连接系统、收集/成就系统
+- **3 柱**：探索/净化系统、情感连接系统、收集/成就系统
 - **2 环**：学科专属系统、社交互动系统
 
 ## 项目状态
 
-当前处于 **实现阶段**。前后端代码均已完整，P0/P1 子系统全部落地，仅 P2
-（时空裂隙系统）尚未实现。代码已纳入 Git 版本控制（2026-06-27 完成 initial commit）。
-
-> 设计文档（v1.0, 2026-04-20）位于 `游戏化宠物养成系统设计方案.md`；
-> 冒险模式改造方案见 `冒险模式设计方案.md`，且**已全栈实现**。
+v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
+- Sprint 1（2026-06-29）：双路径「凑十法」Demo 对比，**选定 Svelte 路径继续**。
+- Sprint 2（2026-06-30）：场景组件扩充（SceneTap/SceneMatch）+ 题库 45→77 + 剧情模式接入场景题型。
+- Sprint A（2026-06-30）：6 个新场景组件 + 题库 77→~200 + 音频动画升级 + 冒险模式渐进演化。
+- **Sprint B（2026-07-02）**：宇宙星空冒险地图 + 战斗动画重构 + BGM 柔和化 + 题库扩充至 491 题（年级 1-3）+ 剧情 24 章。
+- **Sprint C（2026-07-03）**：星灵羁绊核心 — 性格选择（4 选 1）、多情绪动画（greeting/sleeping/dim）、迎接/告别系统、休眠机制（损失厌恶）。
+- **Sprint D（2026-07-03）**：净化重构 — 战斗系统→净化系统（HP→能量水晶、Boss→守护者、怪物→暗水晶、「⚔️ 攻击」→「🌟 净化」、移除死亡惩罚）。
+- **Sprint E（2026-07-03）**：收集驱动 — 配饰系统（12 件装备）、扭蛋机（稀有度分层）、星灵装备 UI、成就图鉴（翻书模式 + 知识点图鉴）。
+  v2 设计方案见 `游戏化学习系统设计方案-v2.md`。
 
 ## 已实现子系统
 
@@ -39,15 +43,88 @@
 | — | 用户中心 | `user` | `lib/api/user.ts` | ✅ |
 | **P2** | 时空裂隙系统 | — | — | ❌ 未实现 |
 
-### 冒险模式（已落地，核心玩法）
+### 冒险模式（Sprint D 净化重构，核心玩法）
 
-每次答题被改造为一次「小冒险」，前端维护全部实时状态（HP/Combo/Boss/宝箱），
+每次答题被改造为一次「知识净化之旅」，前端维护全部实时状态（Energy/Combo/Guardian/宝箱），
 后端仅在结算时记录 `maxCombo` / `bossDefeated` / `comboBonusEnergy`。关键契约：
 
-- `study/dto/AnswerResultDTO.java` —— 含 `isLastQuestion`（标记 Boss 题）
-- `study/dto/SessionResultDTO.java` —— 含 `maxCombo`、`bossDefeated`、`comboBonusEnergy`
-- 前端组件：`AdventurePath` / `ComboCounter` / `BossBattle` / `HpBar` / `TreasureChest` 等
-  （见 `frontend/src/lib/components/study/`）
+- `study/dto/AnswerResultDTO.java` —— 含 `isLastQuestion`
+- `study/dto/SessionResultDTO.java` —— 含 `maxCombo`、`bossDefeated`（字段名保留，语义变为守护者净化）、`comboBonusEnergy`
+- 探索模式：宇宙星空地图（`AdventureMap.svelte`）→ 暗水晶节点 → 净化动画 → 答题 → 守护者遭遇
+- 剧情模式：宇宙星空地图（`StoryMap.svelte`）→ 章节节点 → ChapterDialog → 净化场景
+- 净化动画状态机：`idle → player_purify → idle`（答对）/ `idle → enemy_encourage → idle`（答错）/ `guardian_purified`（守护者净化）
+- **零惩罚**：答错不扣能量、不死亡——combo 归零 + 守护者温和鼓励即可继续
+
+**探索模式组件**（`frontend/src/lib/components/study/`）：
+| 组件 | 用途 |
+|------|------|
+| `AdventureMap.svelte` | SVG 星空地图：60 颗闪烁星星 + 星云 + 星座连线 + 暗水晶节点（dark/purifying/purified 三态） + 精灵令牌 |
+| `BattleScene.svelte` | 净化场景：精灵（左）vs 暗水晶（右），含净化/鼓励/守护者净化动画 + 地面场景 |
+| `EnergyBar.svelte` | ⚡ 能量水晶条（替代旧 HpBar），答错闪红不扣值 |
+| `ComboCounter.svelte` | ⭐ 星光连击倍率 |
+| `GuardianEncounter.svelte` | 守护者净化（替代旧 BossBattle）：问候→净化光环→金光粒子→馈赠 |
+| `GuardianReward.svelte` | 守护者馈赠弹窗 |
+| `ExploreConfirm.svelte` | 冒险出发确认弹窗 |
+
+**剧情模式组件**（`frontend/src/lib/components/story/`）：
+| 组件 | 用途 |
+|------|------|
+| `StoryMap.svelte` | SVG 星空剧情地图：自适应行/列，蛇形星座连线，章节节点 + 精灵追踪 |
+| `StoryStudyTask.svelte` | 剧情学习任务：净化场景 + 题目 + 净化动画 + Energy/Combo |
+| `ChapterDialog.svelte` | 章节弹窗：叙事→对话→选择学科→学习任务→结果 |
+
+### 情感宠物系统（Sprint C 羁绊核心）
+
+`frontend/src/lib/components/spirit/` 目录：
+| 组件 | 用途 |
+|------|------|
+| `SpiritAvatar.svelte` | SVG 精灵：7 种 mood（含 greeting/sleeping/dim）+ 4 种性格台词 + 眨眼/视线追踪 + 配饰渲染层 + 休眠降饱和 |
+| `PersonalityPicker.svelte` | 4 张性格卡片（元气/温柔/傲娇/勇敢），hover 预览台词 |
+| `SpiritGreeting.svelte` | 回归迎接横幅：性格台词 + 打字机效果 + 休眠提示 |
+| `SpiritSpeech.svelte` | 独立台词气泡，打字机动画 |
+| `DormancyOverlay.svelte` | 沉睡全屏覆盖层，引导唤醒 |
+| `PersonalityRadar.svelte` | 6 维度性格雷达图 |
+
+**星灵 behavior：**
+- 1 天未学 → dormancyLevel=1（暗淡，saturate 0.6）
+- 3 天未学 → dormancyLevel=2（沉睡，Zzz 漂浮 + 覆盖层）
+- 开始学习 → `recordInteraction()` 自动唤醒
+- 打开 App >30min 间隔 → 性格迎接动画
+
+### 配饰与收集系统（Sprint E 收集驱动）
+
+- **12 件配饰**：头部×4、颈部×4（含毅力围巾）、眼部×2、特效×2
+- **装备栏位**：head/neck/eyes/effect 各 1 件，星灵详情页切换
+- **扭蛋机**：单抽 50⚡ / 每日免费 / 稀有度分层（Common 70%, Rare 25%, Epic 5%）/ 重复返还
+- **成就图鉴**：列表/翻书双模式，知识点图鉴按学科分组
+- `spirit_accessory` 表记录装备状态
+
+### 场景化题型组件（Sprint 1-2 + Sprint A）
+
+12 种题型全部拥有专属交互组件，场景类题型遵循 `$props({ question, sessionId, onComplete })` 自提交模式：
+
+| 题型 | 组件 | 学科 | 玩法 |
+|------|------|------|------|
+| `SCENE_DRAG` | `SceneMathTen.svelte` | 数学 | 拖苹果到碗凑十 |
+| `SCENE_TAP` | `SceneTap.svelte` | 数学/语文/英语 | 浮动泡泡点击答题 |
+| `SCENE_MATCH` | `SceneMatch.svelte` | 数学/英语 | 图形/卡片配对识别 |
+| `SCENE_WHACK_MOLE` | `SceneWhackMole.svelte` | 数学 | 打地鼠·20以内加减 |
+| `SCENE_SHAPE_PUZZLE` | `SceneShapePuzzle.svelte` | 数学 | 拼图工坊·认识图形 |
+| `SCENE_CLOCK` | `SceneClock.svelte` | 数学 | 拨钟表·认识整时 |
+| `SCENE_SHOP` | `SceneShop.svelte` | 数学 | 宠物商店·认识人民币 |
+| `SCENE_PINYIN` | `ScenePinyinBubble.svelte` | 语文 | 拼音泡泡·听音识字母 |
+| `SCENE_CHAR_BUILD` | `SceneCharBuild.svelte` | 语文 | 汉字工坊·组字寻宝 |
+| `POEM_SEQUENCE` | `PoemSequence.svelte` | 语文 | 诗句拖拽排序 |
+| `MATH_INPUT` | `MathInput.svelte` | 数学 | 数字键盘输入 |
+| `VOCAB_MATCH` | `VocabMatch.svelte` | 英语 | 单词释义配对 |
+
+### 音频系统（Sprint B 柔和化升级）
+
+`frontend/src/lib/audio/sound-manager.ts` — Web Audio API 合成，无外部音频文件依赖。
+- **9 首 BGM**（3学科×3场景）：全部重写为 sine+triangle 波，自然小调/Dorian 调式，低频旋律（C4-C5），
+  节奏脉冲（volume LFO），主音量降至 0.12。去掉 sawtooth/square 等刺耳波形。
+- **11 个场景专属音效** + **5 个宠物情感音效** + **Boss 音效**（已柔和化）
+- Boss 主题从 sawtooth/square 改为 sine/triangle
 
 ## 技术栈
 
@@ -83,8 +160,8 @@ pet-grow-up/
 │       ├── main/resources/
 │       │   ├── application.yml          # 含开发用 DB 口令（与 docker-compose 一致）
 │       │   ├── application-dev.yml      # dev profile（日志 + CORS）
-│       │   ├── schema.sql               # 20 张表 DDL（336 行）
-│       │   └── data.sql                 # 种子数据（237 行）
+│       │   ├── schema.sql               # 21 张表 DDL（含 grade_level 迁移）
+│       │   └── data.sql                 # 种子数据（1133 行：44 知识节点 + 491 题 + 24 剧情章节）
 │       └── test/                # 仅 5 个测试：auth/spirit/exploration/achievement/EnergyCalculator
 ├── frontend/                    # Vite + SvelteKit
 │   └── src/
@@ -92,21 +169,35 @@ pet-grow-up/
 │       │   ├── (auth)/          # 登录 / 注册
 │       │   └── app/             # 鉴权后主应用（/app, /app/study, /app/spirit ...）
 │       └── lib/
-│           ├── components/      # layout / spirit / study / energy / feedback / shop / social / common
+│           ├── components/      # layout / spirit / study / story / energy / feedback / shop / social / common
 │           ├── stores/          # Svelte 5 rune 状态（auth/spirit/energy/toast/achievement/story）
 │           ├── api/             # Fetch 封装 + 各模块 API client
-│           └── types/           # TypeScript 接口
+│           ├── types/           # TypeScript 接口（含 adventure-map.ts）
+│           └── audio/           # Web Audio API BGM + SFX 合成（sound-manager.ts）
 ├── docker-compose.yml           # MySQL 8.0（仅数据库，无后端/前端容器化）
-├── 游戏化宠物养成系统设计方案.md   # 产品设计文档 v1.0
-├── 冒险模式设计方案.md           # 冒险模式改造方案（已实现）
+├── 游戏化宠物养成系统设计方案-v1.md   # 产品设计文档 v1.0
+├── 游戏化学习系统设计方案-v2.md    # 沉浸式重构方案 v2.0（2026-06-27）
+├── .plans/                      # Sprint 计划文档
 └── .gitignore
 ```
 
 ## 数据库
 
-20 张表，Spring Boot 启动时通过 `schema.sql`（`CREATE TABLE IF NOT EXISTS`）自动建表，
-`data.sql` 播种学科世界、题目、成就定义、商店物品、剧情章节等基础数据。
+22 张表，Spring Boot 启动时通过 `schema.sql`（`CREATE TABLE IF NOT EXISTS`）自动建表，
+`data.sql` 播种学科世界、题目、成就定义、商店物品（含配饰）、剧情章节等基础数据。
 开发库口令与 `docker-compose.yml` 保持一致（非生产凭证）。
+
+### 知识图谱（Sprint B 扩展）
+
+`knowledge_node` 表新增 `grade_level` 列（INT 1-6 对应小学年级）：
+
+| 学科 | G1 | G2 | G3 | 合计 |
+|------|:--:|:--:|:--:|:----:|
+| 语文（诗词大陆） | 6 | 5 | 4 | **15** |
+| 数学（智慧王国） | 11 | 6 | 6 | **23** |
+| 英语（魔法学院） | 5 | 4 | 4 | **13** |
+
+题库 491 题，覆盖 12 种题型，剧情章节 24 章（chapter 1-12 为 G1，13-24 为 G2-G3）。
 
 ## 本地运行
 
@@ -115,7 +206,7 @@ pet-grow-up/
 docker compose up -d
 
 # 2. 后端（默认端口 8080，建表+播种自动执行）
-cd backend && ./mvnw spring-boot:run        # 或 mvn spring-boot:run
+cd backend && mvn spring-boot:run
 
 # 3. 前端（默认端口 5173）
 cd frontend && npm install && npm run dev
@@ -126,11 +217,16 @@ cd frontend && npm install && npm run dev
 - **测试覆盖薄弱**：仅 5 个测试文件，集中在 5 个模块，其余 9 个业务模块无测试。
 - **未容器化后端/前端**：`docker-compose.yml` 仅含 MySQL，无应用镜像与发布流程。
 - **P2 时空裂隙系统未实现**：设计文档中唯一缺失的子系统。
-- **学习内容数据**：`data.sql` 种子内容是否充足，需结合实际学科题库评估。
+- **题库需持续对标课标**：当前 491 题覆盖 G1-G3，后续需扩展 G4-G6 及更多题型变体。
+- **知识节点 grade_level 未在 API 暴露**：前端目前未按年级筛选节点，后续需在 SubjectWorld API 中增加年级过滤。
+- **旧组件清理**：`HpBar/BossBattle/BossHealthBar/BossLootDrop/BossPhaseOverlay/BossSection/DamageNumber/AdventurePath/EnemySprite` 等旧战斗组件保留在磁盘上但已无引用，后续可安全删除。
+- **Sprint F（惊喜系统）待实施**：每日盲盒、随机事件、季节活动、社交分享、宠物小屋装饰。
 
 ## 约定
 
-- 前端使用 Svelte 5 runes（`$state` / `$derived`），状态存放于 `lib/stores/*.svelte.ts`。
+- 前端使用 Svelte 5 runes（`$state` / `$derived` / `$derived.by` / `$effect` / `$props`），状态存放于 `lib/stores/*.svelte.ts`。
 - 后端按业务模块分包，每个模块含 `controller / service / mapper / entity / dto` 分层。
 - 统一响应封装 `common/response/ApiResponse`，异常走 `common/exception/GlobalExceptionHandler`。
 - 学习能量计算集中在 `common/util/EnergyCalculator`。
+- 冒险地图/战斗系统全部前端逻辑，后端 API 不变（`startSession` / `submitAnswer` / `getSessionResult`）。
+- SVG 渲染地图（无外部游戏引擎依赖），CSS 动画（闪烁星星、脉冲光环、令牌浮动）。

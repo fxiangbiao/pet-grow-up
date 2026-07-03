@@ -8,10 +8,19 @@
   import PoemSequence from '$lib/components/study/PoemSequence.svelte';
   import MathInput from '$lib/components/study/MathInput.svelte';
   import VocabMatch from '$lib/components/study/VocabMatch.svelte';
+  import SceneMathTen from '$lib/components/study/SceneMathTen.svelte';
+  import SceneTap from '$lib/components/study/SceneTap.svelte';
+  import SceneMatch from '$lib/components/study/SceneMatch.svelte';
+  import SceneWhackMole from '$lib/components/study/SceneWhackMole.svelte';
+  import SceneShapePuzzle from '$lib/components/study/SceneShapePuzzle.svelte';
+  import SceneClock from '$lib/components/study/SceneClock.svelte';
+  import SceneShop from '$lib/components/study/SceneShop.svelte';
+  import ScenePinyinBubble from '$lib/components/study/ScenePinyinBubble.svelte';
+  import SceneCharBuild from '$lib/components/study/SceneCharBuild.svelte';
   import HpBar from '$lib/components/study/HpBar.svelte';
+  import EnergyBar from '$lib/components/study/EnergyBar.svelte';
   import ComboCounter from '$lib/components/study/ComboCounter.svelte';
-  import AdventurePath from '$lib/components/study/AdventurePath.svelte';
-  import BossSection from '$lib/components/study/BossSection.svelte';
+  import BattleScene from '$lib/components/study/BattleScene.svelte';
   import { spiritStore } from '$lib/stores/spirit.svelte';
   import { soundManager } from '$lib/audio/sound-manager';
 
@@ -41,23 +50,26 @@
   let questionStartTime = $state<number>(0);
   let errorMsg = $state('');
 
-  // Adventure state (3 HP, 3 questions)
-  let hp = $state(3);
+  // Adventure state (purification)
+  let energy = $state(100);
   let combo = $state(0);
   let maxCombo = $state(0);
-  let bossDefeated = $state(false);
-  let bossThemePlayed = $state(false);
+  let guardianPurified = $state(false);
+  let guardianThemePlayed = $state(false);
   let treasuresFound = $state(0);
   let results = $state<Array<boolean | null>>([]);
-  let adventureEnded = $state(false);
+
+  // Purify state
+  let purifyState = $state<'idle' | 'player_purify' | 'enemy_encourage' | 'guardian_purified'>('idle');
+  let spiritMood = $state<'idle' | 'happy' | 'excited' | 'hurt'>('idle');
 
   const isLastQuestion = $derived(answeredCount >= totalQuestions - 1);
 
-  // Boss theme on last question
+  // Guardian theme on last question
   $effect(() => {
-    if (isLastQuestion && phase === 'playing' && !bossThemePlayed) {
-      soundManager.playBossTheme();
-      bossThemePlayed = true;
+    if (isLastQuestion && phase === 'playing' && !guardianThemePlayed) {
+      soundManager.playBossTheme?.();
+      guardianThemePlayed = true;
     }
   });
 
@@ -90,6 +102,7 @@
       answeredCount = result.answeredCount ?? 0;
       results = Array(totalQuestions).fill(null);
       phase = 'playing';
+      spiritStore.recordInteraction(); // wake up spirit
       questionStartTime = Date.now();
     } catch (e: any) {
       errorMsg = e.message || '启动学习失败';
@@ -102,8 +115,28 @@
     selectedAnswer = answer;
   }
 
+  function triggerPurifyAnimation(isCorrect: boolean, isLast: boolean) {
+    if (isCorrect) {
+      purifyState = 'player_purify';
+      spiritMood = 'happy';
+      soundManager.playCorrect?.();
+    } else {
+      purifyState = 'enemy_encourage';
+      spiritMood = 'hurt';
+      soundManager.playWrong?.();
+    }
+    setTimeout(() => {
+      if (isLast && isCorrect) {
+        purifyState = 'guardian_purified';
+      } else if (!isLast || isCorrect) {
+        purifyState = 'idle';
+        spiritMood = 'idle';
+      }
+    }, 700);
+  }
+
   async function handleSubmit() {
-    if (!selectedAnswer || submitted || !question || adventureEnded) return;
+    if (!selectedAnswer || submitted || !question) return;
     submitted = true;
     try {
       const result = await submitAnswer({
@@ -115,29 +148,24 @@
       lastResult = result;
       results[answeredCount] = result.isCorrect;
 
+      triggerPurifyAnimation(result.isCorrect, result.isLastQuestion);
+
       if (result.isCorrect) {
         combo++;
         maxCombo = Math.max(maxCombo, combo);
+        if (combo >= 3) spiritMood = 'excited';
+        energy = Math.min(100, energy + 10);
         if (combo >= 2 && combo % 2 === 0) {
           treasuresFound++;
-          soundManager.playTreasure();
+          soundManager.playTreasure?.();
         }
         if (result.isLastQuestion && result.isCorrect) {
-          bossDefeated = true;
-          soundManager.playBossDefeated();
+          guardianPurified = true;
+          soundManager.playBossDefeated?.();
         }
       } else {
         combo = 0;
-        if (result.isLastQuestion) {
-          hp -= 2;
-        } else {
-          hp -= 1;
-        }
-        if (hp <= 0) {
-          adventureEnded = true;
-          setTimeout(finish, 2000);
-          return;
-        }
+        // No HP loss — just visual flash
       }
 
       if (result.isSessionComplete) {
@@ -151,7 +179,7 @@
           selectedAnswer = '';
           lastResult = null;
           questionStartTime = Date.now();
-        }, 1500);
+        }, 1000);
       }
     } catch (e: any) {
       errorMsg = e.message;
@@ -162,20 +190,20 @@
   function finish() {
     soundManager.stopBGM();
     onComplete({
-      passed: hp > 0,
+      passed: true, // always pass — no death in purification
       totalQuestions,
       correctAnswers: results.filter(r => r === true).length,
       accuracy: results.length > 0 ? results.filter(r => r === true).length / results.length : 0,
       maxCombo,
-      bossDefeated,
+      bossDefeated: guardianPurified, // keep field name for backend compat
       treasuresFound,
-      finalHp: Math.max(hp, 0)
+      finalHp: energy
     });
   }
 
   function skip() {
     soundManager.stopBGM();
-    onComplete({ passed: true, totalQuestions: 0, correctAnswers: 0, accuracy: 0, maxCombo: 0, bossDefeated: false, treasuresFound: 0, finalHp: 3 });
+    onComplete({ passed: true, totalQuestions: 0, correctAnswers: 0, accuracy: 0, maxCombo: 0, bossDefeated: false, treasuresFound: 0, finalHp: 100 });
   }
 
   // Parsed options
@@ -201,6 +229,67 @@
     selectedAnswer = answer;
     handleSubmit();
   }
+
+  // Scene component result handler
+  async function handleSceneResult(result: AnswerResult) {
+    if (!result) {
+      errorMsg = '场景提交失败';
+      phase = 'error';
+      return;
+    }
+
+    submitted = true;
+    lastResult = result;
+    results[answeredCount] = result.isCorrect;
+
+    triggerPurifyAnimation(result.isCorrect, result.isLastQuestion);
+
+    if (result.isCorrect) {
+      combo++;
+      maxCombo = Math.max(maxCombo, combo);
+      if (combo >= 3) spiritMood = 'excited';
+      energy = Math.min(100, energy + 10);
+      if (combo >= 2 && combo % 2 === 0) {
+        treasuresFound++;
+        soundManager.playTreasure?.();
+      }
+      if (result.isLastQuestion && result.isCorrect) {
+        guardianPurified = true;
+        soundManager.playBossDefeated?.();
+      }
+    } else {
+      combo = 0;
+      // No HP loss — purification has no death
+    }
+
+    if (result.isSessionComplete) {
+      setTimeout(finish, 2000);
+    } else if (result.nextQuestion) {
+      const nextQ = result.nextQuestion;
+      setTimeout(() => {
+        question = nextQ;
+        answeredCount = nextQ.answeredCount ?? answeredCount + 1;
+        submitted = false;
+        selectedAnswer = '';
+        lastResult = null;
+        questionStartTime = Date.now();
+      }, 1500);
+    }
+  }
+
+  // Is this a scene-type question?
+  const isSceneQuestion = $derived(
+    question?.questionType === 'SCENE_DRAG' || question?.questionType === 'SCENE_TAP' ||
+    question?.questionType === 'SCENE_MATCH' || question?.questionType === 'SCENE_WHACK_MOLE' ||
+    question?.questionType === 'SCENE_SHAPE_PUZZLE' || question?.questionType === 'SCENE_CLOCK' ||
+    question?.questionType === 'SCENE_SHOP' || question?.questionType === 'SCENE_PINYIN' ||
+    question?.questionType === 'SCENE_CHAR_BUILD'
+  );
+
+  const showSubmitBtn = $derived(
+    !submitted && !isSceneQuestion &&
+    question?.questionType !== 'POEM_SEQUENCE' && question?.questionType !== 'VOCAB_MATCH'
+  );
 </script>
 
 <!-- Loading -->
@@ -224,33 +313,61 @@
 <!-- Playing -->
 {:else if phase === 'playing' && question}
   <div class="bg-white rounded-xl border-2 {subjectTheme.border}">
-    <!-- Mini header: HP + Combo -->
+    <!-- Mini header: HP + Combo + Progress dots -->
     <div class="flex items-center justify-between px-4 pt-3 pb-1">
-      <HpBar {hp} maxHp={3} />
+      <EnergyBar {energy} maxEnergy={100} />
+      <div class="flex gap-1.5">
+        {#each Array(totalQuestions) as _, i}
+          <div class="w-2 h-2 rounded-full transition-all duration-300"
+               class:bg-indigo-400={i === answeredCount}
+               class:bg-emerald-400={results[i] === true}
+               class:bg-red-400={results[i] === false}
+               class:bg-gray-200={i > answeredCount || (i === answeredCount && results[i] === null)}>
+          </div>
+        {/each}
+      </div>
       <ComboCounter {combo} />
     </div>
 
-    <!-- Adventure path (compact) -->
-    <div class="bg-gray-50 mx-3 rounded-lg mb-2 scale-90 origin-top">
-      <AdventurePath
-        totalQuestions={totalQuestions}
-        currentIndex={answeredCount}
-        results={results}
+    <!-- Battle Scene: pet vs monster (prominent!) -->
+    <div class="px-3 pt-2 pb-1">
+      <BattleScene
+        {subject}
         species={spiritStore.activeSpirit?.species ?? null}
         evolutionStage={spiritStore.activeSpirit?.currentEvolutionStage ?? 1}
-        subjectTheme={subject}
+        mood={spiritMood}
+        currentIndex={answeredCount}
+        {totalQuestions}
+        isBoss={isLastQuestion}
+        bossHp={isLastQuestion ? 3 : 1}
+        bossMaxHp={isLastQuestion ? 3 : 1}
+        {combo}
+        state={purifyState}
       />
     </div>
 
-    <!-- Boss section -->
-    {#if isLastQuestion}
-      <div class="mx-3 mb-2">
-        <BossSection visible={true} {bossDefeated} {subject} />
-      </div>
-    {/if}
-
-    <!-- Question -->
-    <div class="px-4 pb-4">
+    <!-- Question with crossfade transition -->
+    {#key question.questionId}
+    <div class="px-4 pb-4 question-fade">
+      {#if question.questionType === 'SCENE_DRAG'}
+        <SceneMathTen question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_TAP'}
+        <SceneTap question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_MATCH'}
+        <SceneMatch question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_WHACK_MOLE'}
+        <SceneWhackMole question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_SHAPE_PUZZLE'}
+        <SceneShapePuzzle question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_CLOCK'}
+        <SceneClock question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_SHOP'}
+        <SceneShop question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_PINYIN'}
+        <ScenePinyinBubble question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else if question.questionType === 'SCENE_CHAR_BUILD'}
+        <SceneCharBuild question={question} {sessionId} onComplete={handleSceneResult} />
+      {:else}
       <p class="text-sm font-medium text-gray-800 mb-3">{question.questionText}</p>
 
       {#if question.questionType === 'MULTIPLE_CHOICE'}
@@ -290,14 +407,16 @@
           <VocabMatch options={parsedVocabOptions} disabled={submitted} onSelect={onNewTypeAnswer} />
         {/if}
       {/if}
+      {/if}
 
-      {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH'}
+      {#if showSubmitBtn}
         <button onclick={handleSubmit} disabled={!selectedAnswer}
                 class="mt-3 w-full py-2.5 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 disabled:opacity-50 transition text-sm">
           提交答案
         </button>
       {/if}
     </div>
+    {/key}
   </div>
 
   <!-- Feedback -->
@@ -311,3 +430,13 @@
     </div>
   {/if}
 {/if}
+
+<style>
+  @keyframes qFadeIn {
+    0% { opacity: 0; transform: scale(0.96) translateY(6px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  :global(.question-fade) {
+    animation: qFadeIn 0.3s ease-out;
+  }
+</style>

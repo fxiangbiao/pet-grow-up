@@ -31,6 +31,9 @@ public class KnowledgeNode {
 
     private Integer difficulty;
 
+    @Column("grade_level")
+    private Integer gradeLevel;
+
     @Column("parent_node_id")
     private Long parentNodeId;
 

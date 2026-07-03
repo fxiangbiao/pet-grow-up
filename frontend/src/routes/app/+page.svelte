@@ -5,18 +5,22 @@
   import { achievementStore } from '$lib/stores/achievement.svelte';
   import { spiritStore } from '$lib/stores/spirit.svelte';
   import SpiritAvatar from '$lib/components/spirit/SpiritAvatar.svelte';
+  import SpiritGreeting from '$lib/components/spirit/SpiritGreeting.svelte';
 
   onMount(() => {
     achievementStore.refresh();
     spiritStore.refresh(authStore.user!.id);
+    spiritStore.checkStatus();
   });
 
-  function spiritMood(): 'happy' | 'excited' | 'hurt' | undefined {
+  function spiritMood(): 'happy' | 'excited' | 'hurt' | 'idle' | undefined {
     const s = spiritStore.activeSpirit;
     if (!s) return undefined;
+    if (spiritStore.dormancyLevel >= 2) return undefined; // sleeping, handled separately
+    if (spiritStore.dormancyLevel >= 1) return 'hurt';
     if (s.happiness >= 80) return 'excited';
     if (s.happiness >= 50) return 'happy';
-    return 'hurt';
+    return 'idle';
   }
 </script>
 
@@ -26,6 +30,17 @@
 
 {#if authStore.user}
   <div class="space-y-6 animate-slide-up">
+    <!-- Sprint C: Spirit greeting banner (shown after returning) -->
+    {#if spiritStore.showGreeting && spiritStore.activeSpirit}
+      <SpiritGreeting
+        species={spiritStore.activeSpirit.species}
+        personality={spiritStore.personalityType as any}
+        nickname={spiritStore.activeSpirit.nickname}
+        dormancyLevel={spiritStore.dormancyLevel}
+        onDismiss={() => spiritStore.dismissGreeting()}
+      />
+    {/if}
+
     <!-- Hero card: user greeting + active spirit -->
     <div class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl shadow-lg p-6 text-white">
       <div class="flex items-start justify-between">

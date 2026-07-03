@@ -9,6 +9,9 @@ public class ChooseSpiritRequest {
     @NotNull(message = "Species ID is required")
     private Long speciesId;
 
+    @NotBlank(message = "Personality type is required")
+    private String personalityType;
+
     @NotBlank(message = "Nickname is required")
     private String nickname;
 }

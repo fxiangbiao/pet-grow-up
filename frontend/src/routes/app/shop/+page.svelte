@@ -4,12 +4,14 @@
   import type { ItemDef } from '$lib/types/api';
   import ItemCard from '$lib/components/shop/ItemCard.svelte';
   import InventoryPanel from '$lib/components/shop/InventoryPanel.svelte';
+  import GachaMachine from '$lib/components/shop/GachaMachine.svelte';
   import { toastStore } from '$lib/stores/toast.svelte';
   import { authStore } from '$lib/stores/auth.svelte';
   import LoadingSpinner from '$lib/components/common/LoadingSpinner.svelte';
 
   const tabs = [
     { key: 'shop', label: '商品列表', icon: '🛒' },
+    { key: 'gacha', label: '扭蛋', icon: '🎰' },
     { key: 'inventory', label: '我的背包', icon: '🎒' }
   ];
 
@@ -102,6 +104,9 @@
         {/each}
       </div>
     {/if}
+
+  {:else if activeTab === 'gacha'}
+    <GachaMachine />
 
   {:else if activeTab === 'inventory'}
     <InventoryPanel />

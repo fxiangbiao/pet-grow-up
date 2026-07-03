@@ -1,8 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { onDestroy } from 'svelte';
   import { startSession, submitAnswer } from '$lib/api/study';
-  import { subscribeToSession } from '$lib/api/study-ws';
   import type { QuestionDTO, AnswerResult } from '$lib/api/study';
   import CorrectIndicator from '$lib/components/feedback/CorrectIndicator.svelte';
   import WrongIndicator from '$lib/components/feedback/WrongIndicator.svelte';
@@ -11,26 +11,34 @@
   import PoemSequence from '$lib/components/study/PoemSequence.svelte';
   import MathInput from '$lib/components/study/MathInput.svelte';
   import VocabMatch from '$lib/components/study/VocabMatch.svelte';
-  import HpBar from '$lib/components/study/HpBar.svelte';
   import ComboCounter from '$lib/components/study/ComboCounter.svelte';
-  import AdventurePath from '$lib/components/study/AdventurePath.svelte';
+  import AdventureMap from '$lib/components/study/AdventureMap.svelte';
   import BattleScene from '$lib/components/study/BattleScene.svelte';
-  import BossSection from '$lib/components/study/BossSection.svelte';
-  import BossBattle from '$lib/components/study/BossBattle.svelte';
+  import EnergyBar from '$lib/components/study/EnergyBar.svelte';
+  import GuardianEncounter from '$lib/components/study/GuardianEncounter.svelte';
   import TreasureChest from '$lib/components/study/TreasureChest.svelte';
   import ExploreConfirm from '$lib/components/study/ExploreConfirm.svelte';
+  import SceneMathTen from '$lib/components/study/SceneMathTen.svelte';
+  import SceneTap from '$lib/components/study/SceneTap.svelte';
+  import SceneMatch from '$lib/components/study/SceneMatch.svelte';
+  import SceneWhackMole from '$lib/components/study/SceneWhackMole.svelte';
+  import SceneShapePuzzle from '$lib/components/study/SceneShapePuzzle.svelte';
+  import SceneClock from '$lib/components/study/SceneClock.svelte';
+  import SceneShop from '$lib/components/study/SceneShop.svelte';
+  import ScenePinyinBubble from '$lib/components/study/ScenePinyinBubble.svelte';
+  import SceneCharBuild from '$lib/components/study/SceneCharBuild.svelte';
   import { spiritStore } from '$lib/stores/spirit.svelte';
   import { soundManager } from '$lib/audio/sound-manager';
 
   const subject = $derived($page.params.subject as string);
   const nodeId = $derived(Number($page.url.searchParams.get('nodeId')));
 
-  // Page states
+  // ── Page phases ──
   let phase = $state<'confirm' | 'playing' | 'result'>('confirm');
   let loading = $state(false);
   let error = $state('');
 
-  // Playing state
+  // ── Question state ──
   let question = $state<QuestionDTO | null>(null);
   let sessionId = $state<number>(0);
   let selectedAnswer = $state('');
@@ -40,84 +48,110 @@
   let answeredCount = $state(0);
   let questionStartTime = $state<number>(0);
 
-  // Adventure state
-  let hp = $state(5);
+  // ── Adventure state (purification) ──
+  let energy = $state(100);
   let combo = $state(0);
   let maxCombo = $state(0);
-  let bossDefeated = $state(false);
-  let bossThemePlayed = $state(false);
-  // Boss battle state (BossBattle component integration)
-  let showBossBattle = $state(false);
-  let bossAnswerTimeMs = $state(0);
-  let bossBattleResolved = $state(false);
+  let guardianPurified = $state(false);
+  let guardianThemePlayed = $state(false);
   let treasuresFound = $state(0);
   let results = $state<Array<boolean | null>>([]);
-  let adventureEnded = $state(false);
-  // Battle scene state
-  let battleState = $state<'idle' | 'player_attack' | 'enemy_attack' | 'enemy_defeated'>('idle');
 
-  // Treasure chest overlay state
+  // ── Crystal node purification tracking ──
+  let nodePurified = $state<boolean[]>([]);
+
+  // ── Guardian encounter (replaces Boss battle) ──
+  let showGuardianEncounter = $state(false);
+  let guardianAnswerTimeMs = $state(0);
+  let encounterResolved = $state(false);
+
+  // ── Purify animation ──
+  let purifyState = $state<'idle' | 'player_purify' | 'enemy_encourage' | 'guardian_purified'>('idle');
+
+  // ── Map animation ──
+  let animatingToNode = $state(-1);
+
+  // ── Treasure chest ──
   let showTreasureChest = $state(false);
   let treasureTier = $state<'small' | 'big'>('small');
   let treasureEnergy = $state(0);
 
-  // Play boss theme when approaching the final question and activate BossBattle
-  $effect(() => {
-    if (isLastQuestion && phase === 'playing' && !bossThemePlayed) {
-      soundManager.playBossTheme();
-      bossThemePlayed = true;
-      // Activate boss battle after the pre-boss preview
-      setTimeout(() => {
-        showBossBattle = true;
-      }, 1500); // brief delay to show BossSection preview first
-    }
-  });
+  // ── Derived ──
+  const isLastQuestion = $derived(answeredCount >= totalQuestions - 1);
+  const currentPurified = $derived(nodePurified[answeredCount] ?? false);
 
-  // Spirit mood derived from adventure state
   const spiritMood = $derived(
-    adventureEnded ? 'hurt' :
-    lastResult === null ? 'idle' :
-    lastResult.isCorrect ? (combo >= 2 ? 'excited' : 'happy') :
-    'hurt'
+    lastResult === null ? 'idle'
+    : lastResult.isCorrect ? (combo >= 2 ? 'excited' : 'happy')
+    : 'hurt'
   );
 
   const subjectData: Record<string, { name: string; emoji: string }> = {
     chinese: { name: '诗词大陆', emoji: '📜' },
     math: { name: '智慧王国', emoji: '🔢' },
-    english: { name: '魔法学院', emoji: '🔤' }
+    english: { name: '魔法学院', emoji: '🔤' },
   };
 
   const subjectTheme = $derived.by(() => {
-    const themes: Record<string, { border: string; bg: string; accent: string; bar: string; bgClass: string; decoClass: string }> = {
-      chinese: { border: 'border-amber-300', bg: 'bg-amber-50', accent: 'text-amber-700', bar: 'bg-amber-500', bgClass: 'adventure-bg-chinese', decoClass: 'bg-deco-chinese' },
-      math: { border: 'border-blue-300', bg: 'bg-blue-50', accent: 'text-blue-700', bar: 'bg-blue-500', bgClass: 'adventure-bg-math', decoClass: 'bg-deco-math' },
-      english: { border: 'border-purple-300', bg: 'bg-purple-50', accent: 'text-purple-700', bar: 'bg-purple-500', bgClass: 'adventure-bg-english', decoClass: 'bg-deco-english' }
+    const themes: Record<string, { border: string; bg: string; accent: string; bar: string }> = {
+      chinese: { border: 'border-amber-300', bg: 'bg-amber-50', accent: 'text-amber-700', bar: 'bg-amber-500' },
+      math: { border: 'border-blue-300', bg: 'bg-blue-50', accent: 'text-blue-700', bar: 'bg-blue-500' },
+      english: { border: 'border-purple-300', bg: 'bg-purple-50', accent: 'text-purple-700', bar: 'bg-purple-500' },
     };
     return themes[subject] || themes.chinese;
   });
 
+  const sceneTypes = ['SCENE_DRAG', 'SCENE_TAP', 'SCENE_MATCH', 'SCENE_WHACK_MOLE',
+    'SCENE_SHAPE_PUZZLE', 'SCENE_CLOCK', 'SCENE_SHOP', 'SCENE_PINYIN', 'SCENE_CHAR_BUILD'];
+
+  // ── Guardian theme activation (after last answer, not before) ──
+  $effect(() => {
+    if (isLastQuestion && phase === 'playing' && !guardianThemePlayed) {
+      soundManager.playBossTheme?.();
+      guardianThemePlayed = true;
+      // Don't show the encounter yet — wait for answer submission
+    }
+  });
+
+  // ── BGM lifecycle ──
+  onDestroy(() => { soundManager.stopBGM(); });
+  $effect(() => {
+    if (phase === 'result') { soundManager.stopBGM(); }
+  });
+
+  // ── Init purification nodes ──
+  function initNodePurified(total: number) {
+    nodePurified = Array(total).fill(false);
+  }
+
+  function purifyNode(index: number) {
+    const updated = [...nodePurified];
+    updated[index] = true;
+    nodePurified = updated;
+  }
+
   function resetAdventure() {
-    hp = 5;
+    energy = 100;
     combo = 0;
     maxCombo = 0;
-    bossDefeated = false;
-    bossThemePlayed = false;
-    showBossBattle = false;
-    bossAnswerTimeMs = 0;
-    bossBattleResolved = false;
-    battleState = 'idle';
+    guardianPurified = false;
+    guardianThemePlayed = false;
+    showGuardianEncounter = false;
+    guardianAnswerTimeMs = 0;
+    encounterResolved = false;
+    purifyState = 'idle';
     treasuresFound = 0;
     results = [];
-    adventureEnded = false;
     showTreasureChest = false;
-    treasureTier = 'small';
-    treasureEnergy = 0;
+    animatingToNode = -1;
+    nodePurified = [];
   }
 
   async function handleStart() {
     loading = true;
     error = '';
     resetAdventure();
+    spiritStore.refresh(0);
     try {
       const result = await startSession({ subject, sessionType: 'DAILY', difficultyLevel: 1, knowledgeNodeId: nodeId });
       sessionId = result.sessionId;
@@ -125,8 +159,10 @@
       totalQuestions = result.totalQuestions ?? 5;
       answeredCount = result.answeredCount ?? 0;
       results = Array(totalQuestions).fill(null);
+      initNodePurified(totalQuestions);
       phase = 'playing';
       questionStartTime = Date.now();
+      spiritStore.recordInteraction(); // wake up spirit
       soundManager.playBGM(subject);
     } catch (e: any) {
       error = e.message || '启动失败';
@@ -140,139 +176,149 @@
     selectedAnswer = answer;
   }
 
+  // ── Main submit ──
   async function handleSubmit() {
-    if (!selectedAnswer || submitted || !question || adventureEnded) return;
+    if (!selectedAnswer || submitted || !question) return;
     submitted = true;
     try {
-      const result = await submitAnswer({ sessionId, questionId: question.questionId, answer: selectedAnswer, timeSpent: Math.max(0, Math.floor((Date.now() - questionStartTime) / 1000)) });
-      lastResult = result;
-      results[answeredCount] = result.isCorrect;
-
-      // Trigger battle animation
-      if (result.isCorrect) {
-        battleState = 'player_attack';
-        setTimeout(() => { battleState = 'idle'; }, 600);
-      } else {
-        battleState = 'enemy_attack';
-        setTimeout(() => { battleState = 'idle'; }, 600);
-      }
-
-      if (result.isCorrect) {
-        combo++;
-        maxCombo = Math.max(maxCombo, combo);
-
-        // Boss battle: capture answer time for damage calc, delegate to BossBattle
-        if (result.isLastQuestion) {
-          bossAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
-          // BossBattle handles bossDefeated, HP, and transitions via callbacks
-          // DO NOT set bossDefeated or transition to result here
-        } else {
-          // Treasure chest for non-boss questions
-          if (combo >= 2 && combo % 2 === 0) {
-            treasuresFound++;
-            treasureTier = combo >= 4 ? 'big' : 'small';
-            treasureEnergy = treasureTier === 'big' ? 10 : 5;
-            if (treasureTier === 'big' && hp < 5) {
-              hp = Math.min(5, hp + 1);
-            }
-            showTreasureChest = true;
-          }
-        }
-      } else {
-        combo = 0;
-        if (result.isLastQuestion) {
-          // Boss question wrong: BossBattle handles attack animation via callback
-          bossAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
-          hp -= 2;
-        } else {
-          hp -= 1;
-        }
-        if (hp <= 0) {
-          adventureEnded = true;
-          setTimeout(() => { phase = 'result'; }, 2000);
-          return;
-        }
-      }
-
-      if (result.isSessionComplete) {
-        // For boss battle, BossBattle callbacks handle the transition
-        if (!result.isLastQuestion || bossBattleResolved || adventureEnded) {
-          setTimeout(() => { phase = 'result'; }, 2000);
-        }
-        // If boss battle is still active, callbacks will trigger result transition
-      } else if (result.nextQuestion) {
-        const nextQ = result.nextQuestion;
-        setTimeout(() => {
-          question = nextQ;
-          answeredCount = nextQ.answeredCount ?? answeredCount + 1;
-          submitted = false;
-          selectedAnswer = '';
-          lastResult = null;
-          questionStartTime = Date.now();
-        }, 1500);
-      }
+      const result = await submitAnswer({
+        sessionId, questionId: question.questionId, answer: selectedAnswer,
+        timeSpent: Math.max(0, Math.floor((Date.now() - questionStartTime) / 1000)),
+      });
+      processResult(result);
     } catch (e: any) {
       error = e.message;
       submitted = false;
     }
   }
 
-  let parsedOptions = $derived.by(() => {
-    if (!question?.options) return [];
-    try {
-      return JSON.parse(question.options) as Array<{ key: string; text: string }>;
-    } catch {
-      return [];
-    }
-  });
+  // ── Scene result ──
+  async function handleSceneResult(result: AnswerResult) {
+    if (!result) { phase = 'result'; return; }
+    submitted = true;
+    processResult(result);
+  }
 
-  let parsedVocabOptions = $derived.by(() => {
-    if (!question?.options || question.questionType !== 'VOCAB_MATCH') return null;
-    try {
-      return JSON.parse(question.options) as { left: Array<{ id: string; text: string }>; right: Array<{ id: string; text: string }> };
-    } catch {
-      return null;
-    }
-  });
+  // ── Unified result processing (purification system) ──
+  function processResult(result: AnswerResult) {
+    lastResult = result;
+    results[answeredCount] = result.isCorrect;
 
-  let parsedPoemLines = $derived.by(() => {
-    if (!question?.options || question.questionType !== 'POEM_SEQUENCE') return [];
-    try {
-      return JSON.parse(question.options) as string[];
-    } catch {
-      return [];
+    if (result.isCorrect) {
+      combo++;
+      maxCombo = Math.max(maxCombo, combo);
+
+      // 🌟 Purify the current crystal!
+      purifyState = 'player_purify';
+      setTimeout(() => { purifyState = 'idle'; }, 600);
+
+      // Mark current crystal as purified
+      purifyNode(answeredCount);
+
+      // Energy bonus
+      energy = Math.min(100, energy + 5);
+
+      if (result.isLastQuestion) {
+        guardianAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
+        // Show GuardianEncounter AFTER correct answer (don't block the question)
+        setTimeout(() => { showGuardianEncounter = true; }, 600);
+      } else {
+        if (combo >= 2 && combo % 2 === 0) {
+          treasuresFound++;
+          treasureTier = combo >= 4 ? 'big' : 'small';
+          treasureEnergy = treasureTier === 'big' ? 10 : 5;
+          if (treasureTier === 'big' && energy < 100) energy = Math.min(100, energy + 5);
+          showTreasureChest = true;
+        }
+      }
+    } else {
+      combo = 0;
+
+      // 💫 Brief flash — no damage, no death
+      purifyState = 'enemy_encourage';
+      setTimeout(() => { purifyState = 'idle'; }, 600);
+
+      if (result.isLastQuestion) {
+        guardianAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
+        encounterResolved = true; // skip Guardian encounter, go straight to result
+      }
     }
-  });
+
+    // Session complete?
+    if (result.isSessionComplete) {
+      if (!result.isLastQuestion || encounterResolved) {
+        setTimeout(() => { phase = 'result'; }, 2000);
+      } else {
+        setTimeout(() => {
+          if (phase === 'playing') { encounterResolved = true; phase = 'result'; }
+        }, 10000);
+      }
+    } else if (result.nextQuestion) {
+      const nextQ = result.nextQuestion;
+      const nextIdx = answeredCount + 1;
+      animatingToNode = nextIdx;
+      setTimeout(() => {
+        question = nextQ;
+        answeredCount = nextQ.answeredCount ?? nextIdx;
+        submitted = false;
+        selectedAnswer = '';
+        lastResult = null;
+        questionStartTime = Date.now();
+        animatingToNode = -1;
+      }, 800);
+    }
+  }
 
   function onNewTypeAnswer(answer: string) {
     selectedAnswer = answer;
     handleSubmit();
   }
 
-  const isLastQuestion = $derived(answeredCount >= totalQuestions - 1);
+  // ── Options parsing ──
+  let parsedOptions = $derived.by(() => {
+    const opts = question?.options;
+    if (!opts) return [];
+    if (Array.isArray(opts)) return opts as Array<{ key: string; text: string }>;
+    if (typeof opts === 'string') {
+      try { const p = JSON.parse(opts); if (Array.isArray(p)) return p as Array<{ key: string; text: string }>; } catch {}
+    }
+    if (typeof opts === 'object' && opts !== null) {
+      try { const arr = Object.entries(opts).map(([k, v]) => ({ key: k, text: String(v) })); if (arr.length > 0) return arr; } catch {}
+    }
+    return [];
+  });
+
+  let parsedVocabOptions = $derived.by(() => {
+    if (!question?.options || question.questionType !== 'VOCAB_MATCH') return null;
+    const opts = question.options;
+    try {
+      if (typeof opts === 'object' && opts !== null && !Array.isArray(opts)) {
+        const o = opts as any; if (o.left && o.right) return o;
+      }
+      if (typeof opts === 'string') { const p = JSON.parse(opts); if (p?.left && p?.right) return p; }
+    } catch {}
+    return null;
+  });
+
+  let parsedPoemLines = $derived.by(() => {
+    if (!question?.options || question.questionType !== 'POEM_SEQUENCE') return [];
+    const opts = question.options;
+    try {
+      if (Array.isArray(opts)) return opts as string[];
+      if (typeof opts === 'string') { const p = JSON.parse(opts); if (Array.isArray(p)) return p as string[]; }
+    } catch {}
+    return [];
+  });
 </script>
 
 <svelte:head>
   <title>探险 - Pet Grow Up</title>
 </svelte:head>
 
-<div class="min-h-screen {subjectTheme.bgClass} {phase === 'playing' ? 'pb-8' : ''}">
-  <!-- Background decorations -->
-  {#if phase === 'playing'}
-    {#if subject === 'chinese'}
-      <div class="bg-deco-chinese">
-        <span>诗</span><span>词</span><span>文</span><span>韵</span><span>书</span><span>墨</span>
-      </div>
-    {:else if subject === 'math'}
-      <div class="bg-deco-math"></div>
-    {:else if subject === 'english'}
-      <div class="bg-deco-english">
-        <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span>
-      </div>
-    {/if}
-  {/if}
-
+<div class="min-h-screen {subject === 'chinese' ? 'adventure-bg-chinese' : subject === 'math' ? 'adventure-bg-math' : 'adventure-bg-english'} {phase === 'playing' ? 'pb-8' : ''}">
   <div class="max-w-2xl mx-auto animate-slide-up relative z-10 px-4">
+
+  <!-- ═══ CONFIRM ═══ -->
   {#if phase === 'confirm'}
     <ExploreConfirm
       {subject}
@@ -281,20 +327,36 @@
       species={spiritStore.activeSpirit?.species ?? null}
       evolutionStage={spiritStore.activeSpirit?.currentEvolutionStage ?? 1}
       mood={spiritMood}
-      {loading}
-      {error}
+      {loading} {error}
       onStart={handleStart}
     />
 
+  <!-- ═══ PLAYING ═══ -->
   {:else if phase === 'playing' && question}
     <div class="bg-white/85 backdrop-blur-sm rounded-2xl shadow-lg p-4 border-2 {subjectTheme.border}">
-      <!-- Top bar: HP + Combo -->
+
+      <!-- ═══ COSMIC ADVENTURE MAP ═══ -->
+      <div class="mb-3">
+        <AdventureMap
+          {subject}
+          nodeCount={totalQuestions}
+          currentNodeIndex={answeredCount}
+          nodeResults={results}
+          nodePurified={nodePurified}
+          species={spiritStore.activeSpirit?.species ?? null}
+          evolutionStage={spiritStore.activeSpirit?.currentEvolutionStage ?? 1}
+          {animatingToNode}
+          purifyState={purifyState}
+        />
+      </div>
+
+      <!-- ═══ STATS BAR: Energy + Combo ═══ -->
       <div class="flex items-center justify-between mb-2">
-        <HpBar {hp} maxHp={5} />
+        <EnergyBar {energy} maxEnergy={100} />
         <ComboCounter {combo} />
       </div>
 
-      <!-- Battle scene: spirit vs enemy visual combat view -->
+      <!-- ═══ PURIFY SCENE: Spirit vs Dark Crystal ═══ -->
       <div class="mb-3">
         <BattleScene
           {subject}
@@ -304,110 +366,123 @@
           currentIndex={answeredCount}
           {totalQuestions}
           isBoss={isLastQuestion}
-          bossHp={bossDefeated ? 0 : 100}
-          bossMaxHp={100}
+          bossHp={isLastQuestion ? 3 : 1}
+          bossMaxHp={isLastQuestion ? 3 : 1}
           {combo}
-          state={battleState}
+          state={purifyState}
         />
       </div>
 
-      <!-- Boss battle: interactive phased boss encounter -->
-      {#if showBossBattle}
-        <BossBattle
+      <!-- ═══ GUARDIAN ENCOUNTER ═══ -->
+      {#if showGuardianEncounter}
+        <GuardianEncounter
           visible={true}
           {subject}
           {combo}
-          playerHp={hp}
           answerResult={lastResult}
-          answerTimeMs={bossAnswerTimeMs}
-          onBossDefeated={() => {
-            bossDefeated = true;
-            bossBattleResolved = true;
-            battleState = 'enemy_defeated';
-            soundManager.playBossDefeated();
+          sceneMode={question ? sceneTypes.includes(question.questionType) : false}
+          onGuardianPurified={() => {
+            guardianPurified = true;
+            encounterResolved = true;
+            purifyState = 'guardian_purified';
+            soundManager.playBossDefeated?.();
             setTimeout(() => { phase = 'result'; }, 2500);
           }}
-          onBossAttackPlayer={() => {
-            battleState = 'enemy_attack';
-            setTimeout(() => { battleState = 'idle'; }, 600);
-            if (hp <= 0) {
-              adventureEnded = true;
-              bossBattleResolved = true;
-              setTimeout(() => { phase = 'result'; }, 2000);
-            }
-          }}
-          onBossEscaped={() => {
-            bossBattleResolved = true;
-            soundManager.playComplete();
+          onEncounterEnd={() => {
+            encounterResolved = true;
+            soundManager.playComplete?.();
             setTimeout(() => { phase = 'result'; }, 2000);
           }}
         />
       {/if}
 
-      <!-- Compact progress dots below scene -->
-      <div class="mb-2">
-        <AdventurePath
-          totalQuestions={totalQuestions}
-          currentIndex={answeredCount}
-          results={results}
-          species={spiritStore.activeSpirit?.species ?? null}
-          evolutionStage={spiritStore.activeSpirit?.currentEvolutionStage ?? 1}
-          mood={spiritMood}
-          subjectTheme={subject}
-        />
-      </div>
-
-      <!-- Question area -->
-      <div class="mb-3">
-        <h2 class="text-base font-medium text-gray-800 mb-4">{question.questionText}</h2>
-
-        {#if question.questionType === 'MULTIPLE_CHOICE'}
-          <div class="space-y-2">
-            {#each parsedOptions as opt}
-              <button onclick={() => selectAnswer(opt.key)} disabled={submitted}
-                class={['w-full text-left px-4 py-3 rounded-xl border-2 transition text-sm',
-                  selectedAnswer === opt.key ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'
-                ].join(' ')}>
-                <span class="font-medium">{opt.key}.</span> {opt.text}
-              </button>
-            {/each}
-          </div>
-        {:else if question.questionType === 'FILL_BLANK'}
-          <input type="text" bind:value={selectedAnswer} disabled={submitted}
-                 placeholder="输入你的答案..."
-                 class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
-        {:else if question.questionType === 'TRUE_FALSE'}
-          <div class="grid grid-cols-2 gap-4">
-            <button onclick={() => selectAnswer('true')} disabled={submitted}
-              class={['py-4 rounded-xl border-2 text-center transition text-lg font-medium',
-                selectedAnswer === 'true' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'].join(' ')}>
-              ✓ 正确
-            </button>
-            <button onclick={() => selectAnswer('false')} disabled={submitted}
-              class={['py-4 rounded-xl border-2 text-center transition text-lg font-medium',
-                selectedAnswer === 'false' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 hover:border-gray-300'].join(' ')}>
-              ✗ 错误
-            </button>
-          </div>
-        {:else if question.questionType === 'POEM_SEQUENCE'}
-          <PoemSequence options={parsedPoemLines} disabled={submitted} onSelect={onNewTypeAnswer} />
-        {:else if question.questionType === 'MATH_INPUT'}
-          <MathInput disabled={submitted} onSelect={(v) => { selectedAnswer = v; }} />
-        {:else if question.questionType === 'VOCAB_MATCH'}
-          {#if parsedVocabOptions}
-            <VocabMatch options={parsedVocabOptions} disabled={submitted} onSelect={onNewTypeAnswer} />
+      <!-- ═══ QUESTION AREA ═══ -->
+      <div class="question-fade" style="animation: qFadeIn 0.3s ease-out;">
+      {#key question.questionId}
+      {#if sceneTypes.includes(question.questionType)}
+        {#if question.questionType === 'SCENE_DRAG'}
+          <SceneMathTen question={question} {sessionId} onComplete={(r) => handleSceneResult(r)} />
+        {:else if question.questionType === 'SCENE_TAP'}
+          <SceneTap question={question} {sessionId} onComplete={(r) => handleSceneResult(r)} />
+        {:else if question.questionType === 'SCENE_MATCH'}
+          <SceneMatch question={question} {sessionId} onComplete={(r) => handleSceneResult(r)} />
+        {:else if question.questionType === 'SCENE_WHACK_MOLE'}
+          <SceneWhackMole question={question} {sessionId} onComplete={(r) => handleSceneResult(r)} />
+        {:else if question.questionType === 'SCENE_SHAPE_PUZZLE'}
+          <SceneShapePuzzle question={question} {sessionId} onComplete={(r) => handleSceneResult(r)} />
+        {:else if question.questionType === 'SCENE_CLOCK'}
+          <SceneClock question={question} {sessionId} onComplete={(r) => handleSceneResult(r)} />
+        {:else if question.questionType === 'SCENE_SHOP'}
+          <SceneShop question={question} {sessionId} onComplete={(r) => handleSceneResult(r)} />
+        {:else if question.questionType === 'SCENE_PINYIN'}
+          <ScenePinyinBubble question={question} {sessionId} onComplete={(r) => handleSceneResult(r)} />
+        {:else if question.questionType === 'SCENE_CHAR_BUILD'}
+          <SceneCharBuild question={question} {sessionId} onComplete={(r) => handleSceneResult(r)} />
+        {/if}
+      {:else}
+        <div class="mb-3">
+          <h2 class="text-base font-medium text-gray-800 mb-4">{question.questionText}</h2>
+          {#if question.questionType === 'MULTIPLE_CHOICE'}
+            {#if parsedOptions.length > 0}
+              <div class="space-y-2">
+                {#each parsedOptions as opt}
+                  <button onclick={() => selectAnswer(opt.key)} disabled={submitted}
+                    class={['w-full text-left px-4 py-3 rounded-xl border-2 transition text-sm',
+                      selectedAnswer === opt.key ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'].join(' ')}>
+                    <span class="font-medium">{opt.key}.</span> {opt.text}
+                  </button>
+                {/each}
+              </div>
+            {:else}
+              <input type="text" bind:value={selectedAnswer} disabled={submitted}
+                     placeholder="输入你的答案..." class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-indigo-500 outline-none transition" />
+            {/if}
+          {:else if question.questionType === 'FILL_BLANK'}
+            <input type="text" bind:value={selectedAnswer} disabled={submitted}
+                   placeholder="输入你的答案..." class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
+          {:else if question.questionType === 'TRUE_FALSE'}
+            <div class="grid grid-cols-2 gap-4">
+              <button onclick={() => selectAnswer('true')} disabled={submitted}
+                class={['py-4 rounded-xl border-2 text-center transition text-lg font-medium',
+                  selectedAnswer === 'true' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'].join(' ')}>✓ 正确</button>
+              <button onclick={() => selectAnswer('false')} disabled={submitted}
+                class={['py-4 rounded-xl border-2 text-center transition text-lg font-medium',
+                  selectedAnswer === 'false' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 hover:border-gray-300'].join(' ')}>✗ 错误</button>
+            </div>
+          {:else if question.questionType === 'POEM_SEQUENCE'}
+            {#if parsedPoemLines.length > 0}
+              <PoemSequence options={parsedPoemLines} disabled={submitted} onSelect={onNewTypeAnswer} />
+            {:else}
+              <p class="text-xs text-amber-600 mb-2">⚠️ 诗句加载异常，请直接输入答案</p>
+              <input type="text" bind:value={selectedAnswer} disabled={submitted}
+                     placeholder="输入你的答案..." class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-indigo-500 outline-none transition" />
+            {/if}
+          {:else if question.questionType === 'MATH_INPUT'}
+            <MathInput disabled={submitted} onSelect={(v) => { selectedAnswer = v; }} />
+          {:else if question.questionType === 'VOCAB_MATCH'}
+            {#if parsedVocabOptions}
+              <VocabMatch options={parsedVocabOptions} disabled={submitted} onSelect={onNewTypeAnswer} />
+            {:else}
+              <p class="text-xs text-amber-600 mb-2">⚠️ 配对数据加载异常，请直接输入答案</p>
+              <input type="text" bind:value={selectedAnswer} disabled={submitted}
+                     placeholder="输入你的答案..." class="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:border-indigo-500 outline-none transition" />
+            {/if}
+          {:else}
+            <input type="text" bind:value={selectedAnswer} disabled={submitted}
+                   placeholder="输入你的答案..." class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 outline-none transition" />
           {/if}
-        {/if}
 
-        {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH'}
-          <button onclick={handleSubmit} disabled={!selectedAnswer}
-                  class="mt-4 w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 text-white text-lg font-black rounded-xl
-                    hover:from-amber-300 hover:via-orange-300 hover:to-red-400
-                    disabled:from-gray-300 disabled:via-gray-300 disabled:to-gray-300 disabled:text-gray-400
-                    transition-all active:scale-95 shadow-lg">
-            ⚔️ 攻击！
-          </button>
-        {/if}
+          {#if !submitted && question.questionType !== 'POEM_SEQUENCE' && question.questionType !== 'VOCAB_MATCH' && !sceneTypes.includes(question.questionType)}
+            <button onclick={handleSubmit} disabled={!selectedAnswer}
+                    class="mt-4 w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 text-white text-lg font-black rounded-xl
+                      hover:from-amber-300 hover:via-orange-300 hover:to-red-400
+                      disabled:from-gray-300 disabled:text-gray-400 transition-all active:scale-95 shadow-lg">
+              🌟 净化！
+            </button>
+          {/if}
+        </div>
+      {/if}
+      {/key}
       </div>
     </div>
 
@@ -422,19 +497,15 @@
       </div>
     {/if}
 
-    <!-- Treasure chest overlay -->
+    <!-- Treasure Chest -->
     <TreasureChest show={showTreasureChest} tier={treasureTier} energyBonus={treasureEnergy} {subject}
       onCollected={() => { showTreasureChest = false; }} />
 
+  <!-- ═══ RESULT ═══ -->
   {:else if phase === 'result'}
     <SessionResult
-      {subject}
-      {sessionId}
-      {maxCombo}
-      {bossDefeated}
-      {treasuresFound}
-      startHp={5}
-      finalHp={Math.max(hp, 0)}
+      {subject} {sessionId} {maxCombo} bossDefeated={guardianPurified} {treasuresFound}
+      startHp={100} finalHp={energy}
       onclose={() => goto(`/app/study/${subject}`)}
     />
   {/if}
@@ -444,3 +515,11 @@
   {/if}
   </div>
 </div>
+
+<style>
+  @keyframes qFadeIn {
+    0% { opacity: 0; transform: scale(0.96) translateY(6px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  :global(.question-fade) { animation: qFadeIn 0.3s ease-out; }
+</style>

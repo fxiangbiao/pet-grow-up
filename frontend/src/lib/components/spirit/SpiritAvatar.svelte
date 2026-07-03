@@ -7,28 +7,130 @@
     size = 'md',
     animated = true,
     mood = 'idle',
+    personality = 'cheerful',
+    showSpeechBubble = true,
+    dormancyLevel = 0,
+    accessories = [] as { slot: string; iconUrl: string; name: string }[],
     onclick
   }: {
     species: SpiritSpecies;
     evolutionStage?: number;
     size?: 'sm' | 'md' | 'lg';
     animated?: boolean;
-    mood?: 'idle' | 'happy' | 'excited' | 'hurt';
+    mood?: 'idle' | 'happy' | 'excited' | 'hurt' | 'greeting' | 'sleeping' | 'thinking';
+    personality?: 'cheerful' | 'gentle' | 'tsundere' | 'brave';
+    showSpeechBubble?: boolean;
+    dormancyLevel?: number;
+    accessories?: { slot: string; iconUrl: string; name: string }[];
     onclick?: () => void;
   } = $props();
+
+  // ── Personality quote library ──
+  const quotes: Record<string, Record<string, string[]>> = {
+    cheerful: {
+      correct: ['太厉害啦！', '我们又变强啦～', '完美！你真是天才！'],
+      combo: ['无敌连击！', '根本停不下来！', '你就是数学之王！'],
+      wrong: ['没关系，再试一次！', '差一点点就对了～', '我们换个思路～'],
+      idle: ['来学习吧！', '今天也要加油哦～', '喵~想你了！']
+    },
+    gentle: {
+      correct: ['做对了呢，真棒', '慢慢来，都会好的', '你进步好大呀'],
+      combo: ['一步一步，稳稳的', '耐心让我们更强'],
+      wrong: ['没关系，我在呢', '别着急，我陪着你', '再试一次好不好？'],
+      idle: ['休息好了吗？', '我在这里等你', '今天的阳光真好']
+    },
+    tsundere: {
+      correct: ['哼，这种题我本来不想帮你的...', '凑巧罢了！', '你、你也没那么差嘛！'],
+      combo: ['别得意！还有更难的呢！', '哼！算你厉害...'],
+      wrong: ['笨蛋！...我是说，再想想', '这不怪你啦...'],
+      idle: ['你、你不来学习我可要生气了！', '才不是想你了...刷题而已！']
+    },
+    brave: {
+      correct: ['我们一起打败难题！', '胜利属于我们！', '冲啊！下一题！'],
+      combo: ['绝招！超级连击！', '热血沸腾！谁来都一样！'],
+      wrong: ['这道题是强敌！再挑战！', '别退缩，我陪你！'],
+      idle: ['冒险还没开始呢！', '强者从不偷懒！', '今天也要征服数学！']
+    }
+  };
+
+  function randomQuote(category: string): string {
+    const pool = quotes[personality]?.[category] || quotes.cheerful[category] || [''];
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // ── Speech bubble state ──
+  let currentQuote = $state('');
+  let showBubble = $state(false);
+  let bubbleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function showQuote(category: string) {
+    currentQuote = randomQuote(category);
+    showBubble = true;
+    if (bubbleTimer) clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(() => { showBubble = false; }, 2500);
+  }
+
+  // Listen to mood changes to trigger quotes
+  $effect(() => {
+    const m = mood;
+    if (m === 'happy') showQuote('correct');
+    else if (m === 'excited') showQuote('combo');
+    else if (m === 'hurt') showQuote('wrong');
+  });
 
   // Image loading
   let imgLoaded = $state(false);
   let imgError = $state(false);
   let clicked = $state(false);
 
+  // ── Blink animation ──
+  let blinking = $state(false);
+  let blinkTimer: ReturnType<typeof setInterval> | null = null;
+
+  function scheduleBlink() {
+    if (blinkTimer) clearInterval(blinkTimer);
+    blinkTimer = setInterval(() => {
+      blinking = true;
+      setTimeout(() => { blinking = false; }, 120);
+    }, 2500 + Math.random() * 3500); // every 2.5–6 seconds
+  }
+
+  $effect(() => {
+    scheduleBlink();
+    return () => { if (blinkTimer) clearInterval(blinkTimer); };
+  });
+
+  // ── Eye tracking (follow cursor) ──
+  let eyeOffsetX = $state(0);
+  let eyeOffsetY = $state(0);
+  let avatarEl: HTMLDivElement | null = null;
+
+  function handleMouseMove(e: MouseEvent) {
+    if (!avatarEl) return;
+    const rect = avatarEl.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    // Max pupil offset ~3px in SVG coordinate space
+    const maxOffset = 3;
+    const dx = ((e.clientX - cx) / (rect.width / 2)) * maxOffset;
+    const dy = ((e.clientY - cy) / (rect.height / 2)) * maxOffset;
+    eyeOffsetX = Math.max(-maxOffset, Math.min(maxOffset, dx));
+    eyeOffsetY = Math.max(-maxOffset, Math.min(maxOffset, dy));
+  }
+
+  function handleMouseLeave() {
+    eyeOffsetX = 0;
+    eyeOffsetY = 0;
+  }
+
   const spriteUrl = $derived(species?.spriteUrl || '');
   const useImage = $derived(!!spriteUrl && imgLoaded && !imgError);
 
-  // Click feedback
+  // Click feedback — poke reaction with idle quote
   function handleClick() {
     clicked = true;
-    setTimeout(() => { clicked = false; }, 400);
+    showQuote('idle');
+    setTimeout(() => { clicked = false; }, 600);
     if (onclick) onclick();
   }
 
@@ -112,9 +214,28 @@
   const animClass = $derived(
     mood === 'excited' ? 'animate-bounce-in' :
     mood === 'hurt' ? 'animate-shake' :
+    mood === 'greeting' ? 'animate-greeting' :
     clicked ? 'animate-bounce-in' :
-    animated ? 'animate-float' : ''
+    animated ? (dormancyLevel >= 2 ? 'animate-breathing' : dormancyLevel >= 1 ? 'animate-float-slow' : 'animate-float') : ''
   );
+
+  // Dormancy visual effects
+  const dormancyFilter = $derived(
+    dormancyLevel >= 2 ? 'saturate(0.3) brightness(0.7)' :
+    dormancyLevel >= 1 ? 'saturate(0.6) brightness(0.85)' :
+    'none'
+  );
+  const dormancyOpacity = $derived(dormancyLevel >= 2 ? 0.75 : dormancyLevel >= 1 ? 0.85 : 1);
+
+  // Sleeping Zzz particles
+  const zzzParticles = $derived.by(() => {
+    if (mood !== 'sleeping' && dormancyLevel < 2) return [];
+    return [
+      { x: cx + half * 0.5, y: cy - half * 0.7, delay: 0, size: 10 },
+      { x: cx + half * 0.7, y: cy - half * 0.9, delay: 1.2, size: 8 },
+      { x: cx + half * 0.6, y: cy - half * 1.1, delay: 0.6, size: 6 },
+    ];
+  });
 
   const stageColor = $derived(
     stage === 1 ? 'from-indigo-400 to-purple-500' :
@@ -130,7 +251,23 @@
   onclick={handleClick}
   role={onclick ? 'button' : undefined}
   onkeydown={(e) => { if (onclick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleClick(); } }}
+  bind:this={avatarEl}
+  onmousemove={handleMouseMove}
+  onmouseleave={handleMouseLeave}
 >
+  <!-- ── Speech bubble ── -->
+  {#if showBubble && currentQuote && showSpeechBubble}
+    <div class="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap
+      bg-white/90 backdrop-blur text-xs text-gray-800 px-3 py-1.5 rounded-2xl
+      shadow-md border border-gray-200 animate-fade-in z-50
+      after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2
+      after:border-8 after:border-transparent after:border-t-white/90">
+      {currentQuote}
+    </div>
+  {/if}
+
+  <!-- Dormancy wrapper: filter + opacity on pet visual only -->
+  <div style="filter: {dormancyFilter}; opacity: {dormancyOpacity}; transition: filter 1.5s ease, opacity 1.5s ease;">
   {#if useImage}
     <!-- Real sprite image -->
     <img
@@ -258,8 +395,8 @@
         {@const eyeR = half * 0.08}
         {@const mouthY = cy + half * 0.2}
 
-        <!-- Blush (happy/excited only) -->
-        {#if mood === 'happy' || mood === 'excited'}
+        <!-- Blush (happy/excited/greeting) -->
+        {#if mood === 'happy' || mood === 'excited' || mood === 'greeting'}
           <circle cx={cx - eyeSpacing - 2} cy={eyeY + half * 0.12} r={half * 0.1}
             fill={accentHex} opacity="0.3" />
           <circle cx={cx + eyeSpacing + 2} cy={eyeY + half * 0.12} r={half * 0.1}
@@ -279,27 +416,37 @@
           <!-- Star eyes ✨ -->
           <text x={cx - eyeSpacing} y={eyeY + eyeR} text-anchor="middle" font-size={half * 0.2}>⭐</text>
           <text x={cx + eyeSpacing} y={eyeY + eyeR} text-anchor="middle" font-size={half * 0.2}>⭐</text>
-        {:else if mood === 'happy'}
-          <!-- ^_^ happy curved eyes -->
+        {:else if mood === 'happy' || mood === 'greeting'}
+          <!-- ^_^ happy/greeting curved eyes -->
           <path d="M{cx - eyeSpacing - eyeR},{eyeY + 2} Q{cx - eyeSpacing},{eyeY - eyeR * 1.2} {cx - eyeSpacing + eyeR},{eyeY + 2}"
             fill="none" stroke={primaryHex} stroke-width="2" stroke-linecap="round" opacity="0.9" />
           <path d="M{cx + eyeSpacing - eyeR},{eyeY + 2} Q{cx + eyeSpacing},{eyeY - eyeR * 1.2} {cx + eyeSpacing + eyeR},{eyeY + 2}"
             fill="none" stroke={primaryHex} stroke-width="2" stroke-linecap="round" opacity="0.9" />
+        {:else if mood === 'sleeping'}
+          <!-- =_= sleeping eyes (closed horizontal lines) -->
+          <line x1={cx - eyeSpacing - eyeR} y1={eyeY} x2={cx - eyeSpacing + eyeR} y2={eyeY}
+            stroke={primaryHex} stroke-width="2" stroke-linecap="round" opacity="0.5" />
+          <line x1={cx + eyeSpacing - eyeR} y1={eyeY} x2={cx + eyeSpacing + eyeR} y2={eyeY}
+            stroke={primaryHex} stroke-width="2" stroke-linecap="round" opacity="0.5" />
         {:else}
-          <!-- Normal idle eyes (circles with subtle blink) -->
-          <ellipse cx={cx - eyeSpacing} cy={eyeY} rx={eyeR} ry={eyeR * 0.9}
-            fill={primaryHex} opacity="0.7" />
-          <ellipse cx={cx + eyeSpacing} cy={eyeY} rx={eyeR} ry={eyeR * 0.9}
-            fill={primaryHex} opacity="0.7" />
-          <!-- Eye shine -->
-          <circle cx={cx - eyeSpacing + eyeR * 0.3} cy={eyeY - eyeR * 0.3} r={eyeR * 0.35}
-            fill="white" opacity="0.8" />
-          <circle cx={cx + eyeSpacing + eyeR * 0.3} cy={eyeY - eyeR * 0.3} r={eyeR * 0.35}
-            fill="white" opacity="0.8" />
+          <!-- Normal idle eyes (circles with blink + eye tracking) -->
+          <g style="transform-origin: {cx - eyeSpacing}px {eyeY}px; transform: scaleY({blinking ? 0.05 : 1}); transition: transform {blinking ? '0.05s' : '0.15s'} ease-out;">
+            <ellipse cx={cx - eyeSpacing} cy={eyeY} rx={eyeR} ry={eyeR * 0.9}
+              fill={primaryHex} opacity="0.7" />
+            <!-- Eye shine follows cursor -->
+            <circle cx={cx - eyeSpacing + eyeR * 0.3 + eyeOffsetX} cy={eyeY - eyeR * 0.3 + eyeOffsetY} r={eyeR * 0.35}
+              fill="white" opacity="0.8" />
+          </g>
+          <g style="transform-origin: {cx + eyeSpacing}px {eyeY}px; transform: scaleY({blinking ? 0.05 : 1}); transition: transform {blinking ? '0.05s' : '0.15s'} ease-out;">
+            <ellipse cx={cx + eyeSpacing} cy={eyeY} rx={eyeR} ry={eyeR * 0.9}
+              fill={primaryHex} opacity="0.7" />
+            <circle cx={cx + eyeSpacing + eyeR * 0.3 + eyeOffsetX} cy={eyeY - eyeR * 0.3 + eyeOffsetY} r={eyeR * 0.35}
+              fill="white" opacity="0.8" />
+          </g>
         {/if}
 
         <!-- Mouth -->
-        {#if mood === 'happy'}
+        {#if mood === 'happy' || mood === 'greeting'}
           <path d="M{cx - eyeSpacing * 0.6},{mouthY} Q{cx},{mouthY + half * 0.15} {cx + eyeSpacing * 0.6},{mouthY}"
             fill="none" stroke={primaryHex} stroke-width="1.8" stroke-linecap="round" opacity="0.8" />
         {:else if mood === 'excited'}
@@ -308,6 +455,10 @@
         {:else if mood === 'hurt'}
           <path d="M{cx - eyeSpacing * 0.6},{mouthY + half * 0.12} Q{cx},{mouthY - 2} {cx + eyeSpacing * 0.6},{mouthY + half * 0.12}"
             fill="none" stroke={primaryHex} stroke-width="1.8" stroke-linecap="round" opacity="0.7" />
+        {:else if mood === 'sleeping'}
+          <!-- Sleeping: small 'o' mouth (snoring) -->
+          <ellipse cx={cx} cy={mouthY + 3} rx={eyeSpacing * 0.25} ry={half * 0.08}
+            fill={primaryHex} opacity="0.35" />
         {:else}
           <!-- Idle: small neutral line -->
           <line x1={cx - eyeSpacing * 0.5} y1={mouthY + 3} x2={cx + eyeSpacing * 0.5} y2={mouthY + 3}
@@ -342,11 +493,39 @@
       {/if}
     </svg>
   {/if}
+  </div>
+  <!-- /Dormancy wrapper -->
+
+  <!-- Zzz sleeping particles -->
+  {#if zzzParticles.length > 0}
+    {#each zzzParticles as z, i}
+      <div
+        class="absolute text-indigo-300 font-bold pointer-events-none select-none"
+        style="left: {z.x}px; top: {z.y}px; font-size: {z.size}px;
+          animation: zzzFloat 2.5s ease-in-out {z.delay}s infinite;"
+      >Z</div>
+    {/each}
+  {/if}
 
   <!-- Stage badge -->
   {#if stage > 1}
     <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br {stageColor} flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
       {stage}
+    </div>
+  {/if}
+
+  <!-- Sprint E: Accessory emojis -->
+  {#if accessories.length > 0}
+    <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+      {#each accessories as acc}
+        <span class="absolute text-xs leading-none"
+          style="
+            {acc.slot === 'head' ? 'top: 8%;' : ''}
+            {acc.slot === 'neck' ? 'top: 42%;' : ''}
+            {acc.slot === 'eyes' ? 'top: 28%;' : ''}
+          "
+          title={acc.name}>{acc.iconUrl || '✨'}</span>
+      {/each}
     </div>
   {/if}
 
@@ -376,5 +555,48 @@
   }
   :global(.animate-shake) {
     animation: shake 0.4s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    0% { opacity: 0; transform: translate(-50%, 8px); }
+    100% { opacity: 1; transform: translate(-50%, 0); }
+  }
+  :global(.animate-fade-in) {
+    animation: fadeInUp 0.3s ease-out;
+  }
+
+  /* ── Sprint C: Dormancy + Greeting animations ── */
+  @keyframes greetingBounce {
+    0% { transform: translateY(-60px) scale(0.3); opacity: 0; }
+    50% { transform: translateY(8px) scale(1.05); opacity: 1; }
+    70% { transform: translateY(-4px) scale(0.97); }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  :global(.animate-greeting) {
+    animation: greetingBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes breathing {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+  }
+  :global(.animate-breathing) {
+    animation: breathing 3s ease-in-out infinite;
+  }
+
+  @keyframes floatSlow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  :global(.animate-float-slow) {
+    animation: floatSlow 4s ease-in-out infinite;
+  }
+
+  @keyframes zzzFloat {
+    0%, 100% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+    20% { opacity: 0.7; }
+    50% { transform: translate(8px, -20px) scale(1); opacity: 0.5; }
+    80% { opacity: 0.2; }
+    100% { transform: translate(16px, -40px) scale(0.4); opacity: 0; }
   }
 </style>

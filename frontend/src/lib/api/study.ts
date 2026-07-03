@@ -44,6 +44,8 @@ export interface AnswerResult {
   isSessionComplete: boolean;
   isLastQuestion: boolean;
   nextQuestion: QuestionDTO | null;
+  sceneRewardItem?: string;
+  sceneRewardCount?: number;
 }
 
 export interface SessionResult {
