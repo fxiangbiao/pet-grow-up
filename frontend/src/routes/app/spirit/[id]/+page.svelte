@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { getSpiritDetail, feedSpirit, evolveSpirit } from '$lib/api/spirit';
+  import { getSpiritDetail, feedSpirit, evolveSpirit, getEquippedAccessories, equipAccessory, unequipAccessory, type AccessoryDTO } from '$lib/api/spirit';
+  import { getInventory } from '$lib/api/shop';
+  import type { UserItem } from '$lib/types/api';
   import { page } from '$app/stores';
   import type { SpiritDTO } from '$lib/types/api';
   import PersonalityRadar from '$lib/components/spirit/PersonalityRadar.svelte';
@@ -25,6 +27,8 @@
   let showHappinessChange = $state(0);
   let showEnergyChange = $state(0);
   let showChangeFlags = $state({ happiness: false, energy: false });
+  let accessories = $state<AccessoryDTO[]>([]);
+  let inventory = $state<UserItem[]>([]);
 
   let heartIdCounter = $state(0);
 
@@ -36,12 +40,48 @@
         prevHappiness = s.happiness;
         prevEnergy = s.energy;
         loading = false;
+        // Load accessories and inventory
+        getEquippedAccessories(id).then(a => accessories = a).catch(() => {});
+        getInventory().then(inv => inventory = inv).catch(() => {});
       }).catch(() => {
         loading = false;
         loadError = '无法加载精灵详情，请检查网络或重新登录';
       });
     }
   });
+
+  async function handleEquip(slot: string, itemDefId: number) {
+    if (!spirit) return;
+    try {
+      const updated = await equipAccessory(spirit.id, slot, itemDefId);
+      accessories = updated;
+      toastStore.success('装备成功！');
+    } catch (e: any) { toastStore.error(e.message || '装备失败'); }
+  }
+
+  async function handleUnequip(slot: string) {
+    if (!spirit) return;
+    try {
+      const updated = await unequipAccessory(spirit.id, slot);
+      accessories = updated;
+      toastStore.success('已卸下');
+    } catch (e: any) { toastStore.error(e.message || '卸下失败'); }
+  }
+
+  const accBySlot = $derived.by(() => {
+    const map: Record<string, AccessoryDTO> = {};
+    for (const a of accessories) map[a.slot] = a;
+    return map;
+  });
+
+  const accessoryItems = $derived(inventory.filter(i => i.itemDef?.category === 'ACCESSORY'));
+
+  const slots = [
+    { key: 'head', label: '头部', icon: '🎩' },
+    { key: 'neck', label: '颈部', icon: '🧣' },
+    { key: 'eyes', label: '眼部', icon: '👓' },
+    { key: 'effect', label: '特效', icon: '✨' },
+  ];
 
   function triggerHearts() {
     const newHearts = Array.from({ length: 8 }, (_, i) => ({
@@ -150,7 +190,7 @@
       <!-- Spirit avatar section with sparkle effect on evolve -->
       <div class="text-center mb-6">
         <div class="inline-flex mb-2 transition-all duration-500" class:animate-bounce-in={showCelebration}>
-          <SpiritAvatar species={spirit.species} evolutionStage={spirit.currentEvolutionStage} size="lg" />
+          <SpiritAvatar species={spirit.species} evolutionStage={spirit.currentEvolutionStage} size="lg" {accessories} />
         </div>
         <h1 class="text-2xl font-bold text-gray-800">{spirit.nickname}</h1>
         <p class="text-gray-500">
@@ -161,6 +201,43 @@
           {/if}
            · Lv.{spirit.currentEvolutionStage}
         </p>
+
+        <!-- Sprint E: Equipment slots -->
+        <div class="grid grid-cols-4 gap-2 mt-3 max-w-xs mx-auto">
+          {#each slots as slot}
+            <div class="text-center">
+              <div class="text-xs text-gray-400 mb-1">{slot.icon} {slot.label}</div>
+              {#if accBySlot[slot.key]}
+                <button
+                  onclick={() => handleUnequip(slot.key)}
+                  class="w-full px-2 py-1.5 rounded-lg text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-red-50 hover:text-red-600 transition"
+                  title={accBySlot[slot.key].name}>
+                  {accBySlot[slot.key].iconUrl || '✨'}
+                </button>
+              {:else}
+                <div class="relative group">
+                  <div class="w-full px-2 py-1.5 rounded-lg text-xs bg-gray-100 text-gray-400 border border-dashed border-gray-300">
+                    空
+                  </div>
+                  {#if accessoryItems.length > 0}
+                    <div class="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-white border shadow-lg rounded-lg p-2 z-10 min-w-[120px]">
+                      {#each accessoryItems.filter(i => !Object.values(accBySlot).some(a => a.itemKey === i.itemDef.itemKey)) as item}
+                        <button
+                          onclick={() => handleEquip(slot.key, item.itemDef.id)}
+                          class="block w-full text-left px-2 py-1 text-xs hover:bg-indigo-50 rounded transition">
+                          {item.itemDef.iconUrl || '✨'} {item.itemDef.name}
+                        </button>
+                      {/each}
+                      {#if accessoryItems.filter(i => !Object.values(accBySlot).some(a => a.itemKey === i.itemDef.itemKey)).length === 0}
+                        <span class="text-xs text-gray-400 px-2">没有可用的配饰</span>
+                      {/if}
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          {/each}
+        </div>
       </div>
 
       <!-- Status bars with animated transitions -->

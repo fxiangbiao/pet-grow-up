@@ -330,6 +330,20 @@ CREATE TABLE IF NOT EXISTS story_chapter (
     INDEX idx_chapter_order (display_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================================
+-- Spirit Accessories (Sprint E)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS spirit_accessory (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    spirit_id BIGINT NOT NULL,
+    slot VARCHAR(20) NOT NULL COMMENT 'head, neck, eyes, effect',
+    item_def_id BIGINT NOT NULL,
+    equipped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_spirit_slot (spirit_id, slot),
+    FOREIGN KEY (spirit_id) REFERENCES learning_spirit(id) ON DELETE CASCADE,
+    FOREIGN KEY (item_def_id) REFERENCES item_def(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS user_story_progress (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,

@@ -9,17 +9,20 @@
 
 核心设计理念：「一核三柱两环」
 - **1 核**：学习能量系统 —— 一切学习产生能量，一切游戏内容消耗能量
-- **3 柱**：探索/战斗系统、情感连接系统、收集/成就系统
+- **3 柱**：探索/净化系统、情感连接系统、收集/成就系统
 - **2 环**：学科专属系统、社交互动系统
 
 ## 项目状态
 
-实现阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
+v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 - Sprint 1（2026-06-29）：双路径「凑十法」Demo 对比，**选定 Svelte 路径继续**。
 - Sprint 2（2026-06-30）：场景组件扩充（SceneTap/SceneMatch）+ 题库 45→77 + 剧情模式接入场景题型。
 - Sprint A（2026-06-30）：6 个新场景组件 + 题库 77→~200 + 音频动画升级 + 冒险模式渐进演化。
 - **Sprint B（2026-07-02）**：宇宙星空冒险地图 + 战斗动画重构 + BGM 柔和化 + 题库扩充至 491 题（年级 1-3）+ 剧情 24 章。
-  计划文档见 `.plans/`，v2 设计方案见 `游戏化学习系统设计方案-v2.md`。
+- **Sprint C（2026-07-03）**：星灵羁绊核心 — 性格选择（4 选 1）、多情绪动画（greeting/sleeping/dim）、迎接/告别系统、休眠机制（损失厌恶）。
+- **Sprint D（2026-07-03）**：净化重构 — 战斗系统→净化系统（HP→能量水晶、Boss→守护者、怪物→暗水晶、「⚔️ 攻击」→「🌟 净化」、移除死亡惩罚）。
+- **Sprint E（2026-07-03）**：收集驱动 — 配饰系统（12 件装备）、扭蛋机（稀有度分层）、星灵装备 UI、成就图鉴（翻书模式 + 知识点图鉴）。
+  v2 设计方案见 `游戏化学习系统设计方案-v2.md`。
 
 ## 已实现子系统
 
@@ -40,34 +43,61 @@
 | — | 用户中心 | `user` | `lib/api/user.ts` | ✅ |
 | **P2** | 时空裂隙系统 | — | — | ❌ 未实现 |
 
-### 冒险模式（Sprint B 重构，核心玩法）
+### 冒险模式（Sprint D 净化重构，核心玩法）
 
-每次答题被改造为一次「小冒险」，前端维护全部实时状态（HP/Combo/Boss/宝箱），
+每次答题被改造为一次「知识净化之旅」，前端维护全部实时状态（Energy/Combo/Guardian/宝箱），
 后端仅在结算时记录 `maxCombo` / `bossDefeated` / `comboBonusEnergy`。关键契约：
 
-- `study/dto/AnswerResultDTO.java` —— 含 `isLastQuestion`（标记 Boss 题）
-- `study/dto/SessionResultDTO.java` —— 含 `maxCombo`、`bossDefeated`、`comboBonusEnergy`
-- 探索模式：宇宙星空地图（`AdventureMap.svelte`）→ 怪物节点 → BattleScene 对战 → 答题 → 攻击动画
-- 剧情模式：宇宙星空地图（`StoryMap.svelte`）→ 章节节点 → ChapterDialog → BattleScene 对战
-- 战斗动画状态机：`idle → player_attack → idle`（答对）/ `idle → enemy_attack → idle`（答错）/ `enemy_defeated`（击杀）
+- `study/dto/AnswerResultDTO.java` —— 含 `isLastQuestion`
+- `study/dto/SessionResultDTO.java` —— 含 `maxCombo`、`bossDefeated`（字段名保留，语义变为守护者净化）、`comboBonusEnergy`
+- 探索模式：宇宙星空地图（`AdventureMap.svelte`）→ 暗水晶节点 → 净化动画 → 答题 → 守护者遭遇
+- 剧情模式：宇宙星空地图（`StoryMap.svelte`）→ 章节节点 → ChapterDialog → 净化场景
+- 净化动画状态机：`idle → player_purify → idle`（答对）/ `idle → enemy_encourage → idle`（答错）/ `guardian_purified`（守护者净化）
+- **零惩罚**：答错不扣能量、不死亡——combo 归零 + 守护者温和鼓励即可继续
 
 **探索模式组件**（`frontend/src/lib/components/study/`）：
 | 组件 | 用途 |
 |------|------|
-| `AdventureMap.svelte` | SVG 星空地图：60 颗闪烁星星 + 星云 + 星座连线 + 怪物节点 + HP 条 + 精灵令牌 |
-| `BattleScene.svelte` | 对战画面：精灵（左）vs 怪物（右），含攻击/受击/击杀动画 + 地面场景 |
-| `EnemySprite.svelte` | SVG 怪物精灵：minion（3 variant）/ boss，含 idle/hit/attacking/defeated 状态 |
-| `HpBar.svelte` | ❤️ HP 红心条 |
-| `ComboCounter.svelte` | 🔥 连击倍率 |
-| `BossBattle.svelte` | Boss 终结战（充能→战斗→终结一击→战利品） |
+| `AdventureMap.svelte` | SVG 星空地图：60 颗闪烁星星 + 星云 + 星座连线 + 暗水晶节点（dark/purifying/purified 三态） + 精灵令牌 |
+| `BattleScene.svelte` | 净化场景：精灵（左）vs 暗水晶（右），含净化/鼓励/守护者净化动画 + 地面场景 |
+| `EnergyBar.svelte` | ⚡ 能量水晶条（替代旧 HpBar），答错闪红不扣值 |
+| `ComboCounter.svelte` | ⭐ 星光连击倍率 |
+| `GuardianEncounter.svelte` | 守护者净化（替代旧 BossBattle）：问候→净化光环→金光粒子→馈赠 |
+| `GuardianReward.svelte` | 守护者馈赠弹窗 |
 | `ExploreConfirm.svelte` | 冒险出发确认弹窗 |
 
 **剧情模式组件**（`frontend/src/lib/components/story/`）：
 | 组件 | 用途 |
 |------|------|
 | `StoryMap.svelte` | SVG 星空剧情地图：自适应行/列，蛇形星座连线，章节节点 + 精灵追踪 |
-| `StoryStudyTask.svelte` | 剧情学习任务：BattleScene 对战 + 题目 + 攻击动画 + HP/Combo |
+| `StoryStudyTask.svelte` | 剧情学习任务：净化场景 + 题目 + 净化动画 + Energy/Combo |
 | `ChapterDialog.svelte` | 章节弹窗：叙事→对话→选择学科→学习任务→结果 |
+
+### 情感宠物系统（Sprint C 羁绊核心）
+
+`frontend/src/lib/components/spirit/` 目录：
+| 组件 | 用途 |
+|------|------|
+| `SpiritAvatar.svelte` | SVG 精灵：7 种 mood（含 greeting/sleeping/dim）+ 4 种性格台词 + 眨眼/视线追踪 + 配饰渲染层 + 休眠降饱和 |
+| `PersonalityPicker.svelte` | 4 张性格卡片（元气/温柔/傲娇/勇敢），hover 预览台词 |
+| `SpiritGreeting.svelte` | 回归迎接横幅：性格台词 + 打字机效果 + 休眠提示 |
+| `SpiritSpeech.svelte` | 独立台词气泡，打字机动画 |
+| `DormancyOverlay.svelte` | 沉睡全屏覆盖层，引导唤醒 |
+| `PersonalityRadar.svelte` | 6 维度性格雷达图 |
+
+**星灵 behavior：**
+- 1 天未学 → dormancyLevel=1（暗淡，saturate 0.6）
+- 3 天未学 → dormancyLevel=2（沉睡，Zzz 漂浮 + 覆盖层）
+- 开始学习 → `recordInteraction()` 自动唤醒
+- 打开 App >30min 间隔 → 性格迎接动画
+
+### 配饰与收集系统（Sprint E 收集驱动）
+
+- **12 件配饰**：头部×4、颈部×4（含毅力围巾）、眼部×2、特效×2
+- **装备栏位**：head/neck/eyes/effect 各 1 件，星灵详情页切换
+- **扭蛋机**：单抽 50⚡ / 每日免费 / 稀有度分层（Common 70%, Rare 25%, Epic 5%）/ 重复返还
+- **成就图鉴**：列表/翻书双模式，知识点图鉴按学科分组
+- `spirit_accessory` 表记录装备状态
 
 ### 场景化题型组件（Sprint 1-2 + Sprint A）
 
@@ -153,8 +183,8 @@ pet-grow-up/
 
 ## 数据库
 
-20 张表，Spring Boot 启动时通过 `schema.sql`（`CREATE TABLE IF NOT EXISTS`）自动建表，
-`data.sql` 播种学科世界、题目、成就定义、商店物品、剧情章节等基础数据。
+22 张表，Spring Boot 启动时通过 `schema.sql`（`CREATE TABLE IF NOT EXISTS`）自动建表，
+`data.sql` 播种学科世界、题目、成就定义、商店物品（含配饰）、剧情章节等基础数据。
 开发库口令与 `docker-compose.yml` 保持一致（非生产凭证）。
 
 ### 知识图谱（Sprint B 扩展）
@@ -189,6 +219,8 @@ cd frontend && npm install && npm run dev
 - **P2 时空裂隙系统未实现**：设计文档中唯一缺失的子系统。
 - **题库需持续对标课标**：当前 491 题覆盖 G1-G3，后续需扩展 G4-G6 及更多题型变体。
 - **知识节点 grade_level 未在 API 暴露**：前端目前未按年级筛选节点，后续需在 SubjectWorld API 中增加年级过滤。
+- **旧组件清理**：`HpBar/BossBattle/BossHealthBar/BossLootDrop/BossPhaseOverlay/BossSection/DamageNumber/AdventurePath/EnemySprite` 等旧战斗组件保留在磁盘上但已无引用，后续可安全删除。
+- **Sprint F（惊喜系统）待实施**：每日盲盒、随机事件、季节活动、社交分享、宠物小屋装饰。
 
 ## 约定
 

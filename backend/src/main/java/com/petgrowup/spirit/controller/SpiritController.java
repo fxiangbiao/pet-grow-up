@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/spirits")
@@ -33,6 +34,31 @@ public class SpiritController {
     @GetMapping("/{id}")
     public ApiResponse<SpiritDTO> getSpiritDetail(@PathVariable Long id) {
         return ApiResponse.success(spiritService.getSpiritDetail(id));
+    }
+
+    @GetMapping("/status")
+    public ApiResponse<SpiritStatusDTO> getSpiritStatus(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.success(spiritService.getSpiritStatus(userId));
+    }
+
+    // ── Sprint E: Accessory management ──
+
+    @GetMapping("/{id}/accessories")
+    public ApiResponse<List<AccessoryDTO>> getAccessories(@PathVariable Long id) {
+        return ApiResponse.success(spiritService.getEquippedAccessories(id));
+    }
+
+    @PutMapping("/{id}/accessories")
+    public ApiResponse<List<AccessoryDTO>> equipAccessory(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        String slot = (String) body.get("slot");
+        Object itemIdObj = body.get("itemDefId");
+        if (itemIdObj == null) {
+            return ApiResponse.success(spiritService.unequipAccessory(id, slot));
+        }
+        Long itemDefId = Long.valueOf(itemIdObj.toString());
+        return ApiResponse.success(spiritService.equipAccessory(id, slot, itemDefId));
     }
 
     @PostMapping("/choose")

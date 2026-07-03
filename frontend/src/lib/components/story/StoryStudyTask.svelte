@@ -18,6 +18,7 @@
   import ScenePinyinBubble from '$lib/components/study/ScenePinyinBubble.svelte';
   import SceneCharBuild from '$lib/components/study/SceneCharBuild.svelte';
   import HpBar from '$lib/components/study/HpBar.svelte';
+  import EnergyBar from '$lib/components/study/EnergyBar.svelte';
   import ComboCounter from '$lib/components/study/ComboCounter.svelte';
   import BattleScene from '$lib/components/study/BattleScene.svelte';
   import { spiritStore } from '$lib/stores/spirit.svelte';
@@ -49,27 +50,26 @@
   let questionStartTime = $state<number>(0);
   let errorMsg = $state('');
 
-  // Adventure state
-  let hp = $state(3);
+  // Adventure state (purification)
+  let energy = $state(100);
   let combo = $state(0);
   let maxCombo = $state(0);
-  let bossDefeated = $state(false);
-  let bossThemePlayed = $state(false);
+  let guardianPurified = $state(false);
+  let guardianThemePlayed = $state(false);
   let treasuresFound = $state(0);
   let results = $state<Array<boolean | null>>([]);
-  let adventureEnded = $state(false);
 
-  // Battle scene state
-  let battleState = $state<'idle' | 'player_attack' | 'enemy_attack' | 'enemy_defeated'>('idle');
+  // Purify state
+  let purifyState = $state<'idle' | 'player_purify' | 'enemy_encourage' | 'guardian_purified'>('idle');
   let spiritMood = $state<'idle' | 'happy' | 'excited' | 'hurt'>('idle');
 
   const isLastQuestion = $derived(answeredCount >= totalQuestions - 1);
 
-  // Boss theme on last question
+  // Guardian theme on last question
   $effect(() => {
-    if (isLastQuestion && phase === 'playing' && !bossThemePlayed) {
+    if (isLastQuestion && phase === 'playing' && !guardianThemePlayed) {
       soundManager.playBossTheme?.();
-      bossThemePlayed = true;
+      guardianThemePlayed = true;
     }
   });
 
@@ -102,6 +102,7 @@
       answeredCount = result.answeredCount ?? 0;
       results = Array(totalQuestions).fill(null);
       phase = 'playing';
+      spiritStore.recordInteraction(); // wake up spirit
       questionStartTime = Date.now();
     } catch (e: any) {
       errorMsg = e.message || '启动学习失败';
@@ -114,22 +115,21 @@
     selectedAnswer = answer;
   }
 
-  function triggerBattleAnimation(isCorrect: boolean, isLast: boolean) {
+  function triggerPurifyAnimation(isCorrect: boolean, isLast: boolean) {
     if (isCorrect) {
-      battleState = 'player_attack';
+      purifyState = 'player_purify';
       spiritMood = 'happy';
       soundManager.playCorrect?.();
     } else {
-      battleState = 'enemy_attack';
+      purifyState = 'enemy_encourage';
       spiritMood = 'hurt';
       soundManager.playWrong?.();
     }
-    // Reset after animation plays
     setTimeout(() => {
       if (isLast && isCorrect) {
-        battleState = 'enemy_defeated';
+        purifyState = 'guardian_purified';
       } else if (!isLast || isCorrect) {
-        battleState = 'idle';
+        purifyState = 'idle';
         spiritMood = 'idle';
       }
     }, 700);
@@ -148,24 +148,24 @@
       lastResult = result;
       results[answeredCount] = result.isCorrect;
 
-      triggerBattleAnimation(result.isCorrect, result.isLastQuestion);
+      triggerPurifyAnimation(result.isCorrect, result.isLastQuestion);
 
       if (result.isCorrect) {
         combo++;
         maxCombo = Math.max(maxCombo, combo);
         if (combo >= 3) spiritMood = 'excited';
+        energy = Math.min(100, energy + 10);
         if (combo >= 2 && combo % 2 === 0) {
           treasuresFound++;
           soundManager.playTreasure?.();
         }
         if (result.isLastQuestion && result.isCorrect) {
-          bossDefeated = true;
+          guardianPurified = true;
           soundManager.playBossDefeated?.();
         }
       } else {
         combo = 0;
-        if (result.isLastQuestion) { hp -= 2; } else { hp -= 1; }
-        if (hp <= 0) { adventureEnded = true; setTimeout(finish, 2000); return; }
+        // No HP loss — just visual flash
       }
 
       if (result.isSessionComplete) {
@@ -190,20 +190,20 @@
   function finish() {
     soundManager.stopBGM();
     onComplete({
-      passed: hp > 0,
+      passed: true, // always pass — no death in purification
       totalQuestions,
       correctAnswers: results.filter(r => r === true).length,
       accuracy: results.length > 0 ? results.filter(r => r === true).length / results.length : 0,
       maxCombo,
-      bossDefeated,
+      bossDefeated: guardianPurified, // keep field name for backend compat
       treasuresFound,
-      finalHp: Math.max(hp, 0)
+      finalHp: energy
     });
   }
 
   function skip() {
     soundManager.stopBGM();
-    onComplete({ passed: true, totalQuestions: 0, correctAnswers: 0, accuracy: 0, maxCombo: 0, bossDefeated: false, treasuresFound: 0, finalHp: 3 });
+    onComplete({ passed: true, totalQuestions: 0, correctAnswers: 0, accuracy: 0, maxCombo: 0, bossDefeated: false, treasuresFound: 0, finalHp: 100 });
   }
 
   // Parsed options
@@ -242,24 +242,24 @@
     lastResult = result;
     results[answeredCount] = result.isCorrect;
 
-    triggerBattleAnimation(result.isCorrect, result.isLastQuestion);
+    triggerPurifyAnimation(result.isCorrect, result.isLastQuestion);
 
     if (result.isCorrect) {
       combo++;
       maxCombo = Math.max(maxCombo, combo);
       if (combo >= 3) spiritMood = 'excited';
+      energy = Math.min(100, energy + 10);
       if (combo >= 2 && combo % 2 === 0) {
         treasuresFound++;
         soundManager.playTreasure?.();
       }
       if (result.isLastQuestion && result.isCorrect) {
-        bossDefeated = true;
+        guardianPurified = true;
         soundManager.playBossDefeated?.();
       }
     } else {
       combo = 0;
-      if (result.isLastQuestion) { hp -= 2; } else { hp -= 1; }
-      if (hp <= 0) { adventureEnded = true; setTimeout(finish, 2000); return; }
+      // No HP loss — purification has no death
     }
 
     if (result.isSessionComplete) {
@@ -315,7 +315,7 @@
   <div class="bg-white rounded-xl border-2 {subjectTheme.border}">
     <!-- Mini header: HP + Combo + Progress dots -->
     <div class="flex items-center justify-between px-4 pt-3 pb-1">
-      <HpBar {hp} maxHp={3} />
+      <EnergyBar {energy} maxEnergy={100} />
       <div class="flex gap-1.5">
         {#each Array(totalQuestions) as _, i}
           <div class="w-2 h-2 rounded-full transition-all duration-300"
@@ -342,7 +342,7 @@
         bossHp={isLastQuestion ? 3 : 1}
         bossMaxHp={isLastQuestion ? 3 : 1}
         {combo}
-        state={battleState}
+        state={purifyState}
       />
     </div>
 

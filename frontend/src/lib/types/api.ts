@@ -68,6 +68,13 @@ export interface LearningSpirit {
 
 export interface SpiritDTO extends LearningSpirit {}
 
+export interface SpiritStatus {
+  dormancyLevel: number;      // 0=normal, 1=dim, 2=sleeping
+  lastStudyDate: string | null;
+  daysSinceLastStudy: number;
+  personalityType: string;
+}
+
 export interface AchievementDef {
   id: number;
   achievementKey: string;

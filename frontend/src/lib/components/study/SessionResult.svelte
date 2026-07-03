@@ -17,7 +17,7 @@
   let result = $state<SessionResultDTO | null>(null);
   let loading = $state(true);
 
-  const cleared = $derived(finalHp > 0);
+  const cleared = $derived(true); // purification never fails
 
   $effect(() => {
     if (sessionId) {
@@ -116,7 +116,7 @@
       <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 text-xs space-y-1.5 mb-4">
         <div class="flex items-center justify-between gap-4 flex-wrap">
           <span class="text-gray-500"><span class="mr-1">🏁</span>冒险完成</span>
-          <span class="text-gray-700 font-medium">⚡ 能量 {finalHp * 20}%</span>
+          <span class="text-gray-700 font-medium">⚡ 能量 {finalHp}%</span>
         </div>
         <div class="flex items-center justify-between gap-4 flex-wrap">
           <span class="text-gray-500">🔥 最高 Combo</span>

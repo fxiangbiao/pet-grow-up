@@ -1,5 +1,4 @@
 <script lang="ts">
-  import EnemySprite from './EnemySprite.svelte';
   import type { SpiritSpecies } from '$lib/types/api';
 
   let {
@@ -7,24 +6,22 @@
     nodeCount = 5,
     currentNodeIndex = 0,
     nodeResults = [] as Array<boolean | null>,
-    nodeHps = [] as number[],
-    nodeMaxHps = [] as number[],
+    nodePurified = [] as boolean[],
     species = null as SpiritSpecies | null,
     evolutionStage = 1,
     animatingToNode = -1,
-    battleState = 'idle' as 'idle' | 'player_attack' | 'enemy_attack' | 'enemy_defeated',
+    purifyState = 'idle' as 'idle' | 'player_purify' | 'enemy_encourage' | 'guardian_purified',
     onNodeArrived = () => {},
   }: {
     subject: string;
     nodeCount: number;
     currentNodeIndex: number;
     nodeResults: Array<boolean | null>;
-    nodeHps: number[];
-    nodeMaxHps: number[];
+    nodePurified: boolean[];
     species: SpiritSpecies | null;
     evolutionStage: number;
     animatingToNode: number;
-    battleState: 'idle' | 'player_attack' | 'enemy_attack' | 'enemy_defeated';
+    purifyState: 'idle' | 'player_purify' | 'enemy_encourage' | 'guardian_purified';
     onNodeArrived?: () => void;
   } = $props();
 
@@ -130,6 +127,15 @@
           <stop offset="0%" stop-color={themeGlow} stop-opacity="0.4" />
           <stop offset="100%" stop-color={themeGlow} stop-opacity="0" />
         </radialGradient>
+        <!-- Crystal purification gradients -->
+        <linearGradient id="purifiedGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color={themeGlow} stop-opacity="0.9" />
+          <stop offset="100%" stop-color="#fbbf24" stop-opacity="0.7" />
+        </linearGradient>
+        <linearGradient id="purifyingGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.8" />
+          <stop offset="100%" stop-color={themeGlow} stop-opacity="0.5" />
+        </linearGradient>
       </defs>
 
       <!-- Deep space background -->
@@ -168,43 +174,44 @@
 
       <!-- Monster Nodes -->
       {#each nodePositions as pos, i}
-        {@const monster = getMonsterVariant(i, nodeCount)}
         {@const isCurrent = i === currentNodeIndex && animatingToNode < 0}
         {@const isReached = i < currentNodeIndex}
-        {@const isDefeated = nodeResults[i] === true || (isReached && nodeResults[i] !== false)}
-        {@const hpPercent = nodeMaxHps[i] > 0 ? (nodeHps[i] / nodeMaxHps[i]) * 100 : 100}
+        {@const isPurified = nodePurified[i] || (isReached && nodeResults[i] !== false)}
+        {@const isGuardian = i === nodeCount - 1}
+        {@const crystalSize = isGuardian ? 22 : 14}
 
         <!-- Node platform glow -->
         <circle cx={pos.x} cy={pos.y + 18} r="28" fill="url(#nodeGlow)"
                 opacity={isCurrent ? 0.8 : isReached ? 0.3 : 0.15} />
 
-        <!-- Monster sprite container -->
-        <g class:opacity-25={isDefeated && !isCurrent}
-           class:grayscale={isDefeated && !isCurrent}>
-          <!-- EnemySprite rendered via foreignObject -->
-          <foreignObject x={pos.x - 35} y={pos.y - 20} width="70" height="70">
-            <div class="flex items-center justify-center w-full h-full">
-              <EnemySprite
-                enemyType={monster.enemyType}
-                {subject}
-                variant={monster.variant}
-                state={isDefeated ? 'defeated'
-                       : isCurrent && battleState === 'player_attack' ? 'hit'
-                       : isCurrent && battleState === 'enemy_attack' ? 'attacking'
-                       : isCurrent ? 'idle'
-                       : 'idle'}
-                size="sm"
-              />
-            </div>
-          </foreignObject>
+        <!-- Dark Crystal (replaces monster) -->
+        <g>
+          {#if isPurified}
+            <!-- Purified: glowing golden crystal -->
+            <polygon points="{pos.x},{pos.y - crystalSize} {pos.x + crystalSize * 0.8},{pos.y + crystalSize * 0.3}
+              {pos.x + crystalSize * 0.5},{pos.y + crystalSize} {pos.x - crystalSize * 0.5},{pos.y + crystalSize}
+              {pos.x - crystalSize * 0.8},{pos.y + crystalSize * 0.3}"
+              fill="url(#purifiedGrad)" stroke={themeGlow} stroke-width="1.5" opacity="0.9"
+              filter="url(#cosmic-glow)" />
+            <text x={pos.x} y={pos.y + 5} text-anchor="middle" font-size={isGuardian ? 16 : 11} opacity="0.9">✨</text>
+          {:else if isCurrent && purifyState === 'player_purify'}
+            <!-- Being purified: transition glow -->
+            <polygon points="{pos.x},{pos.y - crystalSize} {pos.x + crystalSize * 0.8},{pos.y + crystalSize * 0.3}
+              {pos.x + crystalSize * 0.5},{pos.y + crystalSize} {pos.x - crystalSize * 0.5},{pos.y + crystalSize}
+              {pos.x - crystalSize * 0.8},{pos.y + crystalSize * 0.3}"
+              fill="url(#purifyingGrad)" stroke={themeGlow} stroke-width="2" opacity="0.9">
+              <animate attributeName="opacity" values="0.5;1;0.5" dur="0.5s" repeatCount="indefinite" />
+            </polygon>
+          {:else}
+            <!-- Dark: shadow-covered crystal -->
+            <polygon points="{pos.x},{pos.y - crystalSize} {pos.x + crystalSize * 0.8},{pos.y + crystalSize * 0.3}
+              {pos.x + crystalSize * 0.5},{pos.y + crystalSize} {pos.x - crystalSize * 0.5},{pos.y + crystalSize}
+              {pos.x - crystalSize * 0.8},{pos.y + crystalSize * 0.3}"
+              fill="#1e1b4b" stroke="#4c1d95" stroke-width="1.5" opacity="0.7" />
+            <!-- Dark core -->
+            <circle cx={pos.x} cy={pos.y} r={crystalSize * 0.35} fill="#2e1065" opacity="0.6" />
+          {/if}
         </g>
-
-        <!-- Defeated marker (stardust) -->
-        {#if isDefeated && !isCurrent}
-          <circle cx={pos.x} cy={pos.y + 10} r="12" fill="none" stroke={themeGlow}
-                  stroke-width="1.5" opacity="0.5" stroke-dasharray="3,3" />
-          <text x={pos.x} y={pos.y + 14} text-anchor="middle" font-size="14" opacity="0.7">✨</text>
-        {/if}
 
         <!-- Current node indicator ring -->
         {#if isCurrent}
@@ -213,16 +220,6 @@
             <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2s" repeatCount="indefinite" />
             <animate attributeName="r" values="28;34;28" dur="2s" repeatCount="indefinite" />
           </circle>
-        {/if}
-
-        <!-- HP bar (current or recently active monster) -->
-        {#if isCurrent || (isReached && nodeHps[i] > 0 && nodeHps[i] < nodeMaxHps[i])}
-          <rect x={pos.x - 22} y={pos.y + 40} width="44" height="5" rx="2.5"
-                fill="#1e293b" stroke={themeColor} stroke-width="0.5" opacity="0.7" />
-          <rect x={pos.x - 22} y={pos.y + 40}
-                width={Math.max(0, 44 * hpPercent / 100)} height="5" rx="2.5"
-                fill={hpPercent > 50 ? themeGlow : hpPercent > 25 ? '#fbbf24' : '#f87171'}
-                opacity="0.9" class="transition-all duration-500" />
         {/if}
       {/each}
 

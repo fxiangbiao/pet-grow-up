@@ -11,12 +11,11 @@
   import PoemSequence from '$lib/components/study/PoemSequence.svelte';
   import MathInput from '$lib/components/study/MathInput.svelte';
   import VocabMatch from '$lib/components/study/VocabMatch.svelte';
-  import HpBar from '$lib/components/study/HpBar.svelte';
   import ComboCounter from '$lib/components/study/ComboCounter.svelte';
   import AdventureMap from '$lib/components/study/AdventureMap.svelte';
-  import EnemySprite from '$lib/components/study/EnemySprite.svelte';
   import BattleScene from '$lib/components/study/BattleScene.svelte';
-  import BossBattle from '$lib/components/study/BossBattle.svelte';
+  import EnergyBar from '$lib/components/study/EnergyBar.svelte';
+  import GuardianEncounter from '$lib/components/study/GuardianEncounter.svelte';
   import TreasureChest from '$lib/components/study/TreasureChest.svelte';
   import ExploreConfirm from '$lib/components/study/ExploreConfirm.svelte';
   import SceneMathTen from '$lib/components/study/SceneMathTen.svelte';
@@ -49,29 +48,25 @@
   let answeredCount = $state(0);
   let questionStartTime = $state<number>(0);
 
-  // ── Adventure state ──
-  let hp = $state(5);
+  // ── Adventure state (purification) ──
+  let energy = $state(100);
   let combo = $state(0);
   let maxCombo = $state(0);
-  let bossDefeated = $state(false);
-  let bossThemePlayed = $state(false);
+  let guardianPurified = $state(false);
+  let guardianThemePlayed = $state(false);
   let treasuresFound = $state(0);
   let results = $state<Array<boolean | null>>([]);
-  let adventureEnded = $state(false);
 
-  // ── Monster node HP tracking ──
-  let nodeHps = $state<number[]>([]);
-  let nodeMaxHps = $state<number[]>([]);
-  const MONSTER_HP_MINION = 1;   // minions die in 1 hit
-  const MONSTER_HP_BOSS = 3;     // boss takes 3 hits
+  // ── Crystal node purification tracking ──
+  let nodePurified = $state<boolean[]>([]);
 
-  // ── Boss battle state ──
-  let showBossBattle = $state(false);
-  let bossAnswerTimeMs = $state(0);
-  let bossBattleResolved = $state(false);
+  // ── Guardian encounter (replaces Boss battle) ──
+  let showGuardianEncounter = $state(false);
+  let guardianAnswerTimeMs = $state(0);
+  let encounterResolved = $state(false);
 
-  // ── Battle scene animation ──
-  let battleState = $state<'idle' | 'player_attack' | 'enemy_attack' | 'enemy_defeated'>('idle');
+  // ── Purify animation ──
+  let purifyState = $state<'idle' | 'player_purify' | 'enemy_encourage' | 'guardian_purified'>('idle');
 
   // ── Map animation ──
   let animatingToNode = $state(-1);
@@ -83,13 +78,10 @@
 
   // ── Derived ──
   const isLastQuestion = $derived(answeredCount >= totalQuestions - 1);
-  const currentMonsterMaxHp = $derived(nodeMaxHps[answeredCount] ?? 1);
-  const currentMonsterHp = $derived(nodeHps[answeredCount] ?? 1);
-  const monsterDefeated = $derived(currentMonsterHp <= 0);
+  const currentPurified = $derived(nodePurified[answeredCount] ?? false);
 
   const spiritMood = $derived(
-    adventureEnded ? 'hurt'
-    : lastResult === null ? 'idle'
+    lastResult === null ? 'idle'
     : lastResult.isCorrect ? (combo >= 2 ? 'excited' : 'happy')
     : 'hurt'
   );
@@ -112,12 +104,12 @@
   const sceneTypes = ['SCENE_DRAG', 'SCENE_TAP', 'SCENE_MATCH', 'SCENE_WHACK_MOLE',
     'SCENE_SHAPE_PUZZLE', 'SCENE_CLOCK', 'SCENE_SHOP', 'SCENE_PINYIN', 'SCENE_CHAR_BUILD'];
 
-  // ── Boss theme activation ──
+  // ── Guardian theme activation (after last answer, not before) ──
   $effect(() => {
-    if (isLastQuestion && phase === 'playing' && !bossThemePlayed) {
-      soundManager.playBossTheme();
-      bossThemePlayed = true;
-      setTimeout(() => { showBossBattle = true; }, 1500);
+    if (isLastQuestion && phase === 'playing' && !guardianThemePlayed) {
+      soundManager.playBossTheme?.();
+      guardianThemePlayed = true;
+      // Don't show the encounter yet — wait for answer submission
     }
   });
 
@@ -127,40 +119,32 @@
     if (phase === 'result') { soundManager.stopBGM(); }
   });
 
-  // ── Init node HP ──
-  function initNodeHps(total: number) {
-    const hps: number[] = [];
-    const maxHps: number[] = [];
-    for (let i = 0; i < total; i++) {
-      if (i === total - 1) {
-        maxHps.push(MONSTER_HP_BOSS);
-        hps.push(MONSTER_HP_BOSS);
-      } else {
-        maxHps.push(MONSTER_HP_MINION);
-        hps.push(MONSTER_HP_MINION);
-      }
-    }
-    nodeHps = hps;
-    nodeMaxHps = maxHps;
+  // ── Init purification nodes ──
+  function initNodePurified(total: number) {
+    nodePurified = Array(total).fill(false);
+  }
+
+  function purifyNode(index: number) {
+    const updated = [...nodePurified];
+    updated[index] = true;
+    nodePurified = updated;
   }
 
   function resetAdventure() {
-    hp = 5;
+    energy = 100;
     combo = 0;
     maxCombo = 0;
-    bossDefeated = false;
-    bossThemePlayed = false;
-    showBossBattle = false;
-    bossAnswerTimeMs = 0;
-    bossBattleResolved = false;
-    battleState = 'idle';
+    guardianPurified = false;
+    guardianThemePlayed = false;
+    showGuardianEncounter = false;
+    guardianAnswerTimeMs = 0;
+    encounterResolved = false;
+    purifyState = 'idle';
     treasuresFound = 0;
     results = [];
-    adventureEnded = false;
     showTreasureChest = false;
     animatingToNode = -1;
-    nodeHps = [];
-    nodeMaxHps = [];
+    nodePurified = [];
   }
 
   async function handleStart() {
@@ -175,9 +159,10 @@
       totalQuestions = result.totalQuestions ?? 5;
       answeredCount = result.answeredCount ?? 0;
       results = Array(totalQuestions).fill(null);
-      initNodeHps(totalQuestions);
+      initNodePurified(totalQuestions);
       phase = 'playing';
       questionStartTime = Date.now();
+      spiritStore.recordInteraction(); // wake up spirit
       soundManager.playBGM(subject);
     } catch (e: any) {
       error = e.message || '启动失败';
@@ -191,16 +176,9 @@
     selectedAnswer = answer;
   }
 
-  // ── Damage current monster ──
-  function damageMonster(amount: number) {
-    const newHps = [...nodeHps];
-    newHps[answeredCount] = Math.max(0, newHps[answeredCount] - amount);
-    nodeHps = newHps;
-  }
-
   // ── Main submit ──
   async function handleSubmit() {
-    if (!selectedAnswer || submitted || !question || adventureEnded) return;
+    if (!selectedAnswer || submitted || !question) return;
     submitted = true;
     try {
       const result = await submitAnswer({
@@ -221,7 +199,7 @@
     processResult(result);
   }
 
-  // ── Unified result processing ──
+  // ── Unified result processing (purification system) ──
   function processResult(result: AnswerResult) {
     lastResult = result;
     results[answeredCount] = result.isCorrect;
@@ -230,60 +208,54 @@
       combo++;
       maxCombo = Math.max(maxCombo, combo);
 
-      // ⚔️ Pet attacks monster!
-      battleState = 'player_attack';
-      setTimeout(() => { battleState = 'idle'; }, 600);
+      // 🌟 Purify the current crystal!
+      purifyState = 'player_purify';
+      setTimeout(() => { purifyState = 'idle'; }, 600);
 
-      // Damage the current monster
-      const damage = isLastQuestion && combo >= 3 ? 2 : 1; // crit on boss with combo
-      damageMonster(damage);
+      // Mark current crystal as purified
+      purifyNode(answeredCount);
 
-      // Boss battle: capture answer time
+      // Energy bonus
+      energy = Math.min(100, energy + 5);
+
       if (result.isLastQuestion) {
-        bossAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
+        guardianAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
+        // Show GuardianEncounter AFTER correct answer (don't block the question)
+        setTimeout(() => { showGuardianEncounter = true; }, 600);
       } else {
-        // Treasure chest
         if (combo >= 2 && combo % 2 === 0) {
           treasuresFound++;
           treasureTier = combo >= 4 ? 'big' : 'small';
           treasureEnergy = treasureTier === 'big' ? 10 : 5;
-          if (treasureTier === 'big' && hp < 5) hp = Math.min(5, hp + 1);
+          if (treasureTier === 'big' && energy < 100) energy = Math.min(100, energy + 5);
           showTreasureChest = true;
         }
       }
     } else {
       combo = 0;
 
-      // 👾 Monster counter-attacks!
-      battleState = 'enemy_attack';
-      setTimeout(() => { battleState = 'idle'; }, 600);
+      // 💫 Brief flash — no damage, no death
+      purifyState = 'enemy_encourage';
+      setTimeout(() => { purifyState = 'idle'; }, 600);
 
       if (result.isLastQuestion) {
-        bossAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
-        hp -= 2;
-      } else {
-        hp -= 1;
-      }
-      if (hp <= 0) {
-        adventureEnded = true;
-        setTimeout(() => { phase = 'result'; }, 2000);
-        return;
+        guardianAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
+        encounterResolved = true; // skip Guardian encounter, go straight to result
       }
     }
 
     // Session complete?
     if (result.isSessionComplete) {
-      if (!result.isLastQuestion || bossBattleResolved || adventureEnded) {
+      if (!result.isLastQuestion || encounterResolved) {
         setTimeout(() => { phase = 'result'; }, 2000);
       } else {
         setTimeout(() => {
-          if (phase === 'playing') { bossBattleResolved = true; phase = 'result'; }
+          if (phase === 'playing') { encounterResolved = true; phase = 'result'; }
         }, 10000);
       }
     } else if (result.nextQuestion) {
       const nextQ = result.nextQuestion;
       const nextIdx = answeredCount + 1;
-      // Animate token to next node
       animatingToNode = nextIdx;
       setTimeout(() => {
         question = nextQ;
@@ -370,21 +342,21 @@
           nodeCount={totalQuestions}
           currentNodeIndex={answeredCount}
           nodeResults={results}
-          {nodeHps} {nodeMaxHps}
+          nodePurified={nodePurified}
           species={spiritStore.activeSpirit?.species ?? null}
           evolutionStage={spiritStore.activeSpirit?.currentEvolutionStage ?? 1}
           {animatingToNode}
-          {battleState}
+          purifyState={purifyState}
         />
       </div>
 
-      <!-- ═══ STATS BAR: HP + Combo ═══ -->
+      <!-- ═══ STATS BAR: Energy + Combo ═══ -->
       <div class="flex items-center justify-between mb-2">
-        <HpBar {hp} maxHp={5} />
+        <EnergyBar {energy} maxEnergy={100} />
         <ComboCounter {combo} />
       </div>
 
-      <!-- ═══ BATTLE SCENE: Pet vs Monster ═══ -->
+      <!-- ═══ PURIFY SCENE: Spirit vs Dark Crystal ═══ -->
       <div class="mb-3">
         <BattleScene
           {subject}
@@ -394,41 +366,31 @@
           currentIndex={answeredCount}
           {totalQuestions}
           isBoss={isLastQuestion}
-          bossHp={isLastQuestion ? currentMonsterHp : 0}
-          bossMaxHp={isLastQuestion ? currentMonsterMaxHp : 1}
+          bossHp={isLastQuestion ? 3 : 1}
+          bossMaxHp={isLastQuestion ? 3 : 1}
           {combo}
-          state={battleState}
+          state={purifyState}
         />
       </div>
 
-      <!-- ═══ BOSS BATTLE ═══ -->
-      {#if showBossBattle}
-        <BossBattle
+      <!-- ═══ GUARDIAN ENCOUNTER ═══ -->
+      {#if showGuardianEncounter}
+        <GuardianEncounter
           visible={true}
           {subject}
           {combo}
-          playerHp={hp}
           answerResult={lastResult}
-          answerTimeMs={bossAnswerTimeMs}
           sceneMode={question ? sceneTypes.includes(question.questionType) : false}
-          onBossDefeated={() => {
-            bossDefeated = true;
-            bossBattleResolved = true;
-            battleState = 'enemy_defeated';
-            damageMonster(999); // KO the boss
-            soundManager.playBossDefeated();
+          onGuardianPurified={() => {
+            guardianPurified = true;
+            encounterResolved = true;
+            purifyState = 'guardian_purified';
+            soundManager.playBossDefeated?.();
             setTimeout(() => { phase = 'result'; }, 2500);
           }}
-          onBossAttackPlayer={() => {
-            battleState = 'enemy_attack';
-            setTimeout(() => { battleState = 'idle'; }, 600);
-            bossBattleResolved = true;
-            if (hp <= 0) adventureEnded = true;
-            setTimeout(() => { phase = 'result'; }, 2500);
-          }}
-          onBossEscaped={() => {
-            bossBattleResolved = true;
-            soundManager.playComplete();
+          onEncounterEnd={() => {
+            encounterResolved = true;
+            soundManager.playComplete?.();
             setTimeout(() => { phase = 'result'; }, 2000);
           }}
         />
@@ -515,7 +477,7 @@
                     class="mt-4 w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-red-500 text-white text-lg font-black rounded-xl
                       hover:from-amber-300 hover:via-orange-300 hover:to-red-400
                       disabled:from-gray-300 disabled:text-gray-400 transition-all active:scale-95 shadow-lg">
-              ⚔️ 攻击！
+              🌟 净化！
             </button>
           {/if}
         </div>
@@ -542,8 +504,8 @@
   <!-- ═══ RESULT ═══ -->
   {:else if phase === 'result'}
     <SessionResult
-      {subject} {sessionId} {maxCombo} {bossDefeated} {treasuresFound}
-      startHp={5} finalHp={Math.max(hp, 0)}
+      {subject} {sessionId} {maxCombo} bossDefeated={guardianPurified} {treasuresFound}
+      startHp={100} finalHp={energy}
       onclose={() => goto(`/app/study/${subject}`)}
     />
   {/if}

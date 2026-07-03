@@ -3,6 +3,8 @@
   import { goto } from '$app/navigation';
   import type { SpiritDTO } from '$lib/types/api';
   import SpiritAvatar from '$lib/components/spirit/SpiritAvatar.svelte';
+  import DormancyOverlay from '$lib/components/spirit/DormancyOverlay.svelte';
+  import { spiritStore } from '$lib/stores/spirit.svelte';
 
   let spirits = $state<SpiritDTO[]>([]);
   let loading = $state(true);
@@ -17,6 +19,11 @@
       loadError = '无法加载精灵数据，请检查网络或重新登录';
     });
   });
+
+  function startStudy() {
+    spiritStore.dismissGreeting();
+    goto('/app/study');
+  }
 </script>
 
 <svelte:head>
@@ -71,5 +78,15 @@
         </button>
       {/each}
     </div>
+  {/if}
+
+  <!-- Sprint C: Dormancy overlay -->
+  {#if spiritStore.dormancyLevel >= 2 && spiritStore.activeSpirit}
+    <DormancyOverlay
+      species={spiritStore.activeSpirit.species}
+      nickname={spiritStore.activeSpirit.nickname}
+      personality={spiritStore.personalityType as any}
+      onWakeUp={startStudy}
+    />
   {/if}
 </div>

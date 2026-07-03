@@ -14,11 +14,18 @@ import com.petgrowup.story.service.StoryService;
 import com.petgrowup.spirit.dto.*;
 import com.petgrowup.spirit.entity.LearningSpirit;
 import com.petgrowup.spirit.entity.SpiritSpecies;
+import com.petgrowup.shop.entity.ItemDef;
+import com.petgrowup.shop.entity.UserItem;
+import com.petgrowup.shop.mapper.ItemDefMapper;
+import com.petgrowup.shop.mapper.UserItemMapper;
+import com.petgrowup.spirit.entity.SpiritAccessory;
 import com.petgrowup.spirit.mapper.SpiritMapper;
 import com.petgrowup.spirit.mapper.SpiritSpeciesMapper;
+import com.petgrowup.spirit.mapper.SpiritAccessoryMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -33,12 +40,18 @@ public class SpiritService {
     private final EnergyService energyService;
     private final AchievementService achievementService;
     private final StoryService storyService;
+    private final SpiritAccessoryMapper accessoryMapper;
+    private final ItemDefMapper itemDefMapper;
+    private final UserItemMapper userItemMapper;
     private final ObjectMapper objectMapper;
 
     public SpiritService(SpiritMapper spiritMapper, SpiritSpeciesMapper speciesMapper,
                          UserMapper userMapper, EnergyService energyService,
                          AchievementService achievementService, ObjectMapper objectMapper,
-                         StoryService storyService) {
+                         StoryService storyService,
+                         SpiritAccessoryMapper accessoryMapper,
+                         ItemDefMapper itemDefMapper,
+                         UserItemMapper userItemMapper) {
         this.spiritMapper = spiritMapper;
         this.speciesMapper = speciesMapper;
         this.userMapper = userMapper;
@@ -46,6 +59,9 @@ public class SpiritService {
         this.achievementService = achievementService;
         this.objectMapper = objectMapper;
         this.storyService = storyService;
+        this.accessoryMapper = accessoryMapper;
+        this.itemDefMapper = itemDefMapper;
+        this.userItemMapper = userItemMapper;
     }
 
     public List<SpiritSpeciesDTO> getAvailableSpecies() {
@@ -80,9 +96,11 @@ public class SpiritService {
             throw new BusinessException("只能选择初始形态的精灵");
         }
 
+        PersonalityDTO initialPersonality = PersonalityDTO.fromArchetype(request.getPersonalityType());
+
         String personalityJson;
         try {
-            personalityJson = objectMapper.writeValueAsString(PersonalityDTO.defaultPersonality());
+            personalityJson = objectMapper.writeValueAsString(initialPersonality);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize personality", e);
         }
@@ -187,6 +205,71 @@ public class SpiritService {
             return PersonalityDTO.defaultPersonality();
         }
         return parsePersonality(spirit.getPersonality());
+    }
+
+    /**
+     * Compute dormancy status for a user's active spirit.
+     */
+    public SpiritStatusDTO getSpiritStatus(Long userId) {
+        User user = userMapper.selectOneById(userId);
+        if (user == null || user.getCurrentSpiritId() == null) {
+            return SpiritStatusDTO.builder()
+                    .dormancyLevel(0)
+                    .lastStudyDate(null)
+                    .daysSinceLastStudy(0)
+                    .personalityType(null)
+                    .build();
+        }
+
+        LearningSpirit spirit = spiritMapper.selectOneById(user.getCurrentSpiritId());
+        if (spirit == null) {
+            return SpiritStatusDTO.builder()
+                    .dormancyLevel(0)
+                    .lastStudyDate(null)
+                    .daysSinceLastStudy(0)
+                    .personalityType(null)
+                    .build();
+        }
+
+        LocalDate lastStudy = user.getLastStudyDate();
+        long daysSince = 0;
+        int dormancyLevel = 0;
+
+        if (lastStudy != null) {
+            daysSince = java.time.temporal.ChronoUnit.DAYS.between(lastStudy, LocalDate.now());
+            if (daysSince >= 3) {
+                dormancyLevel = 2; // sleeping
+            } else if (daysSince >= 1) {
+                dormancyLevel = 1; // dim
+            }
+        }
+
+        // Determine personality type string from dimensions
+        PersonalityDTO p = parsePersonality(spirit.getPersonality());
+        String personalityType = inferPersonalityType(p);
+
+        return SpiritStatusDTO.builder()
+                .dormancyLevel(dormancyLevel)
+                .lastStudyDate(lastStudy)
+                .daysSinceLastStudy(daysSince)
+                .personalityType(personalityType)
+                .build();
+    }
+
+    /**
+     * Infer the closest personality archetype from dimension scores.
+     */
+    private String inferPersonalityType(PersonalityDTO p) {
+        if (p == null) return "cheerful";
+        int cheerful = p.getLively() + p.getPlayful();
+        int gentle = p.getGentle() + p.getShy();
+        int tsundere = p.getIndependent() + p.getShy();
+        int brave = p.getBrave() + p.getLively();
+
+        if (cheerful >= gentle && cheerful >= tsundere && cheerful >= brave) return "cheerful";
+        if (gentle >= cheerful && gentle >= tsundere && gentle >= brave) return "gentle";
+        if (tsundere >= cheerful && tsundere >= gentle && tsundere >= brave) return "tsundere";
+        return "brave";
     }
 
     public void updatePersonalityAfterStudy(Long spiritId, double accuracy, int actualDuration, int expectedDuration, int streak) {
@@ -306,5 +389,70 @@ public class SpiritService {
                 .evolutionEnergyCost(species.getEvolutionEnergyCost())
                 .spriteUrl(species.getSpriteUrl())
                 .build();
+    }
+
+    // ── Sprint E: Accessory management ──
+
+    public List<AccessoryDTO> getEquippedAccessories(Long spiritId) {
+        List<SpiritAccessory> equipped = accessoryMapper.selectListByQuery(
+                QueryWrapper.create().eq("spirit_id", spiritId));
+        return equipped.stream().map(a -> {
+            ItemDef item = itemDefMapper.selectOneById(a.getItemDefId());
+            if (item == null) return null;
+            return AccessoryDTO.builder()
+                    .slot(a.getSlot())
+                    .itemKey(item.getItemKey())
+                    .name(item.getName())
+                    .iconUrl(item.getIconUrl())
+                    .rarity(inferRarity(item))
+                    .build();
+        }).filter(java.util.Objects::nonNull).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<AccessoryDTO> equipAccessory(Long spiritId, String slot, Long itemDefId) {
+        LearningSpirit spirit = spiritMapper.selectOneById(spiritId);
+        if (spirit == null) throw new ResourceNotFoundException("Spirit", spiritId);
+
+        // Validate item exists and is an accessory
+        ItemDef item = itemDefMapper.selectOneById(itemDefId);
+        if (item == null) throw new ResourceNotFoundException("Item", itemDefId);
+        if (!"ACCESSORY".equals(item.getCategory()))
+            throw new BusinessException("只能装备配饰类物品");
+
+        // Check user owns this item
+        User owner = userMapper.selectOneById(spirit.getUserId());
+        UserItem existing = userItemMapper.selectOneByQuery(
+                QueryWrapper.create().eq("user_id", owner.getId()).eq("item_def_id", itemDefId));
+        if (existing == null || existing.getQuantity() <= 0)
+            throw new BusinessException("你还没有这个配饰");
+
+        // Upsert: remove existing accessory in same slot, then insert new
+        accessoryMapper.deleteByQuery(
+                QueryWrapper.create().eq("spirit_id", spiritId).eq("slot", slot));
+
+        SpiritAccessory sa = SpiritAccessory.builder()
+                .spiritId(spiritId)
+                .slot(slot)
+                .itemDefId(itemDefId)
+                .build();
+        accessoryMapper.insert(sa);
+
+        return getEquippedAccessories(spiritId);
+    }
+
+    @Transactional
+    public List<AccessoryDTO> unequipAccessory(Long spiritId, String slot) {
+        accessoryMapper.deleteByQuery(
+                QueryWrapper.create().eq("spirit_id", spiritId).eq("slot", slot));
+        return getEquippedAccessories(spiritId);
+    }
+
+    private String inferRarity(ItemDef item) {
+        if (item.getItemKey() == null) return "common";
+        if (item.getItemKey().contains("rainbow") || item.getItemKey().contains("perseverance")) return "epic";
+        if (item.getItemKey().contains("effect_") || item.getItemKey().contains("star_shades")
+                || item.getItemKey().contains("graduation")) return "rare";
+        return "common";
     }
 }

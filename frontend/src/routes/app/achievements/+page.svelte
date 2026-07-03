@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { achievementStore } from '$lib/stores/achievement.svelte';
   import AchievementCard from '$lib/components/achievement/AchievementCard.svelte';
+  import PictureBook from '$lib/components/achievement/PictureBook.svelte';
+  import KnowledgeAlbum from '$lib/components/achievement/KnowledgeAlbum.svelte';
   import LoadingSpinner from '$lib/components/common/LoadingSpinner.svelte';
   import EmptyState from '$lib/components/common/EmptyState.svelte';
 
@@ -26,6 +28,7 @@
   };
 
   let selectedCategory = $state('ALL');
+  let viewMode = $state<'list' | 'book'>('list');
   let categories = $derived(Object.keys(categoryLabels));
 
   let filteredUnlocked = $derived(
@@ -60,6 +63,10 @@
         <p class="text-gray-500 mt-1">完成学习任务，解锁成就徽章！</p>
       </div>
       <div class="text-right">
+        <div class="flex items-center gap-2 mb-1 justify-end">
+          <button onclick={() => viewMode = 'list'} class="px-2 py-1 text-xs rounded {viewMode === 'list' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}">列表</button>
+          <button onclick={() => viewMode = 'book'} class="px-2 py-1 text-xs rounded {viewMode === 'book' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}">图鉴</button>
+        </div>
         <p class="text-3xl font-bold text-indigo-500">{achievementStore.unlockedCount}</p>
         <p class="text-sm text-gray-400">/ {achievementStore.totalCount} 已解锁</p>
       </div>
@@ -73,6 +80,22 @@
     </div>
   </div>
 
+  <!-- Picture Book Mode -->
+  {#if viewMode === 'book'}
+    <PictureBook>
+      <KnowledgeAlbum slot="knowledge" />
+      <div slot="adventure" class="text-center py-12 text-gray-400">
+        <div class="text-5xl mb-4">🏆</div>
+        <p>闯关记录图鉴即将开放</p>
+        <p class="text-sm mt-1">完成更多学习冒险来解锁吧！</p>
+      </div>
+      <div slot="spirit" class="text-center py-12 text-gray-400">
+        <div class="text-5xl mb-4">🐱</div>
+        <p>星灵成长图鉴即将开放</p>
+        <p class="text-sm mt-1">收集更多星灵并进化来填充图鉴！</p>
+      </div>
+    </PictureBook>
+  {:else}
   <!-- Category filter -->
   <div class="flex gap-2 overflow-x-auto pb-2">
     {#each categories as cat}
@@ -126,5 +149,6 @@
         </div>
       {/if}
     {/if}
+  {/if}
   {/if}
 </div>

@@ -111,6 +111,25 @@ INSERT IGNORE INTO item_def (item_key, name, description, category, effect_type,
 ('energy_candy_plus', '大力能量糖', '恢复精灵40点精力', 'FOOD', 'ENERGY', 40, 60, NULL, TRUE, TRUE, 5),
 ('shiny_star', '闪亮星星', '增加15点快乐度', 'TOY', 'HAPPINESS', 15, 35, NULL, TRUE, TRUE, 6);
 
+-- Sprint E: Accessories (permanent cosmetics, is_consumable=false)
+INSERT IGNORE INTO item_def (item_key, name, description, category, effect_type, effect_value, price, icon_url, is_consumable, is_purchasable, display_order) VALUES
+-- Head (4)
+('acc_hat_red', '小红帽', '一顶可爱的红色小帽子', 'ACCESSORY', 'COSMETIC', 0, 80, '🎩', FALSE, TRUE, 20),
+('acc_bow_pink', '粉色蝴蝶结', '漂亮的粉色蝴蝶结，戴在头上超可爱', 'ACCESSORY', 'COSMETIC', 0, 80, '🎀', FALSE, TRUE, 21),
+('acc_flower_ring', '花环', '鲜花编成的花环，小精灵的最爱', 'ACCESSORY', 'COSMETIC', 0, 120, '🌸', FALSE, TRUE, 22),
+('acc_graduation_cap', '学士帽', '聪明的象征！戴上它我就是学霸', 'ACCESSORY', 'COSMETIC', 0, 200, '🎓', FALSE, TRUE, 23),
+-- Neck (4)
+('acc_scarf_blue', '蓝围巾', '温暖的天蓝色围巾', 'ACCESSORY', 'COSMETIC', 0, 80, '🧣', FALSE, TRUE, 24),
+('acc_bowtie', '小领结', '绅士必备的红色小领结', 'ACCESSORY', 'COSMETIC', 0, 100, '👔', FALSE, TRUE, 25),
+('acc_star_necklace', '星星项链', '闪闪发光的星星吊坠', 'ACCESSORY', 'COSMETIC', 0, 150, '⭐', FALSE, TRUE, 26),
+('acc_perseverance_scarf', '毅力围巾', '连续学习7天的证明！金色传说围巾', 'ACCESSORY', 'COSMETIC', 0, 0, '🏅', FALSE, FALSE, 27),
+-- Eyes (2)
+('acc_round_glasses', '圆框眼镜', '复古圆框眼镜，知识分子的气质', 'ACCESSORY', 'COSMETIC', 0, 120, '👓', FALSE, TRUE, 28),
+('acc_star_shades', '星星墨镜', '酷炫的星星形状墨镜，回头率100%', 'ACCESSORY', 'COSMETIC', 0, 180, '🕶️', FALSE, TRUE, 29),
+-- Effect (2)
+('acc_effect_gold', '金色星光', '答题时散发金色星光粒子', 'ACCESSORY', 'COSMETIC', 0, 250, '✨', FALSE, TRUE, 30),
+('acc_effect_rainbow', '彩虹流光', '答题时散发彩虹流光粒子！超级稀有', 'ACCESSORY', 'COSMETIC', 0, 500, '🌈', FALSE, TRUE, 31);
+
 -- ============================================================
 -- Subject-Specific Question Types
 -- ============================================================
