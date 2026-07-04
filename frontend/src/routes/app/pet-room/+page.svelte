@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { getPetRoom, placeItem, removeItem, changeTheme, getAvailableDecorations, type PetRoomData, type PlacedItem } from '$lib/api/pet-room';
+  import { getPetRoom, placeItem, removeItem, updatePosition, changeTheme, getAvailableDecorations, type PetRoomData, type PlacedItem } from '$lib/api/pet-room';
   import { getEquippedAccessories, type AccessoryDTO } from '$lib/api/spirit';
   import { getAllThemes, defaultTheme } from '$lib/room/themes/registry';
   import PetRoomScene from '$lib/components/room/PetRoomScene.svelte';
@@ -79,6 +79,18 @@
     } catch (e: any) { toastStore.error(e.message || '移除失败'); }
   }
 
+  async function handleFurnitureDragEnd(item: PlacedItem, x: number, y: number) {
+    const id = item.userItemId ?? item.itemDefId;
+    try {
+      room = await updatePosition(id, x, y);
+    } catch { /* silent — position update is best-effort during drag */ }
+  }
+
+  function handleSpiritClick() {
+    // The SpiritAvatar already shows a speech bubble on click via its internal click handler
+    // This is a hook for future expansion (e.g. petting animation, mood boost)
+  }
+
   async function handleChangeTheme(themeKey: string) {
     try {
       room = await changeTheme(themeKey);
@@ -136,7 +148,9 @@
     {:else if room}
       <PetRoomScene {room} {editing} {selectedItemId}
         accessories={spiritAccessories}
-        onfurnitureclick={handleFurnitureClick} />
+        onfurnitureclick={handleFurnitureClick}
+        onfurnituredragend={handleFurnitureDragEnd}
+        onspiritclick={handleSpiritClick} />
 
       {#if editing}
         <div class="mt-3 text-center">
