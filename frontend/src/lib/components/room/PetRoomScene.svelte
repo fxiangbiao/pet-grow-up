@@ -5,6 +5,7 @@
   import type { RoomTheme } from '$lib/room/themes/types';
   import { getFurnitureRenderer } from '$lib/room/furniture/registry';
   import type { FurnitureContext } from '$lib/room/furniture/types';
+  import { pickNextState, getStateDuration, getBehaviorFrame, type BehaviorState } from '$lib/room/behavior';
 
   let {
     room,
@@ -37,13 +38,42 @@
   let isLampOn = $state(true);
   let spiritSpinning = $state(false);
 
-  let spiritMood = $derived.by((): 'idle' | 'happy' | 'excited' | 'hurt' => {
+  // ── Spirit autonomous behavior ──
+  let behaviorState = $state<BehaviorState>('idle_stand');
+  let behaviorFrame = $derived(getBehaviorFrame(behaviorState));
+  let behaviorTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function scheduleNextBehavior() {
+    const happiness = room.activeSpirit?.happiness ?? 50;
+    const next = pickNextState(behaviorState, furniture, happiness);
+    const duration = getStateDuration(next);
+    behaviorTimer = setTimeout(() => {
+      behaviorState = next;
+      scheduleNextBehavior();
+    }, duration);
+  }
+
+  $effect(() => {
+    // Start behavior loop when room loads
+    scheduleNextBehavior();
+    return () => { if (behaviorTimer) clearTimeout(behaviorTimer); };
+  });
+
+  let spiritMood = $derived.by((): 'idle' | 'happy' | 'excited' | 'hurt' | 'sleeping' | 'thinking' => {
+    // Behavior mood takes precedence
+    if (behaviorFrame.mood === 'sleeping') return 'sleeping';
+    if (behaviorFrame.mood === 'thinking') return 'thinking';
+    if (behaviorFrame.mood === 'excited') return 'excited';
     if (!room.activeSpirit) return 'idle';
     const s = room.activeSpirit;
     if (s.happiness >= 80) return 'excited';
     if (s.happiness >= 50) return 'happy';
     return 'idle';
   });
+
+  let spiritLeft = $derived(behaviorFrame.position.left);
+  let spiritBottom = $derived(behaviorFrame.position.bottom);
+  let spiritLabel = $derived(behaviorFrame.label);
 
   // ── Drag state ──
   let dragItemId = $state<number | null>(null);
@@ -323,9 +353,10 @@
     </text>
   </svg>
 
-  <!-- Spirit overlaid on center -->
+  <!-- Spirit overlaid — position driven by autonomous behavior state -->
   <div class="absolute pointer-events-auto cursor-pointer"
-       style="left: 50%; bottom: 22%; transform: translateX(-50%){spiritSpinning ? ' rotate(360deg)' : ''}; transition: transform {spiritSpinning ? '0.6s ease-in-out' : '0s'};"
+       style="left: {spiritLeft}; bottom: {spiritBottom}; transform: translateX(-50%){spiritSpinning ? ' rotate(360deg)' : ''};
+         transition: left 2s ease-in-out, bottom 2s ease-in-out{spiritSpinning ? ', transform 0.6s ease-in-out' : ''};"
        onclick={onspiritclick}
        role={onspiritclick ? 'button' : undefined}
        tabindex={onspiritclick ? 0 : undefined}
@@ -340,6 +371,10 @@
           showSpeechBubble={true}
           {accessories}
         />
+        <!-- Behavior label -->
+        {#if spiritLabel}
+          <div class="absolute -top-2 -right-2 text-sm animate-bounce-in pointer-events-none">{spiritLabel}</div>
+        {/if}
       </div>
     {:else}
       <div class="w-16 h-16"></div>

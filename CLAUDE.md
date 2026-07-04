@@ -23,7 +23,9 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 - **Sprint D（2026-07-03）**：净化重构 — 战斗系统→净化系统（HP→能量水晶、Boss→守护者、怪物→暗水晶、「⚔️ 攻击」→「🌟 净化」、移除死亡惩罚）。
 - **Sprint E（2026-07-03）**：收集驱动 — 配饰系统（12 件装备）、扭蛋机（稀有度分层）、星灵装备 UI、成就图鉴（翻书模式 + 知识点图鉴）。
 - **Sprint F（2026-07-04）**：惊喜系统 — 每日登录盲盒（含 3/7/14/30 天里程碑）、学习后随机惊喜事件、宠物小屋装饰（自由放置 + 6 主题房间）。
-- **Sprint F Layer 1（2026-07-04）**：视觉升级 — 配饰/家具从 emoji 升级为手绘 SVG 渲染器、6 种可收集房间主题、slot_data JSON 迁移为自由坐标。Layer 2（拖拽交互）和 Layer 3（精灵 AI 行为）待实施。
+- **Sprint F Layer 1（2026-07-04）**：视觉升级 — 配饰/家具从 emoji 升级为手绘 SVG 渲染器、6 种可收集房间主题、slot_data JSON 迁移为自由坐标。
+- **Sprint F Layer 2（2026-07-04）**：交互升级 — 自由拖拽摆放家具（pointer capture + 实时位置保存）、点击交互（窗户→昼夜切换、灯→开关、地毯→精灵旋转舞蹈、精灵→对话气泡）。
+- **Sprint F Layer 3（2026-07-04）**：精灵 AI — 自主行为状态机（10 种状态：idle/wander/sit/read/play/sleep），基于家具存在性和快乐度的加权随机选择，CSS transition 平滑移动，行为标签指示器。
   v2 设计方案见 `游戏化学习系统设计方案-v2.md`。
 
 ## 已实现子系统
@@ -126,8 +128,9 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 | `lib/accessories/renderers/` | 配饰 SVG 渲染注册表 — head/neck/eyes/effects 各 2-4 个 renderer，按精灵形态（书童/猫/巫师）调整锚点 |
 | `lib/room/furniture/` | 12 件家具手绘 SVG 渲染器（床/沙发/书架/灯/地毯/盆栽/窗户/海报/球/挂饰/桌/钟），含投影 + 环境光 |
 | `lib/room/themes/` | 6 种房间主题（温馨暖居/星空夜语/翠林幽居/古风书房/水晶殿堂/深海小屋），墙壁/地板/窗/灯/地毯/环境粒子 |
-| `PetRoomScene.svelte` | 多层 SVG 房间：主题墙 → 粒子 → 窗/灯 → 地板 → 家具（按 y 排序）→ 精灵（外部 absolute 定位，避免 foreignObject 嵌套 SVG bug） |
+| `PetRoomScene.svelte` | 多层 SVG 房间：主题墙 → 粒子 → 窗/灯 → 地板 → 家具（按 y 排序 + 拖拽）→ 精灵（CSS 定位，行为状态机驱动平滑移动） |
 | `DecorationPicker.svelte` | 底部弹出装饰品选择器 |
+| `behavior.ts` | 精灵自主行为引擎：10 状态加权随机 + 家具感知 + 快乐度调制 |
 
 **数据库：**
 - `room_theme_def` 表（6 主题种子）+ `ROOM_THEME` 类别 `item_def`（5 件可购买/扭蛋主题）
@@ -257,8 +260,7 @@ cd frontend && npm install && npm run dev
 - **题库需持续对标课标**：当前 491 题覆盖 G1-G3，后续需扩展 G4-G6 及更多题型变体。
 - **知识节点 grade_level 未在 API 暴露**：前端目前未按年级筛选节点，后续需在 SubjectWorld API 中增加年级过滤。
 - **旧组件清理**：`HpBar/BossBattle/BossHealthBar/BossLootDrop/BossPhaseOverlay/BossSection/DamageNumber/AdventurePath/EnemySprite` 等旧战斗组件保留在磁盘上但已无引用，后续可安全删除。
-- **Sprint F Layer 2（拖拽交互）待实施**：自由拖拽摆放家具、点击交互（开关灯/切换昼夜/精灵对话气泡）。
-- **Sprint F Layer 3（精灵 AI）待实施**：精灵自主行为（走动/坐下/睡觉/读书）、多精灵同屏、好友访客模式。
+- **多精灵同屏 + 好友访客模式待实施**：多只精灵同时出现在房间、好友互相参观小屋、留言/表情反应。
 
 ## 约定
 
