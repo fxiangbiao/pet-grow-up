@@ -15,6 +15,7 @@ export interface UserDTO {
   consecutiveStudyDays?: number;
   consecutiveLoginDays?: number;
   dailyRewardClaimed?: boolean;
+  role?: string;
 }
 
 export interface AuthResponse {

@@ -62,6 +62,10 @@ public class User {
     @Column("daily_reward_claimed_date")
     private LocalDate dailyRewardClaimedDate;
 
+    @Column("role")
+    @Builder.Default
+    private String role = "STUDENT";
+
     @Column(value = "created_at", onInsertValue = "NOW()")
     private LocalDateTime createdAt;
 

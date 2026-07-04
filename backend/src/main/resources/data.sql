@@ -1207,3 +1207,7 @@ INSERT IGNORE INTO item_def (item_key, name, description, category, sub_category
 ('theme_crystal_hall', '水晶殿堂主题', '解锁水晶殿堂房间主题（可随时切换）', 'ROOM_THEME', NULL, 500, 0, '💎', FALSE, TRUE, 92),
 ('theme_ancient_study', '古风书房主题', '解锁古风书房房间主题（成就奖励）', 'ROOM_THEME', NULL, 0, 0, '📜', FALSE, FALSE, 93),
 ('theme_ocean_deep', '深海小屋主题', '解锁深海小屋房间主题（扭蛋限定）', 'ROOM_THEME', NULL, 0, 0, '🌊', FALSE, FALSE, 94);
+
+-- Seed admin user (password: admin123)
+INSERT IGNORE INTO users (username, email, password_hash, nickname, role, total_energy, current_energy)
+VALUES ('admin', 'admin@petgrowup.com', '$2a$10$uKwLfEt7E6iyoy1NxTAKWuoGlmLpQsm/pbwaM1L1XcAQ9Kp7xNa5a', '系统管理员', 'ADMIN', 0, 0);

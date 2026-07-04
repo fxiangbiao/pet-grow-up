@@ -17,7 +17,7 @@
     soundOn = soundManager.toggle();
   }
 
-  const navLinks = [
+  const baseLinks = [
     { href: '/app', label: '仪表盘', icon: '🏠' },
     { href: '/app/study', label: '学习', icon: '📚' },
     { href: '/app/spirit', label: '精灵', icon: '🐱' },
@@ -28,6 +28,11 @@
     { href: '/app/story', label: '剧情', icon: '📖' },
     { href: '/app/pet-room', label: '小屋', icon: '🏡' },
   ];
+  let navLinks = $derived(
+    authStore.isAdmin
+      ? [...baseLinks, { href: '/admin', label: '管理', icon: '⚙️' }]
+      : baseLinks
+  );
 </script>
 
 <nav class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 shadow-lg">

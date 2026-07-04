@@ -102,7 +102,8 @@ public class AuthService {
     }
 
     private AuthResponse buildAuthResponse(User user) {
-        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getUsername());
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getUsername(),
+                user.getRole() != null ? user.getRole() : "STUDENT");
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
 
         UserDTO userDTO = UserDTO.builder()
@@ -116,6 +117,7 @@ public class AuthService {
                 .consecutiveLoginDays(user.getConsecutiveLoginDays())
                 .dailyRewardClaimed(user.getDailyRewardClaimedDate() != null
                         && user.getDailyRewardClaimedDate().equals(LocalDate.now()))
+                .role(user.getRole() != null ? user.getRole() : "STUDENT")
                 .build();
 
         return AuthResponse.builder()
