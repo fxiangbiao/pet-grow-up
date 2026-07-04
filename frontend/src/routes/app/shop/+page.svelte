@@ -19,6 +19,8 @@
     { key: '', label: '全部' },
     { key: 'FOOD', label: '食物' },
     { key: 'TOY', label: '玩具' },
+    { key: 'ACCESSORY', label: '配饰' },
+    { key: 'DECORATION', label: '装饰' },
   ];
 
   let activeTab = $state('shop');

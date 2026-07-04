@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { SpiritSpecies } from '$lib/types/api';
+  import { getAccessoryRenderer } from '$lib/accessories/registry';
+  import type { RenderContext } from '$lib/accessories/types';
 
   let {
     species,
@@ -10,7 +12,7 @@
     personality = 'cheerful',
     showSpeechBubble = true,
     dormancyLevel = 0,
-    accessories = [] as { slot: string; iconUrl: string; name: string }[],
+    accessories = [] as { slot: string; iconUrl: string; name: string; itemKey?: string }[],
     onclick
   }: {
     species: SpiritSpecies;
@@ -21,7 +23,7 @@
     personality?: 'cheerful' | 'gentle' | 'tsundere' | 'brave';
     showSpeechBubble?: boolean;
     dormancyLevel?: number;
-    accessories?: { slot: string; iconUrl: string; name: string }[];
+    accessories?: { slot: string; iconUrl: string; name: string; itemKey?: string }[];
     onclick?: () => void;
   } = $props();
 
@@ -158,6 +160,33 @@
   const secondaryHex = $derived(config.colors.secondary);
   const accentHex = $derived(config.colors.accent);
   const half = $derived(dim.icon / 2);
+
+  // Sprint F: Accessory render context
+  const renderCtx = $derived<RenderContext>({
+    cx,
+    cy,
+    half,
+    primaryColor: primaryHex,
+    secondaryColor: secondaryHex,
+    accentColor: accentHex,
+    stage,
+    subject: (species?.subject as 'chinese' | 'math' | 'english') ?? 'chinese',
+    eyeOffsetX,
+    eyeOffsetY,
+  });
+
+  const renderedAccessories = $derived.by(() => {
+    return accessories.map(acc => {
+      const renderer = getAccessoryRenderer(acc.itemKey || acc.name);
+      if (!renderer) return null;
+      try {
+        const fragment = renderer(renderCtx);
+        return { ...acc, svg: fragment.svg };
+      } catch {
+        return null;
+      }
+    }).filter(Boolean) as { slot: string; name: string; iconUrl: string; itemKey?: string; svg: string }[];
+  });
 
   const iconPath = $derived.by(() => {
     switch (species.subject) {
@@ -491,6 +520,13 @@
             style="animation: sf 1.5s ease-in-out {sp.delay}s infinite" />
         {/each}
       {/if}
+
+      <!-- Sprint F: Accessory SVG renderers (inside spirit SVG) -->
+      {#if renderedAccessories.length > 0}
+        <g pointer-events="none">
+          {@html renderedAccessories.map(a => a.svg).join('')}
+        </g>
+      {/if}
     </svg>
   {/if}
   </div>
@@ -514,22 +550,7 @@
     </div>
   {/if}
 
-  <!-- Sprint E: Accessory emojis -->
-  {#if accessories.length > 0}
-    <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-      {#each accessories as acc}
-        <span class="absolute text-xs leading-none"
-          style="
-            {acc.slot === 'head' ? 'top: 8%;' : ''}
-            {acc.slot === 'neck' ? 'top: 42%;' : ''}
-            {acc.slot === 'eyes' ? 'top: 28%;' : ''}
-          "
-          title={acc.name}>{acc.iconUrl || '✨'}</span>
-      {/each}
-    </div>
-  {/if}
-
-  <!-- Mood expressed via SVG facial features now — no emoji overlay needed -->
+  <!-- Mood expressed via SVG facial features + accessory SVG renderers — no emoji overlay needed -->
 </div>
 
 <!-- Hidden image preloader to detect if sprite URL loads -->

@@ -13,6 +13,8 @@ export interface UserDTO {
   currentEnergy: number;
   currentSpiritId: number | null;
   consecutiveStudyDays?: number;
+  consecutiveLoginDays?: number;
+  dailyRewardClaimed?: boolean;
 }
 
 export interface AuthResponse {

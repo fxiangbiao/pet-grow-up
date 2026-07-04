@@ -358,3 +358,77 @@ CREATE TABLE IF NOT EXISTS user_story_progress (
     INDEX idx_user_story (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Safely add random event columns on study_session (for existing databases)
+SET @sql = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'study_session' AND COLUMN_NAME = 'random_event_key') = 0,
+  'ALTER TABLE study_session ADD COLUMN random_event_key VARCHAR(50) DEFAULT NULL, ADD COLUMN random_event_bonus_energy BIGINT NOT NULL DEFAULT 0',
+  'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS random_event_def (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    event_key VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(300),
+    event_type VARCHAR(30) NOT NULL COMMENT 'BONUS_ENERGY, SPIRIT_GIFT, FREE_ITEM, DOUBLE_REWARD, STREAK_BONUS',
+    trigger_chance DECIMAL(3,2) NOT NULL DEFAULT 0.10 COMMENT '0.00-1.00 probability',
+    min_accuracy DECIMAL(3,2) NOT NULL DEFAULT 0.00 COMMENT 'minimum accuracy to trigger',
+    min_streak INT NOT NULL DEFAULT 0 COMMENT 'minimum streak to trigger',
+    reward_energy BIGINT NOT NULL DEFAULT 0,
+    reward_item_key VARCHAR(50) DEFAULT NULL,
+    reward_affection INT NOT NULL DEFAULT 0,
+    display_text VARCHAR(200),
+    icon_url VARCHAR(100),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_event_trigger (trigger_chance, min_accuracy)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Safely add login tracking columns if missing (for existing databases)
+SET @sql = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'last_login_date') = 0,
+  'ALTER TABLE users ADD COLUMN last_login_date DATE DEFAULT NULL, ADD COLUMN consecutive_login_days INT NOT NULL DEFAULT 0, ADD COLUMN daily_reward_claimed_date DATE DEFAULT NULL',
+  'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS daily_reward_def (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    reward_key VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(200),
+    reward_type VARCHAR(30) NOT NULL COMMENT 'ENERGY, ITEM, ACCESSORY',
+    reward_value BIGINT COMMENT 'energy amount if reward_type=ENERGY',
+    reward_item_key VARCHAR(50) COMMENT 'item_key if reward_type=ITEM or ACCESSORY',
+    unlock_day INT NOT NULL COMMENT 'consecutive login day required (1=every day, 3/7/14/30=milestone)',
+    icon_url VARCHAR(100),
+    display_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_reward_day (unlock_day, reward_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Pet Room Theme Definitions (Sprint F Layer 1)
+CREATE TABLE IF NOT EXISTS room_theme_def (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    theme_key VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(500),
+    icon_url VARCHAR(255),
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pet_room (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,
+    room_style VARCHAR(30) NOT NULL DEFAULT 'cozy_warm' COMMENT 'theme key: cozy_warm, starry_night, forest_green, ancient_study, crystal_hall, ocean_deep',
+    slot_data JSON DEFAULT NULL COMMENT '[{"userItemId":N,"itemDefId":N,"itemKey":"...","x":100,"y":200}]',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_pet_room_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

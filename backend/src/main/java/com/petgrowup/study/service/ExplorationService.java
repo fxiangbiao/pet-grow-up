@@ -7,6 +7,8 @@ import com.petgrowup.achievement.enums.RequirementType;
 import com.petgrowup.achievement.service.AchievementService;
 import com.petgrowup.challenge.service.ChallengeService;
 import com.petgrowup.story.service.StoryService;
+import com.petgrowup.event.dto.RandomEventDTO;
+import com.petgrowup.event.service.RandomEventService;
 import com.petgrowup.common.exception.BusinessException;
 import com.petgrowup.common.exception.ResourceNotFoundException;
 import com.petgrowup.common.util.EnergyCalculator;
@@ -42,6 +44,7 @@ public class ExplorationService {
     private final AchievementService achievementService;
     private final ChallengeService challengeService;
     private final StoryService storyService;
+    private final RandomEventService randomEventService;
 
     private static final int QUESTIONS_PER_SESSION = 5;
     private static final long BASE_REWARD = 100;
@@ -54,7 +57,8 @@ public class ExplorationService {
                               SimpMessagingTemplate messagingTemplate,
                               AchievementService achievementService,
                               ChallengeService challengeService,
-                              StoryService storyService) {
+                              StoryService storyService,
+                              RandomEventService randomEventService) {
         this.sessionMapper = sessionMapper;
         this.recordMapper = recordMapper;
         this.quizService = quizService;
@@ -66,6 +70,7 @@ public class ExplorationService {
         this.achievementService = achievementService;
         this.challengeService = challengeService;
         this.storyService = storyService;
+        this.randomEventService = randomEventService;
     }
 
     @Transactional
@@ -244,6 +249,14 @@ public class ExplorationService {
             }
         }
 
+        // Sprint F: replay random event from stored key
+        RandomEventDTO randomEvent = session.getRandomEventKey() != null
+                ? randomEventService.replayFromKey(session.getRandomEventKey(), session.getId())
+                : null;
+        if (randomEvent != null && session.getRandomEventBonusEnergy() != null) {
+            randomEvent.setBonusEnergy(session.getRandomEventBonusEnergy());
+        }
+
         return SessionResultDTO.builder()
                 .sessionId(session.getId())
                 .totalQuestions(session.getTotalQuestions())
@@ -255,6 +268,7 @@ public class ExplorationService {
                 .maxCombo(maxCombo)
                 .bossDefeated(bossDefeated)
                 .comboBonusEnergy(comboBonus)
+                .randomEvent(randomEvent)
                 .build();
     }
 
@@ -332,6 +346,22 @@ public class ExplorationService {
 
         // Check story chapter conditions
         storyService.checkAllConditions(userId);
+
+        // Sprint F: Check random events
+        int streak = session.getStreakAtTime() != null ? session.getStreakAtTime() : 0;
+        RandomEventDTO randomEvent = randomEventService.checkAndTrigger(
+                userId, streak, accuracy, user.getCurrentSpiritId(), session.getId());
+        if (randomEvent != null) {
+            session.setRandomEventKey(randomEvent.getEventKey());
+            if (randomEvent.isDoubleReward()) {
+                // Double the energy earned
+                energyService.earnEnergy(userId, energyEarned, "random_event", "random_event_def", null);
+                session.setRandomEventBonusEnergy(energyEarned);
+            } else if (randomEvent.getBonusEnergy() > 0) {
+                session.setRandomEventBonusEnergy(randomEvent.getBonusEnergy());
+            }
+            sessionMapper.update(session);
+        }
     }
 
     private void updateWorldProgress(Long userId, StudySession session) {

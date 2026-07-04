@@ -1,5 +1,6 @@
 package com.petgrowup.study.dto;
 
+import com.petgrowup.event.dto.RandomEventDTO;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,4 +19,5 @@ public class SessionResultDTO {
     private Integer maxCombo;
     private Boolean bossDefeated;
     private Long comboBonusEnergy;
+    private RandomEventDTO randomEvent;
 }

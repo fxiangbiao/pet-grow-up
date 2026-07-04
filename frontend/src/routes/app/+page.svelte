@@ -6,12 +6,27 @@
   import { spiritStore } from '$lib/stores/spirit.svelte';
   import SpiritAvatar from '$lib/components/spirit/SpiritAvatar.svelte';
   import SpiritGreeting from '$lib/components/spirit/SpiritGreeting.svelte';
+  import BlindBoxAnimation from '$lib/components/daily/BlindBoxAnimation.svelte';
+  import { getDailyRewardStatus, claimDailyReward, type DailyRewardStatus } from '$lib/api/daily-reward';
+
+  let blindBox = $state<DailyRewardStatus | null>(null);
 
   onMount(() => {
     achievementStore.refresh();
     spiritStore.refresh(authStore.user!.id);
     spiritStore.checkStatus();
+    getDailyRewardStatus().then(s => blindBox = s).catch(() => {});
   });
+
+  async function handleBlindBoxClaim() {
+    const result = await claimDailyReward();
+    if (result.energyEarned > 0 && authStore.user) {
+      authStore.user.currentEnergy += result.energyEarned;
+    }
+    // Refresh status
+    getDailyRewardStatus().then(s => blindBox = s).catch(() => {});
+    return result;
+  }
 
   function spiritMood(): 'happy' | 'excited' | 'hurt' | 'idle' | undefined {
     const s = spiritStore.activeSpirit;
@@ -41,6 +56,16 @@
       />
     {/if}
 
+    <!-- Sprint F: Daily blind box -->
+    {#if blindBox}
+      <BlindBoxAnimation
+        reward={blindBox.todayReward}
+        eligible={blindBox.eligible}
+        claimed={blindBox.claimedToday}
+        onclaim={handleBlindBoxClaim}
+      />
+    {/if}
+
     <!-- Hero card: user greeting + active spirit -->
     <div class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl shadow-lg p-6 text-white">
       <div class="flex items-start justify-between">
@@ -62,6 +87,15 @@
                 <div class="flex items-center gap-1.5">
                   <span class="text-2xl font-bold">{authStore.user.consecutiveStudyDays ?? '—'}</span>
                   <span class="text-lg">🔥</span>
+                </div>
+              </div>
+            {/if}
+            {#if blindBox && blindBox.consecutiveLoginDays > 0}
+              <div class="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2.5">
+                <span class="text-xs text-white/70">连续登录</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-2xl font-bold">{blindBox.consecutiveLoginDays}</span>
+                  <span class="text-lg">📅</span>
                 </div>
               </div>
             {/if}
@@ -131,7 +165,7 @@
     </div>
 
     <!-- Quick navigation cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
       <a href="/app/study" class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
         <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-3">📚</div>
         <h3 class="font-semibold text-gray-800">开始学习</h3>
@@ -168,6 +202,11 @@
         <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mb-3">📖</div>
         <h3 class="font-semibold text-gray-800">剧情</h3>
         <p class="text-sm text-gray-500 mt-1">探索学习能量宇宙</p>
+      </a>
+      <a href="/app/pet-room" class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
+        <div class="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center mb-3">🏠</div>
+        <h3 class="font-semibold text-gray-800">精灵小屋</h3>
+        <p class="text-sm text-gray-500 mt-1">装饰你的专属小屋</p>
       </a>
     </div>
   </div>

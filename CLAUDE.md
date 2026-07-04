@@ -22,6 +22,8 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 - **Sprint C（2026-07-03）**：星灵羁绊核心 — 性格选择（4 选 1）、多情绪动画（greeting/sleeping/dim）、迎接/告别系统、休眠机制（损失厌恶）。
 - **Sprint D（2026-07-03）**：净化重构 — 战斗系统→净化系统（HP→能量水晶、Boss→守护者、怪物→暗水晶、「⚔️ 攻击」→「🌟 净化」、移除死亡惩罚）。
 - **Sprint E（2026-07-03）**：收集驱动 — 配饰系统（12 件装备）、扭蛋机（稀有度分层）、星灵装备 UI、成就图鉴（翻书模式 + 知识点图鉴）。
+- **Sprint F（2026-07-04）**：惊喜系统 — 每日登录盲盒（含 3/7/14/30 天里程碑）、学习后随机惊喜事件、宠物小屋装饰（自由放置 + 6 主题房间）。
+- **Sprint F Layer 1（2026-07-04）**：视觉升级 — 配饰/家具从 emoji 升级为手绘 SVG 渲染器、6 种可收集房间主题、slot_data JSON 迁移为自由坐标。Layer 2（拖拽交互）和 Layer 3（精灵 AI 行为）待实施。
   v2 设计方案见 `游戏化学习系统设计方案-v2.md`。
 
 ## 已实现子系统
@@ -41,6 +43,8 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 | **P1** | 每日挑战 | `challenge` | `routes/app/daily/`, `lib/api/challenge.ts` | ✅ |
 | — | 剧情系统 | `story` | `routes/app/story/`, `lib/components/story/` | ✅ |
 | — | 用户中心 | `user` | `lib/api/user.ts` | ✅ |
+| — | 惊喜系统 | `daily` + `event` | `lib/components/daily/`, `lib/components/study/RandomEventOverlay.svelte` | ✅ |
+| — | 宠物小屋 | `room` | `routes/app/pet-room/`, `lib/components/room/`, `lib/room/` | ✅ |
 | **P2** | 时空裂隙系统 | — | — | ❌ 未实现 |
 
 ### 冒险模式（Sprint D 净化重构，核心玩法）
@@ -78,7 +82,7 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 `frontend/src/lib/components/spirit/` 目录：
 | 组件 | 用途 |
 |------|------|
-| `SpiritAvatar.svelte` | SVG 精灵：7 种 mood（含 greeting/sleeping/dim）+ 4 种性格台词 + 眨眼/视线追踪 + 配饰渲染层 + 休眠降饱和 |
+| `SpiritAvatar.svelte` | SVG 精灵：7 种 mood（含 greeting/sleeping/dim）+ 4 种性格台词 + 眨眼/视线追踪 + SVG 配饰渲染（注册表驱动，按形态适配锚点）+ 休眠降饱和 |
 | `PersonalityPicker.svelte` | 4 张性格卡片（元气/温柔/傲娇/勇敢），hover 预览台词 |
 | `SpiritGreeting.svelte` | 回归迎接横幅：性格台词 + 打字机效果 + 休眠提示 |
 | `SpiritSpeech.svelte` | 独立台词气泡，打字机动画 |
@@ -98,6 +102,39 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 - **扭蛋机**：单抽 50⚡ / 每日免费 / 稀有度分层（Common 70%, Rare 25%, Epic 5%）/ 重复返还
 - **成就图鉴**：列表/翻书双模式，知识点图鉴按学科分组
 - `spirit_accessory` 表记录装备状态
+
+### 惊喜系统（Sprint F）
+
+`frontend/src/lib/components/daily/` + `frontend/src/lib/components/study/RandomEventOverlay.svelte`：
+
+| 组件 | 用途 |
+|------|------|
+| `BlindBoxAnimation.svelte` | 每日盲盒：idle→抖动→开启→揭晓奖励，里程碑（3/7/14/30 天）光环特效 |
+| `RandomEventOverlay.svelte` | 学习后随机惊喜弹窗：bounceIn 动画 + 精灵台词 + 奖励摘要 |
+
+**后端：**
+- `daily/` — 每日奖励状态查询/领取，`updateLoginStreak()` 钩在 `AuthService.login()`
+- `event/` — 随机事件引擎：概率独立投骰，按正确率/连续天数过滤，钩在 `ExplorationService.completeSession()`
+- `DailyRewardDef` 7 条种子（3 每日随机 + 4 里程碑），`RandomEventDef` 6 条种子（BONUS_ENERGY/SPIRIT_GIFT/DOUBLE_REWARD/STREAK_BONUS/FREE_ITEM）
+
+### 宠物小屋与配饰渲染（Sprint F Layer 1）
+
+`frontend/src/lib/room/` + `frontend/src/lib/accessories/`：
+
+| 目录 | 用途 |
+|------|------|
+| `lib/accessories/renderers/` | 配饰 SVG 渲染注册表 — head/neck/eyes/effects 各 2-4 个 renderer，按精灵形态（书童/猫/巫师）调整锚点 |
+| `lib/room/furniture/` | 12 件家具手绘 SVG 渲染器（床/沙发/书架/灯/地毯/盆栽/窗户/海报/球/挂饰/桌/钟），含投影 + 环境光 |
+| `lib/room/themes/` | 6 种房间主题（温馨暖居/星空夜语/翠林幽居/古风书房/水晶殿堂/深海小屋），墙壁/地板/窗/灯/地毯/环境粒子 |
+| `PetRoomScene.svelte` | 多层 SVG 房间：主题墙 → 粒子 → 窗/灯 → 地板 → 家具（按 y 排序）→ 精灵（外部 absolute 定位，避免 foreignObject 嵌套 SVG bug） |
+| `DecorationPicker.svelte` | 底部弹出装饰品选择器 |
+
+**数据库：**
+- `room_theme_def` 表（6 主题种子）+ `ROOM_THEME` 类别 `item_def`（5 件可购买/扭蛋主题）
+- `pet_room.slot_data` 从 `{"slot_key": item_def_id}` 迁移为 `[{"userItemId":N, "itemDefId":N, "itemKey":"...", "x":100, "y":200}]` 自由坐标格式
+- `pet_room.room_style` 默认值从 `'DEFAULT'` 改为 `'cozy_warm'`
+
+**API 新增：** `PUT /pet-room/position`（更新家具位置），`PUT /pet-room/theme`（切换主题）
 
 ### 场景化题型组件（Sprint 1-2 + Sprint A）
 
@@ -183,7 +220,7 @@ pet-grow-up/
 
 ## 数据库
 
-22 张表，Spring Boot 启动时通过 `schema.sql`（`CREATE TABLE IF NOT EXISTS`）自动建表，
+25 张表（含 Sprint F 的 `daily_reward_def`、`random_event_def`、`pet_room`、`room_theme_def`），Spring Boot 启动时通过 `schema.sql`（`CREATE TABLE IF NOT EXISTS`）自动建表，
 `data.sql` 播种学科世界、题目、成就定义、商店物品（含配饰）、剧情章节等基础数据。
 开发库口令与 `docker-compose.yml` 保持一致（非生产凭证）。
 
@@ -220,7 +257,8 @@ cd frontend && npm install && npm run dev
 - **题库需持续对标课标**：当前 491 题覆盖 G1-G3，后续需扩展 G4-G6 及更多题型变体。
 - **知识节点 grade_level 未在 API 暴露**：前端目前未按年级筛选节点，后续需在 SubjectWorld API 中增加年级过滤。
 - **旧组件清理**：`HpBar/BossBattle/BossHealthBar/BossLootDrop/BossPhaseOverlay/BossSection/DamageNumber/AdventurePath/EnemySprite` 等旧战斗组件保留在磁盘上但已无引用，后续可安全删除。
-- **Sprint F（惊喜系统）待实施**：每日盲盒、随机事件、季节活动、社交分享、宠物小屋装饰。
+- **Sprint F Layer 2（拖拽交互）待实施**：自由拖拽摆放家具、点击交互（开关灯/切换昼夜/精灵对话气泡）。
+- **Sprint F Layer 3（精灵 AI）待实施**：精灵自主行为（走动/坐下/睡觉/读书）、多精灵同屏、好友访客模式。
 
 ## 约定
 

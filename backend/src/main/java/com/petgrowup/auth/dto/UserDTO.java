@@ -15,4 +15,6 @@ public class UserDTO {
     private Long currentEnergy;
     private Long currentSpiritId;
     private Integer consecutiveStudyDays;
+    private Integer consecutiveLoginDays;
+    private Boolean dailyRewardClaimed;
 }

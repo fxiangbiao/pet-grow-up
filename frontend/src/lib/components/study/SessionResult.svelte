@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { getSessionResult, type SessionResult as SessionResultDTO } from '$lib/api/study';
+  import { getSessionResult, type SessionResult as SessionResultDTO, type RandomEventInfo } from '$lib/api/study';
   import CelebrationOverlay from '$lib/components/feedback/CelebrationOverlay.svelte';
+  import RandomEventOverlay from '$lib/components/study/RandomEventOverlay.svelte';
   import { authStore } from '$lib/stores/auth.svelte';
   import { soundManager } from '$lib/audio/sound-manager';
 
@@ -16,6 +17,8 @@
 
   let result = $state<SessionResultDTO | null>(null);
   let loading = $state(true);
+  let showRandomEvent = $state(false);
+  let randomEventData = $state<RandomEventInfo | null>(null);
 
   const cleared = $derived(true); // purification never fails
 
@@ -27,6 +30,11 @@
         authStore.refreshProfile();
         if (r.accuracy >= 0.8) {
           soundManager.playComplete();
+        }
+        // Sprint F: show random event overlay after a short delay
+        if (r.randomEvent) {
+          randomEventData = r.randomEvent;
+          setTimeout(() => showRandomEvent = true, 800);
         }
       });
     }
@@ -143,5 +151,13 @@
         返回地图
       </button>
     </div>
+
+    <!-- Sprint F: Random event overlay -->
+    {#if showRandomEvent && randomEventData}
+      <RandomEventOverlay
+        event={randomEventData}
+        onclose={() => showRandomEvent = false}
+      />
+    {/if}
   {/if}
 </div>

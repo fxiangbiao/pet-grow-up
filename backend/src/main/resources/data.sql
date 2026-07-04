@@ -1150,3 +1150,60 @@ INSERT IGNORE INTO story_chapter (chapter_number, title, narrative, npc_name, np
  '恭喜你，守护者！你已经成长为一名经验丰富的学习者了。现在，真正的阅读大冒险开始了。中文的段落理解、英文的短文阅读——用你的阅读理解能力去征服这座图书馆吧！知识将为你打开更广阔的世界！',
  '让我开启阅读的大冒险！',
  'ACHIEVEMENT_COUNT', 5, 80, 24);
+
+-- ========================
+-- Daily Reward Definitions (Sprint F)
+-- ========================
+INSERT IGNORE INTO daily_reward_def (reward_key, name, description, reward_type, reward_value, reward_item_key, unlock_day, icon_url, display_order) VALUES
+('daily_energy_30', '30能量', '获得30点学习能量', 'ENERGY', 30, NULL, 1, '⚡', 1),
+('daily_item_food', '随机食物', '获得一个随机食物', 'ITEM', NULL, 'RANDOM_FOOD', 1, '🍬', 2),
+('daily_energy_10', '10能量', '获得10点学习能量', 'ENERGY', 10, NULL, 1, '⚡', 3),
+('streak3_energy', '3天奖励·100能量', '连续3天登录奖励', 'ENERGY', 100, NULL, 3, '🔥', 10),
+('streak7_scarf', '7天奖励·毅力围巾', '连续7天登录获得毅力围巾', 'ACCESSORY', NULL, 'acc_perseverance_scarf', 7, '🏅', 11),
+('streak14_energy', '14天奖励·300能量', '连续14天登录奖励', 'ENERGY', 300, NULL, 14, '💎', 12),
+('streak30_energy', '30天奖励·500能量', '连续30天登录奖励', 'ENERGY', 500, NULL, 30, '👑', 13);
+
+-- ========================
+-- Random Event Definitions (Sprint F)
+-- ========================
+INSERT IGNORE INTO random_event_def (event_key, name, description, event_type, trigger_chance, min_accuracy, min_streak, reward_energy, reward_item_key, reward_affection, display_text, icon_url) VALUES
+('spirit_birthday', '精灵生日派对', '今天精灵特别开心，额外获得能量奖励！', 'BONUS_ENERGY', 0.08, 0.0, 0, 50, NULL, 5, '精灵突然拿出一个小蛋糕！"主人，今天是我的生日哦~"', '🎂'),
+('spirit_gratitude', '精灵感谢日', '精灵感谢你最近的努力学习，送上一份小礼物', 'SPIRIT_GIFT', 0.10, 0.6, 3, 0, 'energy_candy', 10, '精灵害羞地递给你一个小盒子..."谢谢你每天陪我学习！"', '🎁'),
+('double_reward', '能量加倍！', '守护者对你的表现印象深刻，决定加倍奖励', 'DOUBLE_REWARD', 0.05, 0.8, 0, 0, NULL, 0, '守护者拍了拍手："表现太棒了！今天的奖励翻倍！"', '✨'),
+('streak_bonus', '坚持的回报', '连续学习的额外嘉奖，精灵更加信任你', 'STREAK_BONUS', 0.15, 0.0, 7, 30, NULL, 5, '"坚持这么久，你真的很厉害！"精灵自豪地看着你', '🔥'),
+('free_gacha', '免费扭蛋券', '恭喜获得一次免费扭蛋机会！', 'FREE_ITEM', 0.03, 0.7, 3, 0, NULL, 3, '从天而降一张扭蛋券！"快去试试手气吧！"', '🎰'),
+('affection_boost', '好感爆发', '精灵对你的好感大幅提升', 'SPIRIT_GIFT', 0.12, 0.5, 0, 0, NULL, 15, '精灵突然跳到你身上蹭了蹭..."最喜欢主人了！"', '💕');
+
+-- ========================
+-- Decoration Items for Pet Room (Sprint F)
+-- ========================
+INSERT IGNORE INTO item_def (item_key, name, description, category, effect_type, effect_value, price, icon_url, is_consumable, is_purchasable, display_order) VALUES
+('deco_bed_small', '小床', '一张舒适的小床，精灵可以在这里休息', 'DECORATION', 'COSMETIC', 0, 100, '🛏️', FALSE, TRUE, 60),
+('deco_sofa', '小沙发', '软软的沙发，精灵最喜欢窝在这里', 'DECORATION', 'COSMETIC', 0, 120, '🛋️', FALSE, TRUE, 61),
+('deco_lamp', '小夜灯', '温馨的小夜灯，让小屋不再黑暗', 'DECORATION', 'COSMETIC', 0, 60, '💡', FALSE, TRUE, 62),
+('deco_bookshelf', '小书架', '装满故事书的小书架', 'DECORATION', 'COSMETIC', 0, 150, '📚', FALSE, TRUE, 63),
+('deco_rug_round', '圆形地毯', '软绵绵的圆形地毯', 'DECORATION', 'COSMETIC', 0, 80, '🟤', FALSE, TRUE, 64),
+('deco_plant', '盆栽', '一盆绿色的小植物，净化空气', 'DECORATION', 'COSMETIC', 0, 50, '🪴', FALSE, TRUE, 65),
+('deco_window', '小窗户', '一扇能看到星星的小窗户', 'DECORATION', 'COSMETIC', 0, 90, '🪟', FALSE, TRUE, 66),
+('deco_poster', '学习海报', '墙上贴着"好好学习，天天向上"的海报', 'DECORATION', 'COSMETIC', 0, 40, '📜', FALSE, TRUE, 67),
+('deco_toy_ball', '玩具球', '一颗彩色的玩具球', 'DECORATION', 'COSMETIC', 0, 30, '⚽', FALSE, TRUE, 68),
+('deco_star_mobile', '星星挂饰', '挂在屋顶的星星挂饰，会轻轻摇晃', 'DECORATION', 'COSMETIC', 0, 70, '⭐', FALSE, TRUE, 69),
+('deco_table', '小桌子', '一张小桌子，可以放东西', 'DECORATION', 'COSMETIC', 0, 100, '🪑', FALSE, TRUE, 70),
+('deco_clock', '挂钟', '可爱的猫咪挂钟', 'DECORATION', 'COSMETIC', 0, 60, '🕐', FALSE, TRUE, 71);
+
+-- Sprint F Layer 1: Room theme definitions
+INSERT IGNORE INTO room_theme_def (theme_key, name, description, icon_url, is_default, sort_order) VALUES
+('cozy_warm', '温馨暖居', '温暖舒适的默认小屋，每个小精灵最初的港湾', '🏠', TRUE, 1),
+('starry_night', '星空夜语', '深蓝夜空下繁星点点，伴你进入梦乡', '🌌', FALSE, 2),
+('forest_green', '翠林幽居', '绿意盎然的森林小屋，萤火虫在夜空中舞动', '🌿', FALSE, 3),
+('ancient_study', '古风书房', '笔墨纸砚，书香四溢的古雅书房', '📜', FALSE, 4),
+('crystal_hall', '水晶殿堂', '晶莹剔透的梦幻宫殿，闪耀着魔法光芒', '💎', FALSE, 5),
+('ocean_deep', '深海小屋', '蔚蓝深海中的静谧小屋，与鱼群为伴', '🌊', FALSE, 6);
+
+-- Sprint F Layer 1: Room theme items (purchasable in shop / gacha)
+INSERT IGNORE INTO item_def (item_key, name, description, category, sub_category, price_energy, price_points, icon_url, is_consumable, is_shop_available, sort_order) VALUES
+('theme_starry_night', '星空小屋主题', '解锁星空夜语房间主题（可随时切换）', 'ROOM_THEME', NULL, 200, 0, '🌌', FALSE, TRUE, 90),
+('theme_forest_green', '森林小屋主题', '解锁翠林幽居房间主题（可随时切换）', 'ROOM_THEME', NULL, 200, 0, '🌿', FALSE, TRUE, 91),
+('theme_crystal_hall', '水晶殿堂主题', '解锁水晶殿堂房间主题（可随时切换）', 'ROOM_THEME', NULL, 500, 0, '💎', FALSE, TRUE, 92),
+('theme_ancient_study', '古风书房主题', '解锁古风书房房间主题（成就奖励）', 'ROOM_THEME', NULL, 0, 0, '📜', FALSE, FALSE, 93),
+('theme_ocean_deep', '深海小屋主题', '解锁深海小屋房间主题（扭蛋限定）', 'ROOM_THEME', NULL, 0, 0, '🌊', FALSE, FALSE, 94);
