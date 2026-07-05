@@ -26,6 +26,7 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 - **Sprint F Layer 1（2026-07-04）**：视觉升级 — 配饰/家具从 emoji 升级为手绘 SVG 渲染器、6 种可收集房间主题、slot_data JSON 迁移为自由坐标。
 - **Sprint F Layer 2（2026-07-04）**：交互升级 — 自由拖拽摆放家具（pointer capture + 实时位置保存）、点击交互（窗户→昼夜切换、灯→开关、地毯→精灵旋转舞蹈、精灵→对话气泡）。
 - **Sprint F Layer 3（2026-07-04）**：精灵 AI — 自主行为状态机（10 种状态：idle/wander/sit/read/play/sleep），基于家具存在性和快乐度的加权随机选择，CSS transition 平滑移动，行为标签指示器。
+- **Sprint G（2026-07-04～05）**：管理后台 Phase 1 — 角色系统（STUDENT/ADMIN）+ JWT role claim + Spring Security `@PreAuthorize`、题库 CRUD API（列表/筛选/分页/创建/编辑/删除/批量导入）、知识节点树 API、Admin SvelteKit 路由组 `(admin)/admin/*`、12 种题型专属编辑器 + 实时预览系统（`{#key}` 强制重挂载 + `preview` prop 禁用交互）、问题修复（MultipleChoiceEditor 选项添加、PoemSequenceEditor 同步循环、题库列表 `isLarge` 导致 null）。
   v2 设计方案见 `游戏化学习系统设计方案-v2.md`。
 
 ## 已实现子系统
@@ -47,6 +48,7 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 | — | 用户中心 | `user` | `lib/api/user.ts` | ✅ |
 | — | 惊喜系统 | `daily` + `event` | `lib/components/daily/`, `lib/components/study/RandomEventOverlay.svelte` | ✅ |
 | — | 宠物小屋 | `room` | `routes/app/pet-room/`, `lib/components/room/`, `lib/room/` | ✅ |
+| — | 管理后台 | `admin` | `routes/(admin)/admin/`, `lib/components/admin/`, `lib/api/admin.ts` | ✅ Phase 1 |
 | **P2** | 时空裂隙系统 | — | — | ❌ 未实现 |
 
 ### 冒险模式（Sprint D 净化重构，核心玩法）
@@ -158,6 +160,54 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 | `MATH_INPUT` | `MathInput.svelte` | 数学 | 数字键盘输入 |
 | `VOCAB_MATCH` | `VocabMatch.svelte` | 英语 | 单词释义配对 |
 
+### 管理后台（Sprint G Phase 1）
+
+**角色系统**：`users.role` 列（STUDENT/ADMIN），admin 种子用户（admin/admin123）。JWT 包含 `role` claim，
+`JwtAuthenticationFilter` 提取并设为 `ROLE_ADMIN` 权限。双重保护：`SecurityConfig.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")` +
+`@PreAuthorize("hasRole('ADMIN')")` 注解。
+
+**后端 API**（`/api/v1/admin`）：
+| 端点 | 说明 |
+|------|------|
+| `GET /questions?subject=&gradeLevel=&type=&keyword=&page=&size=` | 列表+筛选+分页 |
+| `GET /questions/{id}` | 单题详情 |
+| `POST /questions` | 创建题目 |
+| `PUT /questions/{id}` | 更新题目 |
+| `DELETE /questions/{id}` | 删除题目 |
+| `POST /questions/batch-import` | JSON 批量导入 |
+| `GET /nodes/tree` | 知识节点树（按学科分组） |
+| `POST /nodes` / `PUT /nodes/{id}` / `DELETE /nodes/{id}` | 节点 CRUD |
+| `PUT /nodes/reorder` | 批量更新兄弟节点排序 |
+
+**前端路由**：`(admin)/admin/*` — 路由组 `(admin)` 不参与 URL，`admin/` 子目录提供 `/admin/questions`、`/admin/nodes`。
+Layout 含 `isAdmin` 守卫（`authStore.isAdmin` → 否则 redirect `/app`）、侧边栏导航。
+
+**编辑器系统**（`lib/components/admin/editors/`）：
+| 题型 | 编辑器组件 | 数据格式 |
+|------|----------|---------|
+| MULTIPLE_CHOICE / SCENE_TAP / SCENE_PINYIN / SCENE_WHACK_MOLE | `MultipleChoiceEditor.svelte` | `[{key, text}]` |
+| FILL_BLANK | `FillBlankEditor.svelte` | 纯文本 |
+| MATH_INPUT / SCENE_DRAG | `MathInputEditor.svelte` | 数字答案 |
+| POEM_SEQUENCE | `PoemSequenceEditor.svelte` | `["行1","行2"]` + 正确顺序 |
+| SCENE_MATCH | `SceneMatchEditor.svelte` | 标识字符串 |
+| SCENE_CHAR_BUILD | `SceneCharBuildEditor.svelte` | `{radical, phonetic, targetChar}` |
+| VOCAB_MATCH | `VocabMatchEditor.svelte` | `{left[], right[]}` + 逗号分隔配对 |
+| SCENE_CLOCK | `SceneClockEditor.svelte` | `{hour}` |
+| SCENE_SHOP | `SceneShopEditor.svelte` | `{price, itemName}` |
+| SCENE_SHAPE_PUZZLE | `GenericEditor.svelte` | 原生 JSON（兜底） |
+
+所有编辑器通过 `QuestionFormShell.svelte` 中央调度，按 `questionType` 渲染对应编辑器。
+
+**预览系统**：`AdminQuestionPreview.svelte` — 缩放容器（`scale(0.75)`, `transform-origin: top center`）。
+`{#key remountKey}` 包装每个场景组件确保非响应式 `const` 初始化在表单数据变化时重新执行。
+9 个场景组件添加 `preview?: boolean` prop，`preview=true` 时跳过提交逻辑（仅展示视觉效果）。
+
+**关键 Bug 修复**：
+- **`$effect` 同步循环**：编辑器中 `$effect` 无条件覆盖本地状态 → 使用 `if (!init)` 快照 + `$effect(compare-then-sync)` 模式
+- **选项过滤导致无法添加**：`updateOptions()` 过滤空文本 → 移除过滤，保存所有选项（含空白）
+- **`isLarge` 导致列表字段 null**：MyBatis-Flex `@Column(isLarge = true)` 在 `selectListByQuery` 中 JDBC 驱动返回 null（`selectOneById` 正常）→ 移除 `isLarge`（数据库列类型为 `text` 非 `longtext`）
+- **唯一约束 500**：`uk_quiz_node_question` 冲突 → `GlobalExceptionHandler` 新增 `DuplicateKeyException` → 409 + 中文提示
+
 ### 音频系统（Sprint B 柔和化升级）
 
 `frontend/src/lib/audio/sound-manager.ts` — Web Audio API 合成，无外部音频文件依赖。
@@ -184,6 +234,7 @@ pet-grow-up/
 ├── backend/                     # Spring Boot + Mybatis-Flex
 │   └── src/
 │       ├── main/java/com/petgrowup/
+│       │   ├── admin/           # 管理后台（题目/知识节点 CRUD + 角色权限）
 │       │   ├── auth/            # JWT 认证（access + refresh）
 │       │   ├── spirit/          # 精灵/学习精灵养成 + 性格维度
 │       │   ├── energy/          # 学习能量系统（产生与消费流水）
@@ -207,6 +258,7 @@ pet-grow-up/
 │   └── src/
 │       ├── routes/              # SvelteKit 文件路由
 │       │   ├── (auth)/          # 登录 / 注册
+│       │   ├── (admin)/admin/   # 管理后台（题库管理 / 知识节点 / 角色权限）
 │       │   └── app/             # 鉴权后主应用（/app, /app/study, /app/spirit ...）
 │       └── lib/
 │           ├── components/      # layout / spirit / study / story / energy / feedback / shop / social / common
@@ -238,6 +290,7 @@ pet-grow-up/
 | 英语（魔法学院） | 5 | 4 | 4 | **13** |
 
 题库 491 题，覆盖 12 种题型，剧情章节 24 章（chapter 1-12 为 G1，13-24 为 G2-G3）。
+`users` 表含 `role` 列（VARCHAR(20) DEFAULT 'STUDENT'），admin 用户（admin/admin123, role=ADMIN）。
 
 ## 本地运行
 
@@ -254,9 +307,11 @@ cd frontend && npm install && npm run dev
 
 ## 待办与风险
 
-- **测试覆盖薄弱**：仅 5 个测试文件，集中在 5 个模块，其余 9 个业务模块无测试。
+- **测试覆盖薄弱**：仅 5 个测试文件，集中在 5 个模块，其余 10 个业务模块无测试。Admin 模块无测试。
 - **未容器化后端/前端**：`docker-compose.yml` 仅含 MySQL，无应用镜像与发布流程。
 - **P2 时空裂隙系统未实现**：设计文档中唯一缺失的子系统。
+- **管理后台 Phase 2 待实施**：用户管理、商品管理、数据统计仪表盘。
+- **SCENE_SHAPE_PUZZLE 仍用 GenericEditor**：唯一未配有专属编辑器的题型，目前用原生 JSON 输入。
 - **题库需持续对标课标**：当前 491 题覆盖 G1-G3，后续需扩展 G4-G6 及更多题型变体。
 - **知识节点 grade_level 未在 API 暴露**：前端目前未按年级筛选节点，后续需在 SubjectWorld API 中增加年级过滤。
 - **旧组件清理**：`HpBar/BossBattle/BossHealthBar/BossLootDrop/BossPhaseOverlay/BossSection/DamageNumber/AdventurePath/EnemySprite` 等旧战斗组件保留在磁盘上但已无引用，后续可安全删除。

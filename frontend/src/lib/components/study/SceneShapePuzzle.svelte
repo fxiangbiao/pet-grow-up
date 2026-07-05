@@ -5,11 +5,13 @@
   let {
     question,
     sessionId,
-    onComplete
+    onComplete,
+    preview = false
   }: {
     question: QuestionDTO;
     sessionId: number;
     onComplete: (result: AnswerResult) => void;
+    preview?: boolean;
   } = $props();
 
   // ── Shape definitions ──
@@ -202,6 +204,7 @@
   }
 
   async function handleAllFilled() {
+    if (preview) return;
     submitted = true;
     try {
       // Auto-submit with all slots filled correctly

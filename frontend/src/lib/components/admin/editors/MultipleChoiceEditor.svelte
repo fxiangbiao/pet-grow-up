@@ -9,30 +9,59 @@
     onUpdate?: (data: Partial<CreateQuestion>) => void;
   } = $props();
 
-  let options = $state<{ key: string; text: string }[]>([]);
   let parsed = $derived.by(() => {
     try {
-      return questionData.options ? JSON.parse(questionData.options) as { key: string; text: string }[] : [];
-    } catch { return []; }
-  });
-
-  $effect(() => {
-    const arr = parsed;
-    if (arr.length > 0) options = arr;
-    else options = [
+      const arr = questionData.options ? JSON.parse(questionData.options) as { key: string; text: string }[] : [];
+      if (arr.length >= 2) return arr;
+    } catch { /* fall through */ }
+    // Default: 4 empty options
+    return [
       { key: 'A', text: '' }, { key: 'B', text: '' },
       { key: 'C', text: '' }, { key: 'D', text: '' }
     ];
   });
 
-  function updateOptions() {
-    onUpdate?.({ options: JSON.stringify(options.filter(o => o.text.trim())) });
+  // Use local copy for two-way binding without $effect loop
+  let options = $state<{ key: string; text: string }[]>([]);
+  let init = $state(false);
+  if (!init) {
+    init = true;
+    options = [...parsed];
+  }
+
+  // Sync external changes (e.g. loading saved question) into local state
+  $effect(() => {
+    const ext = JSON.stringify(parsed);
+    const loc = JSON.stringify(options);
+    if (ext !== loc) {
+      options = [...parsed];
+    }
+  });
+
+  function syncToParent() {
+    // Always save all options including empty ones (user can add blanks then fill them)
+    onUpdate?.({ options: JSON.stringify(options) });
+  }
+
+  function updateText(idx: number, text: string) {
+    options[idx].text = text;
+    options = options; // trigger reactivity
+    syncToParent();
   }
 
   function addOption() {
+    if (options.length >= 6) return;
     const nextKey = String.fromCharCode(65 + options.length);
     options = [...options, { key: nextKey, text: '' }];
-    updateOptions();
+    syncToParent();
+  }
+
+  function removeOption(idx: number) {
+    if (options.length <= 2) return; // minimum 2 options
+    options = options.filter((_, i) => i !== idx);
+    // Reassign keys
+    options = options.map((o, i) => ({ ...o, key: String.fromCharCode(65 + i) }));
+    syncToParent();
   }
 </script>
 
@@ -50,13 +79,19 @@
         <span class="w-6 text-center text-sm font-medium text-gray-500">{opt.key}</span>
         <input type="text" class="flex-1 px-3 py-1 border rounded text-sm"
                value={opt.text}
-               oninput={(e: Event) => { options[i].text = (e.target as HTMLInputElement).value; updateOptions(); }}
+               oninput={(e: Event) => updateText(i, (e.target as HTMLInputElement).value)}
                placeholder="选项 {opt.key} 文本"/>
+        {#if options.length > 2}
+          <button onclick={() => removeOption(i)} class="text-red-400 hover:text-red-600 text-sm" title="删除此选项">✕</button>
+        {/if}
       </div>
     {/each}
-    {#if options.length < 6}
-      <button onclick={addOption} class="text-xs text-indigo-500 hover:text-indigo-700 mt-1">+ 添加选项</button>
-    {/if}
+    <div class="flex gap-2 mt-1">
+      {#if options.length < 6}
+        <button onclick={addOption} class="text-xs text-indigo-500 hover:text-indigo-700">+ 添加选项</button>
+      {/if}
+      <span class="text-xs text-gray-400">（最少 2 个，最多 6 个）</span>
+    </div>
   </div>
   <div>
     <label class="block text-sm font-medium text-gray-700 mb-1">正确答案</label>

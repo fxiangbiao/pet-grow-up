@@ -6,6 +6,9 @@ import com.petgrowup.common.exception.BusinessException;
 import com.petgrowup.achievement.service.AchievementService;
 import com.petgrowup.energy.service.EnergyService;
 import com.petgrowup.story.service.StoryService;
+import com.petgrowup.spirit.mapper.SpiritAccessoryMapper;
+import com.petgrowup.shop.mapper.ItemDefMapper;
+import com.petgrowup.shop.mapper.UserItemMapper;
 import com.petgrowup.spirit.dto.ChooseSpiritRequest;
 import com.petgrowup.spirit.dto.PersonalityDTO;
 import com.petgrowup.spirit.entity.LearningSpirit;
@@ -44,12 +47,18 @@ class SpiritServiceTest {
     private ObjectMapper objectMapper;
     @Mock
     private StoryService storyService;
+    @Mock
+    private SpiritAccessoryMapper accessoryMapper;
+    @Mock
+    private ItemDefMapper itemDefMapper;
+    @Mock
+    private UserItemMapper userItemMapper;
 
     private SpiritService spiritService;
 
     @BeforeEach
     void setUp() {
-        spiritService = new SpiritService(spiritMapper, speciesMapper, userMapper, energyService, achievementService, objectMapper, storyService);
+        spiritService = new SpiritService(spiritMapper, speciesMapper, userMapper, energyService, achievementService, objectMapper, storyService, accessoryMapper, itemDefMapper, userItemMapper);
     }
 
     @Test

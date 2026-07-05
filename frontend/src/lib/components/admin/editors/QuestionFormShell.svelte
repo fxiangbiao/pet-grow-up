@@ -5,6 +5,11 @@
   import FillBlankEditor from './FillBlankEditor.svelte';
   import MathInputEditor from './MathInputEditor.svelte';
   import PoemSequenceEditor from './PoemSequenceEditor.svelte';
+  import SceneMatchEditor from './SceneMatchEditor.svelte';
+  import SceneCharBuildEditor from './SceneCharBuildEditor.svelte';
+  import VocabMatchEditor from './VocabMatchEditor.svelte';
+  import SceneClockEditor from './SceneClockEditor.svelte';
+  import SceneShopEditor from './SceneShopEditor.svelte';
   import GenericEditor from './GenericEditor.svelte';
 
   let {
@@ -42,7 +47,8 @@
     SCENE_TAP: '泡泡点击', MULTIPLE_CHOICE: '选择题', FILL_BLANK: '填空题',
     SCENE_MATCH: '图形配对', MATH_INPUT: '数字输入', SCENE_CHAR_BUILD: '汉字拼装',
     SCENE_PINYIN: '拼音泡泡', SCENE_DRAG: '拖拽凑十', VOCAB_MATCH: '单词配对',
-    SCENE_CLOCK: '拨钟表', SCENE_SHOP: '宠物商店', POEM_SEQUENCE: '诗句排序'
+    SCENE_CLOCK: '拨钟表', SCENE_SHOP: '宠物商店', POEM_SEQUENCE: '诗句排序',
+    SCENE_SHAPE_PUZZLE: '拼图工坊', SCENE_WHACK_MOLE: '打地鼠'
   };
 </script>
 
@@ -89,14 +95,27 @@
 
   <!-- Type-specific editor -->
   <div class="border-t pt-4">
-    {#if questionData.questionType === 'MULTIPLE_CHOICE' || questionData.questionType === 'SCENE_TAP'}
+    {#if questionData.questionType === 'MULTIPLE_CHOICE' || questionData.questionType === 'SCENE_TAP' || questionData.questionType === 'SCENE_PINYIN' || questionData.questionType === 'SCENE_WHACK_MOLE'}
       <MultipleChoiceEditor questionData={questionData as any} onUpdate={onUpdate} />
     {:else if questionData.questionType === 'FILL_BLANK'}
       <FillBlankEditor questionData={questionData as any} onUpdate={onUpdate} />
-    {:else if questionData.questionType === 'MATH_INPUT'}
+    {:else if questionData.questionType === 'MATH_INPUT' || questionData.questionType === 'SCENE_DRAG'}
       <MathInputEditor questionData={questionData as any} onUpdate={onUpdate} />
     {:else if questionData.questionType === 'POEM_SEQUENCE'}
       <PoemSequenceEditor questionData={questionData as any} onUpdate={onUpdate} />
+    {:else if questionData.questionType === 'SCENE_MATCH'}
+      <SceneMatchEditor questionData={questionData as any} onUpdate={onUpdate} />
+    {:else if questionData.questionType === 'SCENE_CHAR_BUILD'}
+      <SceneCharBuildEditor questionData={questionData as any} onUpdate={onUpdate} />
+    {:else if questionData.questionType === 'VOCAB_MATCH'}
+      <VocabMatchEditor questionData={questionData as any} onUpdate={onUpdate} />
+    {:else if questionData.questionType === 'SCENE_CLOCK'}
+      <SceneClockEditor questionData={questionData as any} onUpdate={onUpdate} />
+    {:else if questionData.questionType === 'SCENE_SHOP'}
+      <SceneShopEditor questionData={questionData as any} onUpdate={onUpdate} />
+    {:else if questionData.questionType === 'SCENE_SHAPE_PUZZLE'}
+      <GenericEditor questionData={questionData as any} onUpdate={onUpdate}
+        typeLabel="拼图工坊" />
     {:else}
       <GenericEditor questionData={questionData as any} onUpdate={onUpdate}
         typeLabel={typeOptions[questionData.questionType] || questionData.questionType} />

@@ -7,15 +7,21 @@
   let filter = $state<QuestionFilter>({ page: 1, size: 20 });
   let pageData = $state<QuestionPage | null>(null);
   let loading = $state(false);
+  let errorMsg = $state<string | null>(null);
   let confirmDelete = $state<number | null>(null);
 
   onMount(() => { loadQuestions(); });
 
   async function loadQuestions() {
     loading = true;
+    errorMsg = null;
     try {
       pageData = await adminApi.listQuestions(filter);
-    } catch {
+      if (!pageData || pageData.items.length === 0) {
+        errorMsg = '暂无题目数据。请确认：\n1. 后端服务已启动 (mvn spring-boot:run)\n2. 数据库已初始化 (data.sql 含 491 题)\n3. 检查浏览器控制台 (F12) 是否有网络错误';
+      }
+    } catch (e: any) {
+      errorMsg = e.message || '加载失败';
       pageData = null;
     } finally {
       loading = false;
@@ -46,7 +52,7 @@
       SCENE_TAP: '泡泡点击', MULTIPLE_CHOICE: '选择题', FILL_BLANK: '填空题',
       SCENE_MATCH: '图形配对', MATH_INPUT: '数字输入', SCENE_CHAR_BUILD: '汉字拼装',
       SCENE_PINYIN: '拼音泡泡', SCENE_DRAG: '拖拽凑十', VOCAB_MATCH: '单词配对',
-      SCENE_CLOCK: '拨钟表', SCENE_SHOP: '宠物商店', POEM_SEQUENCE: '诗句排序'
+      SCENE_CLOCK: '拨钟表', SCENE_SHOP: '宠物商店', POEM_SEQUENCE: '诗句排序', SCENE_SHAPE_PUZZLE: '拼图工坊', SCENE_WHACK_MOLE: '打地鼠'
     };
     return map[type] || type;
   }
@@ -98,6 +104,8 @@
         <option value="SCENE_CLOCK">拨钟表</option>
         <option value="SCENE_SHOP">宠物商店</option>
         <option value="POEM_SEQUENCE">诗句排序</option>
+        <option value="SCENE_SHAPE_PUZZLE">拼图工坊</option>
+        <option value="SCENE_WHACK_MOLE">打地鼠</option>
       </select>
       <select class="px-3 py-1.5 border rounded-lg text-sm" onchange={(e: Event) => { const v = (e.target as HTMLSelectElement).value; applyFilter({ difficulty: v ? Number(v) : undefined }); }}>
         <option value="">全部难度</option>
@@ -170,6 +178,10 @@
           </div>
         </div>
       {/if}
+    {:else if errorMsg}
+      <div class="text-center py-12 px-4">
+        <div class="text-red-500 text-sm whitespace-pre-line bg-red-50 rounded-lg p-4 inline-block text-left max-w-lg">{errorMsg}</div>
+      </div>
     {:else}
       <div class="text-center text-gray-400 py-12">暂无题目</div>
     {/if}

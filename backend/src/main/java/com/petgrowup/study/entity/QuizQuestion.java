@@ -29,16 +29,16 @@ public class QuizQuestion {
 
     private Integer difficulty;
 
-    @Column(value = "question_text", isLarge = true)
+    @Column(value = "question_text")
     private String questionText;
 
-    @Column(value = "options", isLarge = true)
+    @Column(value = "options")
     private String options;
 
-    @Column(value = "correct_answer", isLarge = true)
+    @Column(value = "correct_answer")
     private String correctAnswer;
 
-    @Column(isLarge = true)
+    @Column
     private String explanation;
 
     private Integer points;

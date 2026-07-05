@@ -5,11 +5,13 @@
   let {
     question,
     sessionId,
-    onComplete
+    onComplete,
+    preview = false
   }: {
     question: QuestionDTO;
     sessionId: number;
     onComplete: (result: AnswerResult) => void;
+    preview?: boolean;
   } = $props();
 
   // ── Valid combinations (部首 + 声旁 = 汉字) ──
@@ -153,6 +155,7 @@
   }
 
   async function handleCorrect() {
+    if (preview) return;
     submitted = true;
     showResult = true;
     showGlow = true;

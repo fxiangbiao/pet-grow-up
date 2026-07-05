@@ -11,17 +11,45 @@
 
   let lines = $state<string[]>([]);
   let correctOrder = $state<string>('');
+  let init = $state(false);
 
-  $effect(() => {
+  if (!init) {
+    init = true;
     try { lines = questionData.options ? JSON.parse(questionData.options) : []; } catch { lines = []; }
     correctOrder = questionData.correctAnswer || '';
-  });
-
-  function updateLines() {
-    onUpdate?.({ options: JSON.stringify(lines.filter(l => l.trim())) });
   }
 
-  function addLine() { lines = [...lines, '']; }
+  // Sync from parent (e.g., loading saved question)
+  $effect(() => {
+    const extOpts = questionData.options || '[]';
+    const extAns = questionData.correctAnswer || '';
+    if (JSON.stringify(lines) !== extOpts) {
+      try { lines = JSON.parse(extOpts); } catch { lines = []; }
+    }
+    if (correctOrder !== extAns) {
+      correctOrder = extAns;
+    }
+  });
+
+  function syncToParent() {
+    onUpdate?.({ options: JSON.stringify(lines), correctAnswer: correctOrder });
+  }
+
+  function addLine() {
+    lines = [...lines, ''];
+    syncToParent();
+  }
+
+  function updateLine(idx: number, text: string) {
+    lines[idx] = text;
+    lines = lines;
+    syncToParent();
+  }
+
+  function removeLine(idx: number) {
+    lines = lines.filter((_, j) => j !== idx);
+    syncToParent();
+  }
 </script>
 
 <div class="space-y-4">
@@ -39,9 +67,9 @@
         <span class="text-xs text-gray-400 w-6">{i + 1}.</span>
         <input type="text" class="flex-1 px-3 py-1 border rounded text-sm"
                value={line}
-               oninput={(e: Event) => { lines[i] = (e.target as HTMLInputElement).value; updateLines(); }}
+               oninput={(e: Event) => updateLine(i, (e.target as HTMLInputElement).value)}
                placeholder="诗句行"/>
-        <button onclick={() => { lines = lines.filter((_, j) => j !== i); updateLines(); }}
+        <button onclick={() => removeLine(i)}
                 class="text-red-400 hover:text-red-600 text-xs">✕</button>
       </div>
     {/each}
@@ -51,7 +79,7 @@
     <label class="block text-sm font-medium text-gray-700 mb-1">正确顺序（逗号分隔的索引，从 1 开始）</label>
     <input type="text" class="w-full px-3 py-1.5 border rounded-lg text-sm"
            value={correctOrder}
-           oninput={(e: Event) => { correctOrder = (e.target as HTMLInputElement).value; onUpdate?.({ correctAnswer: correctOrder }); }}
+           oninput={(e: Event) => { correctOrder = (e.target as HTMLInputElement).value; syncToParent(); }}
            placeholder="例如：1,2,3,4"/>
   </div>
 </div>

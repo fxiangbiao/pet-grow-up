@@ -4,6 +4,7 @@
   import { page } from '$app/stores';
   import { adminApi, type CreateQuestion } from '$lib/api/admin';
   import QuestionFormShell from '$lib/components/admin/editors/QuestionFormShell.svelte';
+  import AdminQuestionPreview from '$lib/components/admin/AdminQuestionPreview.svelte';
   import { toastStore } from '$lib/stores/toast.svelte';
 
   let isNew = $derived($page.params.id === 'new');
@@ -85,6 +86,15 @@
   {#if loading}
     <div class="text-center text-gray-400 py-12">加载中...</div>
   {:else}
-    <QuestionFormShell questionData={formData} onUpdate={handleUpdate} />
+    <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+      <div class="xl:col-span-3">
+        <QuestionFormShell questionData={formData} onUpdate={handleUpdate} />
+      </div>
+      <div class="xl:col-span-2">
+        <div class="sticky top-4">
+          <AdminQuestionPreview questionData={formData} />
+        </div>
+      </div>
+    </div>
   {/if}
 </div>

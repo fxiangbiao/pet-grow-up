@@ -5,11 +5,13 @@
   let {
     question,
     sessionId,
-    onComplete
+    onComplete,
+    preview = false
   }: {
     question: QuestionDTO;
     sessionId: number;
     onComplete: (result: AnswerResult) => void;
+    preview?: boolean;
   } = $props();
 
   // ── Bill definitions ──
@@ -122,6 +124,7 @@
 
   async function handlePay() {
     if (!isExact || submitted) return;
+    if (preview) return;
     submitted = true;
     soundManager.playPurchase();
 
