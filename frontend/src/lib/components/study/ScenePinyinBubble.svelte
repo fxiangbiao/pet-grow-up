@@ -5,11 +5,13 @@
   let {
     question,
     sessionId,
-    onComplete
+    onComplete,
+    preview = false
   }: {
     question: QuestionDTO;
     sessionId: number;
     onComplete: (result: AnswerResult) => void;
+    preview?: boolean;
   } = $props();
 
   // ── Parse options ──
@@ -101,14 +103,16 @@
     }
   }
 
-  // Auto-speak on mount
+  // Auto-speak on mount (skip in preview mode)
   $effect(() => {
+    if (preview) return;
     const t = setTimeout(() => { speakPinyin(); }, 300);
     return () => clearTimeout(t);
   });
 
   async function handleTap(key: string) {
     if (submitted) return;
+    if (preview) return;
 
     // Find and pop the bubble
     const bubble = bubbles.find(b => b.opt.key === key);

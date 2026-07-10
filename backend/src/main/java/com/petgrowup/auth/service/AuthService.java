@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+
 @Service
 public class AuthService {
 
@@ -45,6 +47,7 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         User user = userMapper.selectOneByQuery(QueryWrapper.create().eq("username", request.getUsername()));
 
@@ -56,7 +59,32 @@ public class AuthService {
             throw new BadCredentialsException("Invalid username or password");
         }
 
+        updateLoginStreak(user);
         return buildAuthResponse(user);
+    }
+
+    private void updateLoginStreak(User user) {
+        LocalDate today = LocalDate.now();
+        LocalDate lastLogin = user.getLastLoginDate();
+
+        int streak;
+        if (lastLogin == null) {
+            streak = 1;
+        } else if (lastLogin.equals(today)) {
+            streak = user.getConsecutiveLoginDays() != null ? user.getConsecutiveLoginDays() : 1;
+            user.setConsecutiveLoginDays(streak);
+            user.setLastLoginDate(today);
+            userMapper.update(user);
+            return;
+        } else if (lastLogin.equals(today.minusDays(1))) {
+            streak = (user.getConsecutiveLoginDays() != null ? user.getConsecutiveLoginDays() : 0) + 1;
+        } else {
+            streak = 1;
+        }
+
+        user.setConsecutiveLoginDays(streak);
+        user.setLastLoginDate(today);
+        userMapper.update(user);
     }
 
     public AuthResponse refresh(RefreshTokenRequest request) {
@@ -74,7 +102,8 @@ public class AuthService {
     }
 
     private AuthResponse buildAuthResponse(User user) {
-        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getUsername());
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getUsername(),
+                user.getRole() != null ? user.getRole() : "STUDENT");
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
 
         UserDTO userDTO = UserDTO.builder()
@@ -85,6 +114,10 @@ public class AuthService {
                 .currentEnergy(user.getCurrentEnergy())
                 .currentSpiritId(user.getCurrentSpiritId())
                 .consecutiveStudyDays(user.getConsecutiveStudyDays())
+                .consecutiveLoginDays(user.getConsecutiveLoginDays())
+                .dailyRewardClaimed(user.getDailyRewardClaimedDate() != null
+                        && user.getDailyRewardClaimedDate().equals(LocalDate.now()))
+                .role(user.getRole() != null ? user.getRole() : "STUDENT")
                 .build();
 
         return AuthResponse.builder()

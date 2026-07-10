@@ -5,11 +5,13 @@
   let {
     question,
     sessionId,
-    onComplete
+    onComplete,
+    preview = false
   }: {
     question: QuestionDTO;
     sessionId: number;
     onComplete: (result: AnswerResult) => void;
+    preview?: boolean;
   } = $props();
 
   // ── Parse numeric options ──
@@ -113,8 +115,9 @@
     if (countdownTimer) clearInterval(countdownTimer);
   }
 
-  // Start on mount
+  // Start on mount (skip in preview mode)
   $effect(() => {
+    if (preview) return;
     startMoleCycle();
     startCountdown();
     return cleanup;
@@ -122,6 +125,7 @@
 
   async function handleTap(optionKey: string) {
     if (submitted) return;
+    if (preview) return;
     submitted = true;
     timerActive = false;
     cleanup();

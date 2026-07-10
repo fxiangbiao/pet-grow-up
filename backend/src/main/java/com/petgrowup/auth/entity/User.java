@@ -52,6 +52,20 @@ public class User {
     @Column("last_study_date")
     private LocalDate lastStudyDate;
 
+    @Column("last_login_date")
+    private LocalDate lastLoginDate;
+
+    @Column("consecutive_login_days")
+    @Builder.Default
+    private Integer consecutiveLoginDays = 0;
+
+    @Column("daily_reward_claimed_date")
+    private LocalDate dailyRewardClaimedDate;
+
+    @Column("role")
+    @Builder.Default
+    private String role = "STUDENT";
+
     @Column(value = "created_at", onInsertValue = "NOW()")
     private LocalDateTime createdAt;
 

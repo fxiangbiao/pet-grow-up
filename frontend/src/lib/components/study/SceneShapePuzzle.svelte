@@ -5,11 +5,13 @@
   let {
     question,
     sessionId,
-    onComplete
+    onComplete,
+    preview = false
   }: {
     question: QuestionDTO;
     sessionId: number;
     onComplete: (result: AnswerResult) => void;
+    preview?: boolean;
   } = $props();
 
   // ── Shape definitions ──
@@ -202,6 +204,7 @@
   }
 
   async function handleAllFilled() {
+    if (preview) return;
     submitted = true;
     try {
       // Auto-submit with all slots filled correctly
@@ -285,10 +288,15 @@
       <div class="flex flex-wrap items-end justify-center gap-3">
         {#each targets as slot (slot.id)}
           <div
+            role="button"
+            tabindex={slot.filled ? -1 : 0}
             ondrop={(e: DragEvent) => handleDrop(slot.id)}
             ondragover={(e: DragEvent) => handleDragOver(e, slot.id)}
             ondragleave={() => { dragOverSlotId = null; }}
             onclick={() => tapSlot(slot.id)}
+            onkeydown={(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapSlot(slot.id); }
+            }}
             class={[
               'flex items-center justify-center rounded-xl border-2 border-dashed transition-all duration-300',
               slot.filled ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-amber-400',

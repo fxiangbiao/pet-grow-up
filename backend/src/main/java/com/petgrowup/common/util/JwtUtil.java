@@ -25,14 +25,20 @@ public class JwtUtil {
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
-    public String generateAccessToken(Long userId, String username) {
+    public String generateAccessToken(Long userId, String username, String role) {
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("username", username)
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
                 .signWith(secretKey)
                 .compact();
+    }
+
+    // Backward-compatible overload for callers that don't pass role yet
+    public String generateAccessToken(Long userId, String username) {
+        return generateAccessToken(userId, username, "STUDENT");
     }
 
     public String generateRefreshToken(Long userId) {
@@ -46,6 +52,10 @@ public class JwtUtil {
 
     public Long extractUserId(String token) {
         return Long.parseLong(parseClaims(token).getSubject());
+    }
+
+    public String extractRole(String token) {
+        return parseClaims(token).get("role", String.class);
     }
 
     public boolean validateToken(String token) {

@@ -4,11 +4,13 @@
   let {
     question,
     sessionId,
-    onComplete
+    onComplete,
+    preview = false
   }: {
     question: QuestionDTO;
     sessionId: number;
     onComplete: (result: AnswerResult) => void;
+    preview?: boolean;
   } = $props();
 
   const target = 10;
@@ -179,6 +181,7 @@
   }
 
   async function doSubmit() {
+    if (preview) return;
     try {
       const result = await submitAnswer({
         sessionId,

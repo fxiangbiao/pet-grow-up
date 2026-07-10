@@ -75,4 +75,11 @@ public class StudySession {
 
     @Column("completed_at")
     private LocalDateTime completedAt;
+
+    @Column("random_event_key")
+    private String randomEventKey;
+
+    @Column("random_event_bonus_energy")
+    @Builder.Default
+    private Long randomEventBonusEnergy = 0L;
 }

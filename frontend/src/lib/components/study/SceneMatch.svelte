@@ -5,11 +5,13 @@
   let {
     question,
     sessionId,
-    onComplete
+    onComplete,
+    preview = false
   }: {
     question: QuestionDTO;
     sessionId: number;
     onComplete: (result: AnswerResult) => void;
+    preview?: boolean;
   } = $props();
 
   // ── Shape definitions ──
@@ -73,6 +75,7 @@
 
   async function handleSelect(key: string) {
     if (submitted) return;
+    if (preview) return;
     selected = key;
     submitted = true;
     soundManager.playClick();

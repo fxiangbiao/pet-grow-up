@@ -5,11 +5,13 @@
   let {
     question,
     sessionId,
-    onComplete
+    onComplete,
+    preview = false
   }: {
     question: QuestionDTO;
     sessionId: number;
     onComplete: (result: AnswerResult) => void;
+    preview?: boolean;
   } = $props();
 
   // ── Clock state ──
@@ -112,6 +114,7 @@
   }
 
   async function handleCorrect() {
+    if (preview) return;
     submitted = true;
     soundManager.playClockChime();
 

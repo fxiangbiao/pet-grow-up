@@ -5,11 +5,13 @@
   let {
     question,
     sessionId,
-    onComplete
+    onComplete,
+    preview = false
   }: {
     question: QuestionDTO;
     sessionId: number;
     onComplete: (result: AnswerResult) => void;
+    preview?: boolean;
   } = $props();
 
   // ── Parse options (multi-format, supports optional `color` field) ──
@@ -85,6 +87,7 @@
 
   async function handleTap(key: string) {
     if (submitted) return;
+    if (preview) return;
     selected = key;
     submitted = true;
     soundManager.playClick();

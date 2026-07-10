@@ -5,6 +5,7 @@ import type { UserDTO } from '$lib/types/api';
 let user = $state<UserDTO | null>(null);
 let isAuthenticated = $derived(user !== null);
 let hasSpirit = $derived(user?.currentSpiritId != null);
+let isAdmin = $derived(user?.role === 'ADMIN');
 
 function loadFromStorage() {
   if (typeof localStorage === 'undefined') return;
@@ -38,6 +39,7 @@ export const authStore = {
   get user() { return user; },
   get isAuthenticated() { return isAuthenticated; },
   get hasSpirit() { return hasSpirit; },
+  get isAdmin() { return isAdmin; },
 
   login(userData: UserDTO, token: string) {
     user = userData;

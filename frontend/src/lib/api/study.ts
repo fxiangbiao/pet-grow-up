@@ -48,6 +48,19 @@ export interface AnswerResult {
   sceneRewardCount?: number;
 }
 
+export interface RandomEventInfo {
+  eventKey: string;
+  name: string;
+  description: string;
+  eventType: string;
+  iconUrl: string;
+  displayText: string;
+  bonusEnergy: number;
+  rewardItemName: string;
+  affectionGained: number;
+  isDoubleReward: boolean;
+}
+
 export interface SessionResult {
   sessionId: number;
   totalQuestions: number;
@@ -59,6 +72,7 @@ export interface SessionResult {
   maxCombo: number;
   bossDefeated: boolean;
   comboBonusEnergy: number;
+  randomEvent?: RandomEventInfo | null;
 }
 
 export function getSubjectsProgress(): Promise<SubjectProgress[]> {
