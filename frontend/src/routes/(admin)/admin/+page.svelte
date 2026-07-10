@@ -3,6 +3,6 @@
   import { goto } from '$app/navigation';
 
   $effect(() => {
-    if (browser) goto('/admin/questions');
+    if (browser) goto('/admin/statistics');
   });
 </script>

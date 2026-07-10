@@ -35,6 +35,11 @@
     <!-- Sidebar -->
     <nav class="w-56 min-h-[calc(100vh-53px)] bg-white border-r border-gray-200 p-4 flex-shrink-0">
       <div class="space-y-1">
+        <a href="/admin/statistics"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/statistics') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          📊 统计仪表盘
+        </a>
         <a href="/admin/questions"
            class="block px-3 py-2 rounded-lg text-sm font-medium transition
              {currentPath.startsWith('/admin/questions') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
@@ -45,9 +50,16 @@
              {currentPath.startsWith('/admin/nodes') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
           🗂️ 知识节点
         </a>
-        <div class="px-3 py-2 text-xs text-gray-400 mt-4 uppercase tracking-wider">更多（规划中）</div>
-        <span class="block px-3 py-2 rounded-lg text-sm text-gray-300 cursor-not-allowed">👥 用户管理</span>
-        <span class="block px-3 py-2 rounded-lg text-sm text-gray-300 cursor-not-allowed">🛒 商品管理</span>
+        <a href="/admin/users"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/users') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          👥 用户管理
+        </a>
+        <a href="/admin/items"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/items') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          🛒 商品管理
+        </a>
       </div>
     </nav>
 

@@ -28,6 +28,7 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 - **Sprint F Layer 3（2026-07-04）**：精灵 AI — 自主行为状态机（10 种状态：idle/wander/sit/read/play/sleep），基于家具存在性和快乐度的加权随机选择，CSS transition 平滑移动，行为标签指示器。
 - **Sprint G（2026-07-04～05）**：管理后台 Phase 1 — 角色系统（STUDENT/ADMIN）+ JWT role claim + Spring Security `@PreAuthorize`、题库 CRUD API（列表/筛选/分页/创建/编辑/删除/批量导入）、知识节点树 API、Admin SvelteKit 路由组 `(admin)/admin/*`、12 种题型专属编辑器 + 实时预览系统（`{#key}` 强制重挂载 + `preview` prop 禁用交互）、问题修复（MultipleChoiceEditor 选项添加、PoemSequenceEditor 同步循环、题库列表 `isLarge` 导致 null）。
   v2 设计方案见 `游戏化学习系统设计方案-v2.md`。
+- **Sprint H（2026-07-10）**：管理后台 Phase 2 — 用户管理（列表/筛选/角色切换/重置密码，含自我保护 + 最后管理员保护）、商品管理 CRUD（`item_def` 全字段编辑 + 删除引用检查）、统计仪表盘（8 概览指标 + 学习趋势柱状图 + 能量流转双柱图 + 按来源分布 + 成就解锁率表格，CSS 柱状图无图表库依赖）、提取 `Pagination.svelte` 共享组件 + `constants.ts` 共享 label 映射、修复 `item_def` room_theme INSERT schema 漂移（不存在的列名 `sub_category/price_energy/price_points/is_shop_available/sort_order` → 改用与 DDL 一致的 `effect_type/effect_value/price/is_purchasable/display_order`）。
 
 ## 已实现子系统
 
@@ -48,7 +49,7 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 | — | 用户中心 | `user` | `lib/api/user.ts` | ✅ |
 | — | 惊喜系统 | `daily` + `event` | `lib/components/daily/`, `lib/components/study/RandomEventOverlay.svelte` | ✅ |
 | — | 宠物小屋 | `room` | `routes/app/pet-room/`, `lib/components/room/`, `lib/room/` | ✅ |
-| — | 管理后台 | `admin` | `routes/(admin)/admin/`, `lib/components/admin/`, `lib/api/admin.ts` | ✅ Phase 1 |
+| — | 管理后台 | `admin` | `routes/(admin)/admin/`, `lib/components/admin/`, `lib/api/admin.ts` | ✅ Phase 2 |
 | **P2** | 时空裂隙系统 | — | — | ❌ 未实现 |
 
 ### 冒险模式（Sprint D 净化重构，核心玩法）
@@ -208,6 +209,53 @@ Layout 含 `isAdmin` 守卫（`authStore.isAdmin` → 否则 redirect `/app`）�
 - **`isLarge` 导致列表字段 null**：MyBatis-Flex `@Column(isLarge = true)` 在 `selectListByQuery` 中 JDBC 驱动返回 null（`selectOneById` 正常）→ 移除 `isLarge`（数据库列类型为 `text` 非 `longtext`）
 - **唯一约束 500**：`uk_quiz_node_question` 冲突 → `GlobalExceptionHandler` 新增 `DuplicateKeyException` → 409 + 中文提示
 
+### 管理后台 Phase 2（Sprint H）
+
+在 Phase 1 基础上新增用户管理、商品管理、统计仪表盘三个模块，复用 Phase 1 的后端分层约定（类级 `@PreAuthorize` + `ApiResponse` + `QueryWrapper` 分页 + `BusinessException`）和前端模式（`onMount` 加载 + `$state` 状态 + `adminApi` 调用）。
+
+**后端新增 API**（`/api/v1/admin`，全部 `@PreAuthorize("hasRole('ADMIN')")`）：
+
+| 模块 | 端点 | 说明 |
+|------|------|------|
+| 用户管理 | `GET /users?role=&keyword=&page=&size=` | 分页列表，keyword 模糊匹配 username/nickname/email |
+| | `GET /users/{id}` | 用户详情 |
+| | `PUT /users/{id}/role` | 修改角色（STUDENT↔ADMIN），禁止对自己操作、禁止降级最后一个 ADMIN |
+| | `POST /users/{id}/reset-password` | 重置密码（`PasswordEncoder` 加密，留空用默认 `pet123456`） |
+| 商品管理 | `GET /items?category=&keyword=&page=&size=` | 分页列表，按 display_order ASC |
+| | `GET /items/{id}` | 商品详情 |
+| | `POST /items` | 创建（`@Valid` + item_key 唯一校验） |
+| | `PUT /items/{id}` | 部分更新 |
+| | `DELETE /items/{id}` | 删除（删除前用 `userItemMapper` 检查引用，有用户持有则拒绝） |
+| 统计仪表盘 | `GET /statistics/overview` | 8 个概览指标（总用户/学生/管理员/题库/学习场次/能量产出/能量消耗/今日活跃） |
+| | `GET /statistics/study?days=7` | 学习趋势（每日场次 + 每日活跃 + 平均正确率） |
+| | `GET /statistics/energy?days=7` | 能量流转（每日产出/消耗 + 按来源分布） |
+| | `GET /statistics/achievements` | 成就解锁统计（解锁人数 + 总用户 + 解锁率） |
+
+**后端新文件**：
+- `admin/controller/` — `AdminUserController`、`AdminItemController`、`AdminStatisticsController`
+- `admin/service/` — `AdminUserService`、`AdminItemService`、`AdminStatisticsService`
+- `admin/dto/` — User/Item/Statistics 系列 DTO（含分页 DTO + RowDTO 嵌套静态类）
+- `admin/mapper/AdminStatisticsMapper` — `@Select` 注解的分组聚合查询（项目无 XML mapper，这是分组聚合的唯一方案）
+
+**聚合查询模式**：单值聚合用 `selectOneByQueryAs(select("COALESCE(SUM(col),0)"), Long.class)`（复用 `EnergyService.getBalance` 模式）；分组聚合用 `@Select` 返回 `List<Map>`，service 层映射为 DTO。
+
+**前端新增路由**（`(admin)/admin/`）：
+| 路由 | 说明 |
+|------|------|
+| `/admin/statistics` | 统计仪表盘（默认首页，CSS 柱状图无图表库依赖，7/14/30 天时间范围切换） |
+| `/admin/users` | 用户列表（filter + 分页 + 角色徽章） |
+| `/admin/users/[id]` | 用户详情（角色切换 + 重置密码，禁用对自己的操作） |
+| `/admin/items` | 商品列表（filter + 分页 + 分类徽章） |
+| `/admin/items/[id]` | 商品创建/编辑（`id='new'` 同页，内联表单 + 删除确认） |
+
+**前端共享组件**：
+- `lib/components/admin/Pagination.svelte` — 提取的分页组件（±2 窗口 + 省略号），questions 页已改用
+- `lib/components/admin/constants.ts` — 共享 label 映射（USER_ROLE/ITEM_CATEGORY/EFFECT_TYPE/ACHIEVEMENT_CATEGORY/ACHIEVEMENT_RARITY/ENERGY_SOURCE），消除重复 map
+- `lib/api/admin.ts` — 追加用户/商品/统计三组 API 函数 + TS 接口
+- `(admin)/+layout.svelte` — 侧边栏 5 个导航项（统计仪表盘/题库/知识节点/用户/商品），移除"规划中"占位符
+
+**Bug 修复**：`data.sql` 中 room_theme 的 `INSERT IGNORE INTO item_def` 引用了 5 个不存在的列（`sub_category, price_energy, price_points, is_shop_available, sort_order`），改为与 DDL 一致的列名（`effect_type, effect_value, price, is_purchasable, display_order`），运行时不再报错。
+
 ### 音频系统（Sprint B 柔和化升级）
 
 `frontend/src/lib/audio/sound-manager.ts` — Web Audio API 合成，无外部音频文件依赖。
@@ -307,10 +355,9 @@ cd frontend && npm install && npm run dev
 
 ## 待办与风险
 
-- **测试覆盖薄弱**：仅 5 个测试文件，集中在 5 个模块，其余 10 个业务模块无测试。Admin 模块无测试。
+- **测试覆盖薄弱**：仅 5 个测试文件，集中在 5 个模块，其余 10 个业务模块无测试。Admin 模块 Phase 1/2 均无测试（后端编译已验证，前端 `npm run build` 通过，但缺少单元/集成测试）。
 - **未容器化后端/前端**：`docker-compose.yml` 仅含 MySQL，无应用镜像与发布流程。
 - **P2 时空裂隙系统未实现**：设计文档中唯一缺失的子系统。
-- **管理后台 Phase 2 待实施**：用户管理、商品管理、数据统计仪表盘。
 - **SCENE_SHAPE_PUZZLE 仍用 GenericEditor**：唯一未配有专属编辑器的题型，目前用原生 JSON 输入。
 - **题库需持续对标课标**：当前 502 题覆盖 G1-G3，后续需扩展 G4-G6 及更多题型变体。
 - **知识节点 grade_level 未在 API 暴露**：前端目前未按年级筛选节点，后续需在 SubjectWorld API 中增加年级过滤。
