@@ -178,6 +178,17 @@ INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, 
 ((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'MATH_INPUT', 2, '8 + 5 = ?', NULL, '13', '8+5=13，8和2凑成10，加剩下的3', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'MATH_INPUT', 2, '16 - 7 = ?', NULL, '9', '16-7=9，破十法：10-7=3，3+6=9', 10);
 
+-- Math: SCENE_WHACK_MOLE (打地鼠) for math_addsub20 — 20以内加减法
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_WHACK_MOLE', 2, '打地鼠！12 + 5 = ?', '[{"key":"A","text":"15"},{"key":"B","text":"17"},{"key":"C","text":"19"}]', 'B', '12+5=17，十位不变个位相加', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_WHACK_MOLE', 2, '打地鼠！7 + 6 = ?', '[{"key":"A","text":"12"},{"key":"B","text":"13"},{"key":"C","text":"14"}]', 'B', '7+6=13，凑十法：7+3=10，10+3=13', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_WHACK_MOLE', 2, '打地鼠！15 - 8 = ?', '[{"key":"A","text":"6"},{"key":"B","text":"7"},{"key":"C","text":"8"}]', 'B', '15-8=7，破十法：10-8=2，2+5=7', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_WHACK_MOLE', 2, '打地鼠！9 + 3 = ?', '[{"key":"A","text":"11"},{"key":"B","text":"12"},{"key":"C","text":"13"}]', 'B', '9+3=12，凑十法：9+1=10，10+2=12', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_WHACK_MOLE', 2, '打地鼠！18 - 9 = ?', '[{"key":"A","text":"8"},{"key":"B","text":"9"},{"key":"C","text":"10"}]', 'B', '18-9=9，破十法：10-9=1，1+8=9', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_WHACK_MOLE', 2, '打地鼠！6 + 8 = ?', '[{"key":"A","text":"13"},{"key":"B","text":"14"},{"key":"C","text":"15"}]', 'B', '6+8=14，凑十法：8+2=10，10+4=14', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_WHACK_MOLE', 2, '打地鼠！11 - 4 = ?', '[{"key":"A","text":"6"},{"key":"B","text":"7"},{"key":"C","text":"8"}]', 'B', '11-4=7，破十法：10-4=6，6+1=7', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_addsub20'), 'SCENE_WHACK_MOLE', 2, '打地鼠！13 + 4 = ?', '[{"key":"A","text":"16"},{"key":"B","text":"17"},{"key":"C","text":"18"}]', 'B', '13+4=17，十位不变个位相加', 10);
+
 -- Math: More SCENE_MATCH for math_geometry (color + size matching)
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
 ((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_MATCH', 3, '哪个是红色的圆形？', '[{"key":"RED_CIRCLE","label":"红色圆形","cssShape":"circle","color":"rose"},{"key":"BLUE_SQUARE","label":"蓝色正方形","cssShape":"square","color":"sky"},{"key":"GREEN_TRIANGLE","label":"绿色三角形","cssShape":"triangle","color":"emerald"},{"key":"YELLOW_RECTANGLE","label":"黄色长方形","cssShape":"rectangle","color":"amber"}]', 'RED_CIRCLE', '红色+圆形=红色圆形', 10),
@@ -189,6 +200,12 @@ INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, 
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
 ((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_TAP', 3, '一个正方形有( )条边？', '[{"key":"A","text":"3"},{"key":"B","text":"4"},{"key":"C","text":"5"}]', 'B', '正方形有4条一样长的边', 10),
 ((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_TAP', 3, '一个三角形有( )个角？', '[{"key":"A","text":"2"},{"key":"B","text":"3"},{"key":"C","text":"4"}]', 'B', '三角形有3个角', 10);
+
+-- Math: SCENE_SHAPE_PUZZLE (拼图工坊) for math_geometry — 认识图形拼图
+INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_SHAPE_PUZZLE', 3, '拼图工坊：用正方形、三角形、长方形和圆形搭一座小房子！', '{"puzzleKey":"house"}', 'SQUARE,TRIANGLE,RECT,CIRCLE', '正方形做房身，三角形做屋顶，长方形做门，圆形做窗户。每种图形都有自己独特的形状！', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_SHAPE_PUZZLE', 3, '拼图工坊：用三角形和长方形搭一棵大树！', '{"puzzleKey":"tree"}', 'TRI1,TRI2,TRI3,RECT', '三个三角形叠成树冠，长方形做树干。大树由这些基本图形组成！', 10),
+((SELECT id FROM knowledge_node WHERE node_key = 'math_geometry'), 'SCENE_SHAPE_PUZZLE', 3, '拼图工坊：用长方形、圆形和正方形搭一辆小汽车！', '{"puzzleKey":"car"}', 'RECT1,CIRC1,CIRC2,SQUARE', '长方形做车身，两个圆形做车轮，正方形做窗户。汽车也是由图形组成的！', 10);
 
 -- Chinese: SCENE_TAP (汉字部首识别) for chinese_intro
 INSERT IGNORE INTO quiz_question (knowledge_node_id, question_type, difficulty, question_text, options, correct_answer, explanation, points) VALUES

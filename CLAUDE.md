@@ -18,7 +18,7 @@ v2 重构阶段。P0/P1 子系统全部落地，P2（时空裂隙）未实现。
 - Sprint 1（2026-06-29）：双路径「凑十法」Demo 对比，**选定 Svelte 路径继续**。
 - Sprint 2（2026-06-30）：场景组件扩充（SceneTap/SceneMatch）+ 题库 45→77 + 剧情模式接入场景题型。
 - Sprint A（2026-06-30）：6 个新场景组件 + 题库 77→~200 + 音频动画升级 + 冒险模式渐进演化。
-- **Sprint B（2026-07-02）**：宇宙星空冒险地图 + 战斗动画重构 + BGM 柔和化 + 题库扩充至 491 题（年级 1-3）+ 剧情 24 章。
+- **Sprint B（2026-07-02）**：宇宙星空冒险地图 + 战斗动画重构 + BGM 柔和化 + 题库扩充至 502 题（年级 1-3）+ 剧情 24 章。
 - **Sprint C（2026-07-03）**：星灵羁绊核心 — 性格选择（4 选 1）、多情绪动画（greeting/sleeping/dim）、迎接/告别系统、休眠机制（损失厌恶）。
 - **Sprint D（2026-07-03）**：净化重构 — 战斗系统→净化系统（HP→能量水晶、Boss→守护者、怪物→暗水晶、「⚔️ 攻击」→「🌟 净化」、移除死亡惩罚）。
 - **Sprint E（2026-07-03）**：收集驱动 — 配饰系统（12 件装备）、扭蛋机（稀有度分层）、星灵装备 UI、成就图鉴（翻书模式 + 知识点图鉴）。
@@ -194,7 +194,7 @@ Layout 含 `isAdmin` 守卫（`authStore.isAdmin` → 否则 redirect `/app`）�
 | VOCAB_MATCH | `VocabMatchEditor.svelte` | `{left[], right[]}` + 逗号分隔配对 |
 | SCENE_CLOCK | `SceneClockEditor.svelte` | `{hour}` |
 | SCENE_SHOP | `SceneShopEditor.svelte` | `{price, itemName}` |
-| SCENE_SHAPE_PUZZLE | `GenericEditor.svelte` | 原生 JSON（兜底） |
+| SCENE_SHAPE_PUZZLE | `GenericEditor.svelte` | `{"puzzleKey":"house/tree/car"}`（兜底 JSON） |
 
 所有编辑器通过 `QuestionFormShell.svelte` 中央调度，按 `questionType` 渲染对应编辑器。
 
@@ -252,7 +252,7 @@ pet-grow-up/
 │       │   ├── application.yml          # 含开发用 DB 口令（与 docker-compose 一致）
 │       │   ├── application-dev.yml      # dev profile（日志 + CORS）
 │       │   ├── schema.sql               # 21 张表 DDL（含 grade_level 迁移）
-│       │   └── data.sql                 # 种子数据（1133 行：44 知识节点 + 491 题 + 24 剧情章节）
+│       │   └── data.sql                 # 种子数据（1133 行：44 知识节点 + 502 题 + 24 剧情章节）
 │       └── test/                # 仅 5 个测试：auth/spirit/exploration/achievement/EnergyCalculator
 ├── frontend/                    # Vite + SvelteKit
 │   └── src/
@@ -289,7 +289,7 @@ pet-grow-up/
 | 数学（智慧王国） | 11 | 6 | 6 | **23** |
 | 英语（魔法学院） | 5 | 4 | 4 | **13** |
 
-题库 491 题，覆盖 12 种题型，剧情章节 24 章（chapter 1-12 为 G1，13-24 为 G2-G3）。
+题库 502 题，覆盖 12 种题型，剧情章节 24 章（chapter 1-12 为 G1，13-24 为 G2-G3）。
 `users` 表含 `role` 列（VARCHAR(20) DEFAULT 'STUDENT'），admin 用户（admin/admin123, role=ADMIN）。
 
 ## 本地运行
@@ -312,7 +312,7 @@ cd frontend && npm install && npm run dev
 - **P2 时空裂隙系统未实现**：设计文档中唯一缺失的子系统。
 - **管理后台 Phase 2 待实施**：用户管理、商品管理、数据统计仪表盘。
 - **SCENE_SHAPE_PUZZLE 仍用 GenericEditor**：唯一未配有专属编辑器的题型，目前用原生 JSON 输入。
-- **题库需持续对标课标**：当前 491 题覆盖 G1-G3，后续需扩展 G4-G6 及更多题型变体。
+- **题库需持续对标课标**：当前 502 题覆盖 G1-G3，后续需扩展 G4-G6 及更多题型变体。
 - **知识节点 grade_level 未在 API 暴露**：前端目前未按年级筛选节点，后续需在 SubjectWorld API 中增加年级过滤。
 - **旧组件清理**：`HpBar/BossBattle/BossHealthBar/BossLootDrop/BossPhaseOverlay/BossSection/DamageNumber/AdventurePath/EnemySprite` 等旧战斗组件保留在磁盘上但已无引用，后续可安全删除。
 - **多精灵同屏 + 好友访客模式待实施**：多只精灵同时出现在房间、好友互相参观小屋、留言/表情反应。

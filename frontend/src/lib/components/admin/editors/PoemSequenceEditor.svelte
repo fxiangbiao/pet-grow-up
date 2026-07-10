@@ -9,25 +9,36 @@
     onUpdate?: (data: Partial<CreateQuestion>) => void;
   } = $props();
 
+  // Normalize external data — same pattern as MultipleChoiceEditor to avoid $effect loops
+  let parsedLines = $derived.by(() => {
+    try {
+      const arr = questionData.options ? JSON.parse(questionData.options) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch { return []; }
+  });
+
+  let parsedCorrectAnswer = $derived(questionData.correctAnswer || '');
+
   let lines = $state<string[]>([]);
   let correctOrder = $state<string>('');
   let init = $state(false);
 
   if (!init) {
     init = true;
-    try { lines = questionData.options ? JSON.parse(questionData.options) : []; } catch { lines = []; }
-    correctOrder = questionData.correctAnswer || '';
+    lines = [...parsedLines];
+    correctOrder = parsedCorrectAnswer;
   }
 
-  // Sync from parent (e.g., loading saved question)
+  // Sync from parent (e.g., loading saved question) — compare stringified outputs
+  // so both sides go through the same serialisation path
   $effect(() => {
-    const extOpts = questionData.options || '[]';
-    const extAns = questionData.correctAnswer || '';
-    if (JSON.stringify(lines) !== extOpts) {
-      try { lines = JSON.parse(extOpts); } catch { lines = []; }
+    const extLines = JSON.stringify(parsedLines);
+    const locLines = JSON.stringify(lines);
+    if (extLines !== locLines) {
+      lines = [...parsedLines];
     }
-    if (correctOrder !== extAns) {
-      correctOrder = extAns;
+    if (correctOrder !== parsedCorrectAnswer) {
+      correctOrder = parsedCorrectAnswer;
     }
   });
 
