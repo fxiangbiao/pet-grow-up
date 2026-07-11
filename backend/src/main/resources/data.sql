@@ -1218,12 +1218,12 @@ INSERT IGNORE INTO room_theme_def (theme_key, name, description, icon_url, is_de
 ('ocean_deep', '深海小屋', '蔚蓝深海中的静谧小屋，与鱼群为伴', '🌊', FALSE, 6);
 
 -- Sprint F Layer 1: Room theme items (purchasable in shop / gacha)
-INSERT IGNORE INTO item_def (item_key, name, description, category, sub_category, price_energy, price_points, icon_url, is_consumable, is_shop_available, sort_order) VALUES
-('theme_starry_night', '星空小屋主题', '解锁星空夜语房间主题（可随时切换）', 'ROOM_THEME', NULL, 200, 0, '🌌', FALSE, TRUE, 90),
-('theme_forest_green', '森林小屋主题', '解锁翠林幽居房间主题（可随时切换）', 'ROOM_THEME', NULL, 200, 0, '🌿', FALSE, TRUE, 91),
-('theme_crystal_hall', '水晶殿堂主题', '解锁水晶殿堂房间主题（可随时切换）', 'ROOM_THEME', NULL, 500, 0, '💎', FALSE, TRUE, 92),
-('theme_ancient_study', '古风书房主题', '解锁古风书房房间主题（成就奖励）', 'ROOM_THEME', NULL, 0, 0, '📜', FALSE, FALSE, 93),
-('theme_ocean_deep', '深海小屋主题', '解锁深海小屋房间主题（扭蛋限定）', 'ROOM_THEME', NULL, 0, 0, '🌊', FALSE, FALSE, 94);
+INSERT IGNORE INTO item_def (item_key, name, description, category, effect_type, effect_value, price, icon_url, is_consumable, is_purchasable, display_order) VALUES
+('theme_starry_night', '星空小屋主题', '解锁星空夜语房间主题（可随时切换）', 'ROOM_THEME', 'COSMETIC', 0, 200, '🌌', FALSE, TRUE, 90),
+('theme_forest_green', '森林小屋主题', '解锁翠林幽居房间主题（可随时切换）', 'ROOM_THEME', 'COSMETIC', 0, 200, '🌿', FALSE, TRUE, 91),
+('theme_crystal_hall', '水晶殿堂主题', '解锁水晶殿堂房间主题（可随时切换）', 'ROOM_THEME', 'COSMETIC', 0, 500, '💎', FALSE, TRUE, 92),
+('theme_ancient_study', '古风书房主题', '解锁古风书房房间主题（成就奖励）', 'ROOM_THEME', 'COSMETIC', 0, 0, '📜', FALSE, FALSE, 93),
+('theme_ocean_deep', '深海小屋主题', '解锁深海小屋房间主题（扭蛋限定）', 'ROOM_THEME', 'COSMETIC', 0, 0, '🌊', FALSE, FALSE, 94);
 
 -- Seed admin user (password: admin123)
 INSERT IGNORE INTO users (username, email, password_hash, nickname, role, total_energy, current_energy)

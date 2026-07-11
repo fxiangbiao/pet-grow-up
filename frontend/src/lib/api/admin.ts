@@ -86,6 +86,133 @@ export interface BatchImportResult {
   errors: string[];
 }
 
+// ---- User management ----
+
+export interface UserFilter {
+  role?: string;
+  keyword?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface UserRow {
+  id: number;
+  username: string;
+  email: string;
+  nickname: string | null;
+  avatarUrl: string | null;
+  role: string;
+  currentEnergy: number;
+  totalEnergy: number;
+  consecutiveStudyDays: number;
+  lastStudyDate: string | null;
+  lastLoginDate: string | null;
+  createdAt: string;
+}
+
+export interface UserPage {
+  items: UserRow[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+// ---- Item management ----
+
+export interface ItemFilter {
+  category?: string;
+  keyword?: string;
+  page?: number;
+  size?: number;
+}
+
+export interface ItemRow {
+  id: number;
+  itemKey: string;
+  name: string;
+  description: string | null;
+  category: string;
+  effectType: string | null;
+  effectValue: number;
+  price: number;
+  iconUrl: string | null;
+  isConsumable: boolean;
+  isPurchasable: boolean;
+  displayOrder: number;
+  createdAt: string;
+}
+
+export interface ItemPage {
+  items: ItemRow[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface CreateItemDef {
+  itemKey: string;
+  name: string;
+  description?: string;
+  category: string;
+  effectType?: string;
+  effectValue?: number;
+  price?: number;
+  iconUrl?: string;
+  isConsumable?: boolean;
+  isPurchasable?: boolean;
+  displayOrder?: number;
+}
+
+// ---- Statistics ----
+
+export interface Overview {
+  totalUsers: number;
+  totalStudents: number;
+  totalAdmins: number;
+  totalQuestions: number;
+  totalStudySessions: number;
+  totalEnergyEarned: number;
+  totalEnergySpent: number;
+  todayActiveUsers: number;
+}
+
+export interface TimeSeriesPoint {
+  date: string;
+  value: number;
+}
+
+export interface StudyStats {
+  dailySessions: TimeSeriesPoint[];
+  dailyActiveUsers: TimeSeriesPoint[];
+  avgAccuracy: TimeSeriesPoint[];
+}
+
+export interface SourceBreakdown {
+  source: string;
+  totalAmount: number;
+  count: number;
+}
+
+export interface EnergyStats {
+  dailyEarned: TimeSeriesPoint[];
+  dailySpent: TimeSeriesPoint[];
+  bySource: SourceBreakdown[];
+}
+
+export interface AchievementStatRow {
+  key: string;
+  name: string;
+  category: string;
+  rarity: string;
+  unlockedCount: number;
+  totalUsers: number;
+  unlockRate: number;
+}
+
+export interface AchievementStats {
+  achievements: AchievementStatRow[];
+}
+
 function buildQuery(filter: QuestionFilter): string {
   const params = new URLSearchParams();
   if (filter.subject) params.set('subject', filter.subject);
@@ -137,4 +264,124 @@ export const adminApi = {
 
   reorderNodes: (data: ReorderNodes) =>
     api.put<void>(`${BASE}/nodes/reorder`, data),
+
+  // Users
+  listUsers: (filter: UserFilter = {}) => {
+    const params = new URLSearchParams();
+    if (filter.role) params.set('role', filter.role);
+    if (filter.keyword) params.set('keyword', filter.keyword);
+    params.set('page', String(filter.page ?? 1));
+    params.set('size', String(filter.size ?? 20));
+    return api.get<UserPage>(`${BASE}/users?${params.toString()}`);
+  },
+
+  getUser: (id: number) =>
+    api.get<UserRow>(`${BASE}/users/${id}`),
+
+  updateUserRole: (id: number, role: string) =>
+    api.put<void>(`${BASE}/users/${id}/role`, { role }),
+
+  resetUserPassword: (id: number, newPassword?: string) =>
+    api.post<void>(`${BASE}/users/${id}/reset-password`, newPassword ? { newPassword } : {}),
+
+  // Items
+  listItems: (filter: ItemFilter = {}) => {
+    const params = new URLSearchParams();
+    if (filter.category) params.set('category', filter.category);
+    if (filter.keyword) params.set('keyword', filter.keyword);
+    params.set('page', String(filter.page ?? 1));
+    params.set('size', String(filter.size ?? 20));
+    return api.get<ItemPage>(`${BASE}/items?${params.toString()}`);
+  },
+
+  getItem: (id: number) =>
+    api.get<CreateItemDef & { id: number }>(`${BASE}/items/${id}`),
+
+  createItem: (data: CreateItemDef) =>
+    api.post<{ id: number }>(`${BASE}/items`, data),
+
+  updateItem: (id: number, data: Partial<CreateItemDef>) =>
+    api.put<void>(`${BASE}/items/${id}`, data),
+
+  deleteItem: (id: number) =>
+    api.delete<void>(`${BASE}/items/${id}`),
+
+  // Statistics
+  getOverview: () =>
+    api.get<Overview>(`${BASE}/statistics/overview`),
+
+  getStudyStats: (days = 7) =>
+    api.get<StudyStats>(`${BASE}/statistics/study?days=${days}`),
+
+  getEnergyStats: (days = 7) =>
+    api.get<EnergyStats>(`${BASE}/statistics/energy?days=${days}`),
+
+  getAchievementStats: () =>
+    api.get<AchievementStats>(`${BASE}/statistics/achievements`),
+
+  // ---- Achievements ----
+  listAchievements: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.category) p.set('category', filter.category); if (filter.rarity) p.set('rarity', filter.rarity); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/achievements?${p.toString()}`);
+  },
+  getAchievement: (id: number) => api.get<any>(`${BASE}/achievements/${id}`),
+  createAchievement: (data: any) => api.post<any>(`${BASE}/achievements`, data),
+  updateAchievement: (id: number, data: any) => api.put<any>(`${BASE}/achievements/${id}`, data),
+  deleteAchievement: (id: number) => api.delete<void>(`${BASE}/achievements/${id}`),
+
+  // ---- Stories ----
+  listStories: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/stories?${p.toString()}`);
+  },
+  getStory: (id: number) => api.get<any>(`${BASE}/stories/${id}`),
+  createStory: (data: any) => api.post<any>(`${BASE}/stories`, data),
+  updateStory: (id: number, data: any) => api.put<any>(`${BASE}/stories/${id}`, data),
+  deleteStory: (id: number) => api.delete<void>(`${BASE}/stories/${id}`),
+
+  // ---- Challenges ----
+  listChallenges: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/challenges?${p.toString()}`);
+  },
+  getChallenge: (id: number) => api.get<any>(`${BASE}/challenges/${id}`),
+  createChallenge: (data: any) => api.post<any>(`${BASE}/challenges`, data),
+  updateChallenge: (id: number, data: any) => api.put<any>(`${BASE}/challenges/${id}`, data),
+  deleteChallenge: (id: number) => api.delete<void>(`${BASE}/challenges/${id}`),
+
+  // ---- Daily Rewards ----
+  listDailyRewards: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/daily-rewards?${p.toString()}`);
+  },
+  getDailyReward: (id: number) => api.get<any>(`${BASE}/daily-rewards/${id}`),
+  createDailyReward: (data: any) => api.post<any>(`${BASE}/daily-rewards`, data),
+  updateDailyReward: (id: number, data: any) => api.put<any>(`${BASE}/daily-rewards/${id}`, data),
+  deleteDailyReward: (id: number) => api.delete<void>(`${BASE}/daily-rewards/${id}`),
+
+  // ---- Events ----
+  listEvents: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/events?${p.toString()}`);
+  },
+  getEvent: (id: number) => api.get<any>(`${BASE}/events/${id}`),
+  createEvent: (data: any) => api.post<any>(`${BASE}/events`, data),
+  updateEvent: (id: number, data: any) => api.put<any>(`${BASE}/events/${id}`, data),
+  deleteEvent: (id: number) => api.delete<void>(`${BASE}/events/${id}`),
+
+  // ---- Species ----
+  listSpecies: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.subject) p.set('subject', filter.subject); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/species?${p.toString()}`);
+  },
+  getSpecies: (id: number) => api.get<any>(`${BASE}/species/${id}`),
+  createSpecies: (data: any) => api.post<any>(`${BASE}/species`, data),
+  updateSpecies: (id: number, data: any) => api.put<any>(`${BASE}/species/${id}`, data),
+  deleteSpecies: (id: number) => api.delete<void>(`${BASE}/species/${id}`),
 };

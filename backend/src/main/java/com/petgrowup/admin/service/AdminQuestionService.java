@@ -28,11 +28,14 @@ public class AdminQuestionService {
     public QuestionPageDTO listQuestions(QuestionFilterDTO filter) {
         QueryWrapper qw = QueryWrapper.create();
 
-        // Join with knowledge_node for subject/grade filtering
+        // Load all nodes once — reused for both filtering and display
+        List<KnowledgeNode> allNodes = nodeMapper.selectListByQuery(QueryWrapper.create());
+        Map<Long, KnowledgeNode> nodeMap = allNodes.stream()
+                .collect(Collectors.toMap(KnowledgeNode::getId, n -> n));
+
+        // Filter by subject/grade via node ids
         if (filter.getSubject() != null || filter.getGradeLevel() != null) {
-            // Filter by joining knowledge_node
-            List<KnowledgeNode> nodes = nodeMapper.selectListByQuery(QueryWrapper.create());
-            Set<Long> nodeIds = nodes.stream()
+            Set<Long> nodeIds = allNodes.stream()
                     .filter(n -> filter.getSubject() == null || filter.getSubject().equals(n.getSubject()))
                     .filter(n -> filter.getGradeLevel() == null || filter.getGradeLevel().equals(n.getGradeLevel()))
                     .map(KnowledgeNode::getId)
@@ -69,9 +72,6 @@ public class AdminQuestionService {
 
         List<QuizQuestion> questions = questionMapper.selectListByQuery(qw);
 
-        // Load all node info for display
-        Map<Long, KnowledgeNode> nodeMap = nodeMapper.selectListByQuery(QueryWrapper.create())
-                .stream().collect(Collectors.toMap(KnowledgeNode::getId, n -> n));
 
         List<QuestionRowDTO> rows = questions.stream().map(q -> {
             KnowledgeNode node = nodeMap.get(q.getKnowledgeNodeId());

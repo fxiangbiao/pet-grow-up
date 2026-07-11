@@ -1,8 +1,9 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { adminApi, type QuestionFilter, type QuestionRow, type QuestionPage } from '$lib/api/admin';
   import { toastStore } from '$lib/stores/toast.svelte';
+  import Pagination from '$lib/components/admin/Pagination.svelte';
 
   let filter = $state<QuestionFilter>({ page: 1, size: 20 });
   let pageData = $state<QuestionPage | null>(null);
@@ -18,7 +19,7 @@
     try {
       pageData = await adminApi.listQuestions(filter);
       if (!pageData || pageData.items.length === 0) {
-        errorMsg = '暂无题目数据。请确认：\n1. 后端服务已启动 (mvn spring-boot:run)\n2. 数据库已初始化 (data.sql 含 491 题)\n3. 检查浏览器控制台 (F12) 是否有网络错误';
+        errorMsg = '暂无题目数据。请确认：\n1. 后端服务已启动 (mvn spring-boot:run)\n2. 数据库已初始化 (data.sql 含 502 题)\n3. 检查浏览器控制台 (F12) 是否有网络错误';
       }
     } catch (e: any) {
       errorMsg = e.message || '加载失败';
@@ -159,25 +160,7 @@
       </table>
 
       <!-- Pagination -->
-      {#if totalPages > 1}
-        <div class="flex items-center justify-between px-4 py-3 border-t">
-          <span class="text-sm text-gray-500">共 {pageData.total} 道题，第 {filter.page ?? 1}/{totalPages} 页</span>
-          <div class="flex gap-1">
-            <button disabled={filter.page === 1} onclick={() => goPage((filter.page ?? 1) - 1)}
-                    class="px-2 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-30">‹</button>
-            {#each Array.from({ length: totalPages }, (_, i) => i + 1) as p}
-              {#if p === 1 || p === totalPages || Math.abs(p - (filter.page ?? 1)) <= 2}
-                <button onclick={() => goPage(p)}
-                        class="px-2 py-1 text-sm border rounded {p === (filter.page ?? 1) ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50'}">{p}</button>
-              {:else if p === 2 || p === totalPages - 1}
-                <span class="px-2 py-1 text-sm text-gray-400">...</span>
-              {/if}
-            {/each}
-            <button disabled={filter.page === totalPages} onclick={() => goPage((filter.page ?? 1) + 1)}
-                    class="px-2 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-30">›</button>
-          </div>
-        </div>
-      {/if}
+      <Pagination page={filter.page ?? 1} totalPages={totalPages} total={pageData.total} {goPage} />
     {:else if errorMsg}
       <div class="text-center py-12 px-4">
         <div class="text-red-500 text-sm whitespace-pre-line bg-red-50 rounded-lg p-4 inline-block text-left max-w-lg">{errorMsg}</div>

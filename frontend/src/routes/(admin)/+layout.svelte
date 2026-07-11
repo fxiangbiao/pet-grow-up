@@ -35,6 +35,11 @@
     <!-- Sidebar -->
     <nav class="w-56 min-h-[calc(100vh-53px)] bg-white border-r border-gray-200 p-4 flex-shrink-0">
       <div class="space-y-1">
+        <a href="/admin/statistics"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/statistics') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          📊 统计仪表盘
+        </a>
         <a href="/admin/questions"
            class="block px-3 py-2 rounded-lg text-sm font-medium transition
              {currentPath.startsWith('/admin/questions') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
@@ -45,9 +50,46 @@
              {currentPath.startsWith('/admin/nodes') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
           🗂️ 知识节点
         </a>
-        <div class="px-3 py-2 text-xs text-gray-400 mt-4 uppercase tracking-wider">更多（规划中）</div>
-        <span class="block px-3 py-2 rounded-lg text-sm text-gray-300 cursor-not-allowed">👥 用户管理</span>
-        <span class="block px-3 py-2 rounded-lg text-sm text-gray-300 cursor-not-allowed">🛒 商品管理</span>
+        <a href="/admin/users"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/users') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          👥 用户管理
+        </a>
+        <a href="/admin/items"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/items') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          🛒 商品管理
+        </a>
+        <a href="/admin/achievements"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/achievements') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          🏆 成就定义
+        </a>
+        <a href="/admin/stories"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/stories') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          📖 剧情章节
+        </a>
+        <a href="/admin/challenges"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/challenges') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          🎯 每日挑战
+        </a>
+        <a href="/admin/daily-rewards"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/daily-rewards') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          📅 每日奖励
+        </a>
+        <a href="/admin/events"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/events') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          🎲 随机事件
+        </a>
+        <a href="/admin/species"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/species') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          🐾 精灵物种
+        </a>
       </div>
     </nav>
 
