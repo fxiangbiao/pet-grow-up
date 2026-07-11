@@ -1,6 +1,7 @@
 package com.petgrowup.admin.service;
 
 import com.mybatisflex.core.query.QueryWrapper;
+import com.petgrowup.study.entity.QuizQuestion;
 import com.petgrowup.admin.dto.*;
 import com.petgrowup.common.exception.BusinessException;
 import com.petgrowup.study.entity.KnowledgeNode;
@@ -29,12 +30,12 @@ public class AdminNodeService {
                 .collect(Collectors.groupingBy(n ->
                         n.getParentNodeId() != null ? n.getParentNodeId() : 0L));
 
-        // Count questions per node
+        // Count questions per node — single GROUP BY query instead of N+1
         Map<Long, Integer> questionCounts = new HashMap<>();
-        for (KnowledgeNode node : allNodes) {
-            long count = questionMapper.selectCountByQuery(
-                    QueryWrapper.create().eq("knowledge_node_id", node.getId()));
-            questionCounts.put(node.getId(), (int) count);
+        List<QuizQuestion> allQuestions = questionMapper.selectListByQuery(QueryWrapper.create()
+                .select("id", "knowledge_node_id"));
+        for (QuizQuestion q : allQuestions) {
+            questionCounts.merge(q.getKnowledgeNodeId(), 1, Integer::sum);
         }
 
         // Build trees grouped by subject

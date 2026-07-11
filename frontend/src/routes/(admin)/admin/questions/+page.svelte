@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { adminApi, type QuestionFilter, type QuestionRow, type QuestionPage } from '$lib/api/admin';
@@ -19,7 +19,7 @@
     try {
       pageData = await adminApi.listQuestions(filter);
       if (!pageData || pageData.items.length === 0) {
-        errorMsg = '暂无题目数据。请确认：\n1. 后端服务已启动 (mvn spring-boot:run)\n2. 数据库已初始化 (data.sql 含 491 题)\n3. 检查浏览器控制台 (F12) 是否有网络错误';
+        errorMsg = '暂无题目数据。请确认：\n1. 后端服务已启动 (mvn spring-boot:run)\n2. 数据库已初始化 (data.sql 含 502 题)\n3. 检查浏览器控制台 (F12) 是否有网络错误';
       }
     } catch (e: any) {
       errorMsg = e.message || '加载失败';

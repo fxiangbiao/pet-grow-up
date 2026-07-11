@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { adminApi, type NodeTreeItem, type CreateNode } from '$lib/api/admin';
   import { toastStore } from '$lib/stores/toast.svelte';
+  import ConfirmModal from '$lib/components/common/ConfirmModal.svelte';
 
   let allNodes = $state<NodeTreeItem[]>([]);
   let loading = $state(true);
@@ -15,6 +16,7 @@
 
   // Expand state
   let expanded = $state<Set<number>>(new Set());
+  let nodeToDelete = $state<NodeTreeItem | null>(null);
 
   const subjects = ['math', 'chinese', 'english'];
   const subjectLabels: Record<string, string> = { math: '数学', chinese: '语文', english: '英语' };
@@ -69,8 +71,14 @@
     } catch (e: any) { toastStore.error(e.message || '保存失败'); }
   }
 
-  async function handleDelete(node: NodeTreeItem) {
-    if (!confirm(`确定删除 "${node.name}"？${node.questionCount > 0 ? `\n（该节点有 ${node.questionCount} 道题目）` : ''}${node.children ? '\n（该节点有子节点）' : ''}`)) return;
+  function handleDelete(node: NodeTreeItem) {
+    nodeToDelete = node;
+  }
+
+  async function doDelete() {
+    if (!nodeToDelete) return;
+    const node = nodeToDelete;
+    nodeToDelete = null;
     try {
       await adminApi.deleteNode(node.id);
       toastStore.success('节点已删除');
@@ -194,3 +202,8 @@
     </div>
   {/if}
 </div>
+
+<ConfirmModal show={nodeToDelete !== null} title="确认删除" confirmText="删除"
+              message={`确定要删除节点 "${nodeToDelete?.name || ''}"？${nodeToDelete && nodeToDelete.questionCount > 0 ? `该节点有 ${nodeToDelete.questionCount} 道题目。` : ''}${nodeToDelete?.children ? '该节点有子节点。' : ''}`}
+              onConfirm={doDelete}
+              onCancel={() => nodeToDelete = null} />

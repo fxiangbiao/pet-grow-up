@@ -1,4 +1,4 @@
-// Shared label maps for admin pages — eliminates duplication across pages
+﻿// Shared label maps for admin pages — eliminates duplication across pages
 
 export const USER_ROLE_LABELS: Record<string, string> = {
   STUDENT: '学生',
@@ -48,4 +48,31 @@ export const ENERGY_SOURCE_LABELS: Record<string, string> = {
   gacha_draw: '扭蛋抽卡',
   feed: '喂养精灵',
   evolve: '精灵进化',
+};
+
+export const CHALLENGE_TYPE_LABELS: Record<string, string> = {
+  STUDY_SESSION: '学习探险',
+  ACCURACY: '准确率',
+  ENERGY_EARN: '精力获取',
+  PERFECT_SESSION: '完美探险',
+};
+
+export const EVENT_TYPE_LABELS: Record<string, string> = {
+  BONUS_ENERGY: '额外精力',
+  SPIRIT_GIFT: '精灵礼物',
+  FREE_ITEM: '免费道具',
+  DOUBLE_REWARD: '双倍奖励',
+  STREAK_BONUS: '连击加成',
+};
+
+export const REWARD_TYPE_LABELS: Record<string, string> = {
+  ENERGY: '精力',
+  ITEM: '道具',
+  ACCESSORY: '配饰',
+};
+
+export const SPECIES_SUBJECT_LABELS: Record<string, string> = {
+  math: '数学',
+  chinese: '语文',
+  english: '英语',
 };

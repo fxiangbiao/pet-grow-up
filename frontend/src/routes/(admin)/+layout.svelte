@@ -60,6 +60,36 @@
              {currentPath.startsWith('/admin/items') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
           🛒 商品管理
         </a>
+        <a href="/admin/achievements"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/achievements') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          🏆 成就定义
+        </a>
+        <a href="/admin/stories"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/stories') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          📖 剧情章节
+        </a>
+        <a href="/admin/challenges"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/challenges') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          🎯 每日挑战
+        </a>
+        <a href="/admin/daily-rewards"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/daily-rewards') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          📅 每日奖励
+        </a>
+        <a href="/admin/events"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/events') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          🎲 随机事件
+        </a>
+        <a href="/admin/species"
+           class="block px-3 py-2 rounded-lg text-sm font-medium transition
+             {currentPath.startsWith('/admin/species') ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'}">
+          🐾 精灵物种
+        </a>
       </div>
     </nav>
 

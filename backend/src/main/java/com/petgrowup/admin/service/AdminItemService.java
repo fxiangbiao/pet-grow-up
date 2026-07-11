@@ -34,8 +34,7 @@ public class AdminItemService {
             qw.eq("category", filter.getCategory());
         }
         if (filter.getKeyword() != null && !filter.getKeyword().isBlank()) {
-            String kw = "%" + filter.getKeyword() + "%";
-            qw.and(q -> q.like("name", kw).or().like("item_key", kw));
+            qw.like("name", "%" + filter.getKeyword() + "%");
         }
 
         long total = itemDefMapper.selectCountByQuery(qw);

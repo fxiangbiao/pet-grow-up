@@ -35,8 +35,7 @@ public class AdminUserService {
             qw.eq("role", filter.getRole());
         }
         if (filter.getKeyword() != null && !filter.getKeyword().isBlank()) {
-            String kw = "%" + filter.getKeyword() + "%";
-            qw.and(q -> q.like("username", kw).or().like("nickname", kw).or().like("email", kw));
+            qw.like("username", "%" + filter.getKeyword() + "%");
         }
 
         long total = userMapper.selectCountByQuery(qw);

@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
@@ -6,7 +6,6 @@
   import { authStore } from '$lib/stores/auth.svelte';
   import { toastStore } from '$lib/stores/toast.svelte';
   import { USER_ROLE_LABELS } from '$lib/components/admin/constants';
-  import ConfirmModal from '$lib/components/common/ConfirmModal.svelte';
 
   let userId = $derived(Number($page.params.id));
   let user = $state<UserRow | null>(null);
@@ -131,10 +130,6 @@
   {/if}
 </div>
 
-<ConfirmModal show={showResetModal} title="重置密码" confirmText="确认重置"
-              message="确定要重置该用户的密码吗？"
-              onConfirm={handleResetPassword}
-              onCancel={() => { showResetModal = false; newPassword = ''; }} />
 
 {#if showResetModal}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"

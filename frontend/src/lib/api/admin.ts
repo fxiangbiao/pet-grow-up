@@ -318,4 +318,70 @@ export const adminApi = {
 
   getAchievementStats: () =>
     api.get<AchievementStats>(`${BASE}/statistics/achievements`),
+
+  // ---- Achievements ----
+  listAchievements: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.category) p.set('category', filter.category); if (filter.rarity) p.set('rarity', filter.rarity); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/achievements?${p.toString()}`);
+  },
+  getAchievement: (id: number) => api.get<any>(`${BASE}/achievements/${id}`),
+  createAchievement: (data: any) => api.post<any>(`${BASE}/achievements`, data),
+  updateAchievement: (id: number, data: any) => api.put<any>(`${BASE}/achievements/${id}`, data),
+  deleteAchievement: (id: number) => api.delete<void>(`${BASE}/achievements/${id}`),
+
+  // ---- Stories ----
+  listStories: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/stories?${p.toString()}`);
+  },
+  getStory: (id: number) => api.get<any>(`${BASE}/stories/${id}`),
+  createStory: (data: any) => api.post<any>(`${BASE}/stories`, data),
+  updateStory: (id: number, data: any) => api.put<any>(`${BASE}/stories/${id}`, data),
+  deleteStory: (id: number) => api.delete<void>(`${BASE}/stories/${id}`),
+
+  // ---- Challenges ----
+  listChallenges: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/challenges?${p.toString()}`);
+  },
+  getChallenge: (id: number) => api.get<any>(`${BASE}/challenges/${id}`),
+  createChallenge: (data: any) => api.post<any>(`${BASE}/challenges`, data),
+  updateChallenge: (id: number, data: any) => api.put<any>(`${BASE}/challenges/${id}`, data),
+  deleteChallenge: (id: number) => api.delete<void>(`${BASE}/challenges/${id}`),
+
+  // ---- Daily Rewards ----
+  listDailyRewards: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/daily-rewards?${p.toString()}`);
+  },
+  getDailyReward: (id: number) => api.get<any>(`${BASE}/daily-rewards/${id}`),
+  createDailyReward: (data: any) => api.post<any>(`${BASE}/daily-rewards`, data),
+  updateDailyReward: (id: number, data: any) => api.put<any>(`${BASE}/daily-rewards/${id}`, data),
+  deleteDailyReward: (id: number) => api.delete<void>(`${BASE}/daily-rewards/${id}`),
+
+  // ---- Events ----
+  listEvents: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/events?${p.toString()}`);
+  },
+  getEvent: (id: number) => api.get<any>(`${BASE}/events/${id}`),
+  createEvent: (data: any) => api.post<any>(`${BASE}/events`, data),
+  updateEvent: (id: number, data: any) => api.put<any>(`${BASE}/events/${id}`, data),
+  deleteEvent: (id: number) => api.delete<void>(`${BASE}/events/${id}`),
+
+  // ---- Species ----
+  listSpecies: (filter: any = {}) => {
+    const p = new URLSearchParams(); if (filter.subject) p.set('subject', filter.subject); if (filter.keyword) p.set('keyword', filter.keyword);
+    p.set('page', String(filter.page ?? 1)); p.set('size', String(filter.size ?? 20));
+    return api.get<any>(`${BASE}/species?${p.toString()}`);
+  },
+  getSpecies: (id: number) => api.get<any>(`${BASE}/species/${id}`),
+  createSpecies: (data: any) => api.post<any>(`${BASE}/species`, data),
+  updateSpecies: (id: number, data: any) => api.put<any>(`${BASE}/species/${id}`, data),
+  deleteSpecies: (id: number) => api.delete<void>(`${BASE}/species/${id}`),
 };

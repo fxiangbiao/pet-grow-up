@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import type { CreateQuestion, NodeTreeItem } from '$lib/api/admin';
   import { adminApi } from '$lib/api/admin';
   import MultipleChoiceEditor from './MultipleChoiceEditor.svelte';
@@ -11,6 +11,7 @@
   import SceneClockEditor from './SceneClockEditor.svelte';
   import SceneShopEditor from './SceneShopEditor.svelte';
   import GenericEditor from './GenericEditor.svelte';
+  import SceneShapePuzzleEditor from './SceneShapePuzzleEditor.svelte';
 
   let {
     questionData,
@@ -114,8 +115,7 @@
     {:else if questionData.questionType === 'SCENE_SHOP'}
       <SceneShopEditor questionData={questionData as any} onUpdate={onUpdate} />
     {:else if questionData.questionType === 'SCENE_SHAPE_PUZZLE'}
-      <GenericEditor questionData={questionData as any} onUpdate={onUpdate}
-        typeLabel="拼图工坊" />
+      <SceneShapePuzzleEditor questionData={questionData as any} onUpdate={onUpdate} />
     {:else}
       <GenericEditor questionData={questionData as any} onUpdate={onUpdate}
         typeLabel={typeOptions[questionData.questionType] || questionData.questionType} />
@@ -131,3 +131,6 @@
               placeholder="答题后的解释说明..."></textarea>
   </div>
 </div>
+
+
+
