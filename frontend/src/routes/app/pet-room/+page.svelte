@@ -11,6 +11,7 @@
   let decorations = $state<PlacedItem[]>([]);
   let spiritAccessories = $state<AccessoryDTO[]>([]);
   let loading = $state(true);
+  let loadError = $state('');
   let editing = $state(false);
   let selectedItemId = $state<number | null>(null);
   let showThemePicker = $state(false);
