@@ -441,3 +441,17 @@ CREATE TABLE IF NOT EXISTS pet_room (
     INDEX idx_pet_room_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+
+CREATE TABLE IF NOT EXISTS learning_weakness (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    knowledge_node_id BIGINT DEFAULT NULL,
+    subject VARCHAR(20) NOT NULL,
+    wrong_count INT NOT NULL DEFAULT 1,
+    last_wrong_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    mastery_level INT NOT NULL DEFAULT 0 COMMENT '0-100, increases with correct answers',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_node_subject (user_id, knowledge_node_id, subject),
+    INDEX idx_user_weakness (user_id, mastery_level ASC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

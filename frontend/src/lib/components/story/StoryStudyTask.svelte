@@ -17,7 +17,6 @@
   import SceneShop from '$lib/components/study/SceneShop.svelte';
   import ScenePinyinBubble from '$lib/components/study/ScenePinyinBubble.svelte';
   import SceneCharBuild from '$lib/components/study/SceneCharBuild.svelte';
-  import HpBar from '$lib/components/study/HpBar.svelte';
   import EnergyBar from '$lib/components/study/EnergyBar.svelte';
   import ComboCounter from '$lib/components/study/ComboCounter.svelte';
   import BattleScene from '$lib/components/study/BattleScene.svelte';

@@ -17,6 +17,7 @@ import com.petgrowup.spirit.service.SpiritService;
 import com.petgrowup.study.dto.*;
 import com.petgrowup.study.entity.*;
 import com.petgrowup.study.mapper.*;
+import com.petgrowup.study.service.WeaknessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,7 @@ public class ExplorationService {
     private final ChallengeService challengeService;
     private final StoryService storyService;
     private final RandomEventService randomEventService;
+    private final WeaknessService weaknessService;
 
     private static final int QUESTIONS_PER_SESSION = 5;
     private static final long BASE_REWARD = 100;
@@ -58,7 +60,8 @@ public class ExplorationService {
                               AchievementService achievementService,
                               ChallengeService challengeService,
                               StoryService storyService,
-                              RandomEventService randomEventService) {
+                              RandomEventService randomEventService,
+                              WeaknessService weaknessService) {
         this.sessionMapper = sessionMapper;
         this.recordMapper = recordMapper;
         this.quizService = quizService;
@@ -71,6 +74,7 @@ public class ExplorationService {
         this.challengeService = challengeService;
         this.storyService = storyService;
         this.randomEventService = randomEventService;
+        this.weaknessService = weaknessService;
     }
 
     @Transactional
@@ -148,6 +152,13 @@ public class ExplorationService {
                 .build();
 
         recordMapper.insert(record);
+
+        // Track weakness
+        if (isCorrect) {
+            weaknessService.recordCorrectAnswer(userId, question.getKnowledgeNodeId(), session.getSubject());
+        } else {
+            weaknessService.recordWrongAnswer(userId, question.getKnowledgeNodeId(), session.getSubject());
+        }
 
         // Update session
         int newCorrect = session.getCorrectAnswers() + (isCorrect ? 1 : 0);
@@ -314,6 +325,12 @@ public class ExplorationService {
                     user.getCurrentSpiritId(), accuracy,
                     session.getActualDuration(), session.getExpectedDuration(),
                     session.getStreakAtTime());
+
+            // Add experience based on energy earned (exp = energy * 0.5)
+            int expGain = (int) (energyEarned * 0.5);
+            if (expGain > 0) {
+                spiritService.addExperience(userId, user.getCurrentSpiritId(), expGain);
+            }
         }
 
         // Update subject world progress

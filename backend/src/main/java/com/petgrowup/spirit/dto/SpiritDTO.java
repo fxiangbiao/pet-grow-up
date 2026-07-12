@@ -12,6 +12,8 @@ public class SpiritDTO {
     private SpiritSpeciesDTO species;
     private String nickname;
     private Integer currentEvolutionStage;
+    private Integer experience;
+    private Integer totalExperienceForNextStage;
     private Integer happiness;
     private Integer energy;
     private Integer affection;

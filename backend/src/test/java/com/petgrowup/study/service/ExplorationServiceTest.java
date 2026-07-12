@@ -4,6 +4,7 @@ import com.petgrowup.achievement.service.AchievementService;
 import com.petgrowup.challenge.service.ChallengeService;
 import com.petgrowup.story.service.StoryService;
 import com.petgrowup.event.service.RandomEventService;
+import com.petgrowup.study.service.WeaknessService;
 import com.petgrowup.auth.entity.User;
 import com.petgrowup.auth.mapper.UserMapper;
 import com.petgrowup.common.exception.BusinessException;
@@ -58,6 +59,8 @@ class ExplorationServiceTest {
     private StoryService storyService;
     @Mock
     private RandomEventService randomEventService;
+    @Mock
+    private WeaknessService weaknessService;
 
     private ExplorationService explorationService;
 
@@ -65,7 +68,7 @@ class ExplorationServiceTest {
     void setUp() {
         explorationService = new ExplorationService(sessionMapper, recordMapper, quizService,
                 energyService, spiritService, userMapper, worldMapper, messagingTemplate, achievementService,
-                challengeService, storyService, randomEventService);
+                challengeService, storyService, randomEventService, weaknessService);
     }
 
     @Test

@@ -10,7 +10,7 @@
     typewriterSpeed = 40
   }: {
     quote: string;
-    personality?: 'cheerful' | 'gentle' | 'tsundere' | 'brave';
+    personality?: 'cheerful' | 'gentle' | 'tsundere' | 'brave' | 'weakness';
     show?: boolean;
     typewriter?: boolean;
     typewriterSpeed?: number;
@@ -55,14 +55,16 @@
     cheerful: 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-300',
     gentle: 'bg-gradient-to-r from-pink-50 to-rose-50 border-pink-300',
     tsundere: 'bg-gradient-to-r from-violet-50 to-purple-50 border-purple-300',
-    brave: 'bg-gradient-to-r from-red-50 to-orange-50 border-red-300'
+    brave: 'bg-gradient-to-r from-red-50 to-orange-50 border-red-300',
+    weakness: 'bg-gradient-to-r from-sky-50 to-blue-50 border-sky-300'
   };
 
   const arrowColors: Record<string, string> = {
     cheerful: 'border-t-amber-50',
     gentle: 'border-t-pink-50',
     tsundere: 'border-t-violet-50',
-    brave: 'border-t-red-50'
+    brave: 'border-t-red-50',
+    weakness: 'border-t-sky-50'
   };
 </script>
 

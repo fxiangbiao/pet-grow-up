@@ -14,6 +14,14 @@ let currentBgmSubject = '';
 let currentBgmScene = '';
 let masterVolume = 0.12;
 
+// MP3 BGM audio elements for explore scenes
+let currentBgmAudio: HTMLAudioElement | null = null;
+const bgmAudioFiles: Record<string, string> = {
+  chinese: '/bgm-chinese.mp3',
+  math: '/bgm-math.mp3',
+  english: '/bgm-english.mp3'
+};
+
 function getContext(): AudioContext {
   if (!ctx) {
     ctx = new AudioContext();
@@ -153,19 +161,39 @@ function startPulse(c: AudioContext, freq: number, vol: number, speedHz: number)
   return osc;
 }
 
-// ── Chinese Explore: Pentatonic warmth with flowing melody ──
+// ── Chinese Explore: 诗词大陆 — 柔和水滴风，古筝般的温暖旋律 ──
 function playChineseExplore(c: AudioContext) {
-  // Warm low pad
-  bgmOscillators.push(startPadOsc(c, 131, 0.04)); // C3
-  bgmOscillators.push(startPadOsc(c, 196, 0.03)); // G3
-  // Gentle pulse
-  bgmOscillators.push(startPulse(c, 98, 0.03, 0.5));
+  // 极柔和低音铺垫
+  bgmOscillators.push(startPadOsc(c, 131, 0.05)); // C3
+  bgmOscillators.push(startPadOsc(c, 196, 0.04));  // G3
+  // 轻柔呼吸脉动
+  bgmOscillators.push(startPulse(c, 98, 0.035, 0.4));
 
-  // Flowing pentatonic melody — calm but forward-moving
-  const melody = [330, 392, 440, 523, 440, 392, 330, 294, 330, 392, 440, 523, 587, 523, 440, 392];
-  const cycle = 20;
+  // 五声音阶音乐盒旋律 — 缓慢、甜美、如水滴
+  const melody = [523, 587, 659, 784, 659, 587, 523, 440, 523, 587, 659, 784, 880, 784, 659, 587];
+  const cycle = 32;
   melody.forEach((freq, i) => {
-    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (cycle / melody.length), cycle / melody.length, 'triangle', 0.05, 0.008));
+    const t = c.currentTime + i * (cycle / melody.length);
+    const len = cycle / melody.length * 1.8;
+    const osc = c.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.07, t + 0.3);
+    g.gain.setValueAtTime(0.07, t + len - 0.6);
+    g.gain.linearRampToValueAtTime(0, t + len);
+    osc.connect(g);
+    g.connect(bgmGain!);
+    osc.start(t);
+    osc.stop(t + len + 0.1);
+    bgmOscillators.push(osc);
+  });
+
+  // 柔和八度泛音点缀
+  [0, 8].forEach((noteIdx) => {
+    const t = c.currentTime + noteIdx * (cycle / melody.length);
+    bgmOscillators.push(schedulePluck(c, 262, t, cycle / melody.length * 4, 'sine', 0.04, 0.01));
   });
 }
 
@@ -197,36 +225,40 @@ function playChineseChar(c: AudioContext) {
   });
 }
 
-// ── Math Explore: Dorian mode arpeggios — medieval adventure quest ──
+// ── Math Explore: 智慧王国 — 温暖钟声风，柔和琶音 ──
 function playMathExplore(c: AudioContext) {
-  // Rich low drone
-  bgmOscillators.push(startPadOsc(c, 131, 0.04)); // C3
-  bgmOscillators.push(startPadOsc(c, 196, 0.03)); // G3
-  bgmOscillators.push(startPulse(c, 65, 0.035, 0.55));
+  // 柔和低音铺垫
+  bgmOscillators.push(startPadOsc(c, 131, 0.05)); // C3
+  bgmOscillators.push(startPadOsc(c, 196, 0.04));  // G3
+  // 柔和脉动
+  bgmOscillators.push(startPulse(c, 65, 0.035, 0.4));
 
-  // Dorian arpeggio — adventurous, forward momentum
-  const arp = [262, 330, 392, 440, 392, 330, 262, 294, 349, 440, 349, 294, 262, 330, 392, 466, 440, 392, 330, 262];
-  const arpCycle = 16;
+  // 大调琶音 — 温暖、明亮、可爱
+  const arp = [262, 330, 392, 523, 392, 330, 262, 294, 349, 440, 349, 294];
+  const arpCycle = 24;
   arp.forEach((freq, i) => {
-    bgmOscillators.push(schedulePluck(c, freq, c.currentTime + i * (arpCycle / arp.length), arpCycle / arp.length, 'triangle', 0.06, 0.01));
-  });
-
-  // Occasional tension note (Ab = 415 Hz — minor 6th interval creates adventure tension)
-  [3, 7, 11].forEach((beat) => {
-    const t = c.currentTime + beat * (arpCycle / 4);
+    const t = c.currentTime + i * (arpCycle / arp.length);
+    const len = arpCycle / arp.length * 2;
     const osc = c.createOscillator();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(415, t);
+    osc.frequency.setValueAtTime(freq, t);
     const g = c.createGain();
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.025, t + 0.3);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+    g.gain.linearRampToValueAtTime(0.065, t + 0.25);
+    g.gain.setValueAtTime(0.065, t + len - 0.5);
+    g.gain.linearRampToValueAtTime(0, t + len);
     osc.connect(g);
     g.connect(bgmGain!);
     osc.start(t);
-    osc.stop(t + 1.6);
+    osc.stop(t + len + 0.1);
     bgmOscillators.push(osc);
   });
+
+  // 柔和高音星光点缀
+  for (let i = 0; i < 3; i++) {
+    const t = c.currentTime + i * 8 + 2;
+    bgmOscillators.push(schedulePluck(c, 1047, t, 1.5, 'sine', 0.035, 0.008));
+  }
 }
 
 // ── Math Clock: Tick-tock rhythm + dreamy melody ──
@@ -292,63 +324,53 @@ function playMathShop(c: AudioContext) {
   }
 }
 
-// ── English Explore: Warm ambient + gentle adventure melody ──
+// ── English Explore: 魔法学院 — 音乐盒风格，甜美摇篮曲 ──
 function playEnglishExplore(c: AudioContext) {
-  // Warm Cmaj7 pad — very soft
-  bgmOscillators.push(startPadOsc(c, 131, 0.035)); // C3
-  bgmOscillators.push(startPadOsc(c, 165, 0.03));  // E3
-  bgmOscillators.push(startPadOsc(c, 196, 0.03));  // G3
-  bgmOscillators.push(startPadOsc(c, 247, 0.025)); // B3
-  bgmOscillators.push(startPulse(c, 65, 0.03, 0.45));
+  // 极柔和 Cmaj7 铺垫 — 温暖包裹
+  bgmOscillators.push(startPadOsc(c, 131, 0.045)); // C3
+  bgmOscillators.push(startPadOsc(c, 165, 0.04));  // E3
+  bgmOscillators.push(startPadOsc(c, 196, 0.04));  // G3
+  bgmOscillators.push(startPadOsc(c, 247, 0.035)); // B3
+  // 轻柔呼吸
+  bgmOscillators.push(startPulse(c, 65, 0.03, 0.35));
 
-  // Gentle melody — C4-C5 range, sine + slow attack = never harsh
-  const melody = [262, 330, 392, 349, 330, 294, 262, 330, 392, 440, 392, 330, 294, 262, 294, 330];
-  const cycle = 28;
+  // 音乐盒旋律 — 简单、甜美、可爱
+  const melody = [523, 587, 659, 784, 880, 784, 659, 587, 523, 659, 784, 880, 784, 659, 587, 523];
+  const cycle = 32;
   melody.forEach((freq, i) => {
-    const osc = c.createOscillator();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(freq, c.currentTime);
-
-    // Subtle vibrato
-    const vib = c.createOscillator();
-    vib.type = 'sine';
-    vib.frequency.setValueAtTime(3.5, c.currentTime);
-    const vibGain = c.createGain();
-    vibGain.gain.setValueAtTime(2, c.currentTime);
-    vib.connect(vibGain);
-    vibGain.connect(osc.frequency);
-    vib.start();
-
-    const g = c.createGain();
     const t = c.currentTime + i * (cycle / melody.length);
-    const len = cycle / melody.length * 1.5;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.025, t + 1.2); // very slow attack
-    g.gain.setValueAtTime(0.025, t + len - 0.8);
-    g.gain.linearRampToValueAtTime(0, t + len);
-
-    osc.connect(g);
-    g.connect(bgmGain!);
-    osc.start();
-    bgmOscillators.push(osc, vib);
-  });
-
-  // Occasional tension swell (Ab in C major context — mysterious)
-  [4, 12, 20].forEach((noteIdx) => {
-    const t = c.currentTime + noteIdx * (cycle / melody.length);
+    const len = cycle / melody.length * 2;
     const osc = c.createOscillator();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(415, t);
+    osc.frequency.setValueAtTime(freq, t);
+    // 微微颤音增加温暖感
+    const vib = c.createOscillator();
+    vib.type = 'sine';
+    vib.frequency.setValueAtTime(4, t);
+    const vibGain = c.createGain();
+    vibGain.gain.setValueAtTime(1.5, t);
+    vib.connect(vibGain);
+    vibGain.connect(osc.frequency);
+    vib.start(t);
+
     const g = c.createGain();
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.02, t + 1.5);
-    g.gain.linearRampToValueAtTime(0, t + 4);
+    g.gain.linearRampToValueAtTime(0.06, t + 0.4);
+    g.gain.setValueAtTime(0.06, t + len - 0.8);
+    g.gain.linearRampToValueAtTime(0, t + len);
     osc.connect(g);
     g.connect(bgmGain!);
     osc.start(t);
-    osc.stop(t + 4.2);
-    bgmOscillators.push(osc);
+    osc.stop(t + len + 0.1);
+    bgmOscillators.push(osc, vib);
   });
+
+  // 柔和星光闪烁 — 高音 sine 泛音
+  for (let i = 0; i < 4; i++) {
+    const t = c.currentTime + i * 8 + 1;
+    bgmOscillators.push(schedulePluck(c, 1047, t, 2, 'sine', 0.03, 0.006));
+    bgmOscillators.push(schedulePluck(c, 1319, t + 0.5, 1.5, 'sine', 0.025, 0.005));
+  }
 }
 
 // ── English Letters: ABC-inspired, gentle bell chimes ──
@@ -394,6 +416,31 @@ function playEnglishVocab(c: AudioContext) {
     osc.start(t);
     osc.stop(t + 0.2);
     bgmOscillators.push(osc);
+  }
+}
+
+// ── MP3 BGM playback helper ──
+function playMp3Bgm(subject: string) {
+  const file = bgmAudioFiles[subject];
+  if (!file) return;
+  
+  stopMp3Bgm();
+  
+  const audio = new Audio(file);
+  audio.loop = true;
+  audio.volume = Math.min(masterVolume * 8, 1.0); // Scale up from oscillator level
+  currentBgmAudio = audio;
+  
+  audio.play().catch((err) => {
+    console.warn('BGM play failed:', err);
+  });
+}
+
+function stopMp3Bgm() {
+  if (currentBgmAudio) {
+    currentBgmAudio.pause();
+    currentBgmAudio.currentTime = 0;
+    currentBgmAudio = null;
   }
 }
 
@@ -452,7 +499,7 @@ export const soundManager = {
       } else if (effectiveScene === 'char' || effectiveScene === 'shizi') {
         playChineseChar(c);
       } else {
-        playChineseExplore(c);
+        playMp3Bgm('chinese');
       }
     } else if (subject === 'math') {
       if (effectiveScene === 'clock') {
@@ -460,7 +507,7 @@ export const soundManager = {
       } else if (effectiveScene === 'shop') {
         playMathShop(c);
       } else {
-        playMathExplore(c);
+        playMp3Bgm('math');
       }
     } else if (subject === 'english') {
       if (effectiveScene === 'letters') {
@@ -468,7 +515,7 @@ export const soundManager = {
       } else if (effectiveScene === 'vocab') {
         playEnglishVocab(c);
       } else {
-        playEnglishExplore(c);
+        playMp3Bgm('english');
       }
     }
   },
@@ -479,6 +526,7 @@ export const soundManager = {
       try { osc.stop(); } catch { /* already stopped */ }
     });
     bgmOscillators = [];
+    stopMp3Bgm();
     currentBgmSubject = '';
     currentBgmScene = '';
     if (bgmGain) {
