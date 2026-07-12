@@ -34,7 +34,7 @@
   <h1 class="text-2xl font-bold text-gray-800 mb-6">我的精灵</h1>
 
   {#if loading}
-    <div class="text-center text-gray-500 py-12">加载中...</div>
+    <SkeletonTemplates name="spirits" />
   {:else if loadError}
     <div class="max-w-md mx-auto text-center py-12">
       <div class="text-5xl mb-4">🔒</div>

@@ -96,7 +96,7 @@
     </div>
 
     {#if loading}
-      <LoadingSpinner size="md" text="加载商品..." />
+      <SkeletonTemplates name="shop" />
     {:else if items.length === 0}
       <div class="text-center py-12 text-gray-400">暂无商品</div>
     {:else}

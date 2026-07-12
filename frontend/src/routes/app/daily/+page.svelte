@@ -65,7 +65,7 @@
   </div>
 
   {#if loading}
-    <LoadingSpinner size="md" text="加载今日挑战..." />
+    <SkeletonTemplates name="daily" />
   {:else}
     <div class="space-y-3">
       {#each challenges as c (c.id)}

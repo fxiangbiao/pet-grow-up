@@ -114,7 +114,7 @@
 
   <!-- Content -->
   {#if achievementStore.loading}
-    <LoadingSpinner text="加载成就数据..." />
+    <SkeletonTemplates name="achievements" />
   {:else if achievementStore.loadError}
     <div class="max-w-md mx-auto text-center py-12">
       <div class="text-5xl mb-4">🔒</div>
