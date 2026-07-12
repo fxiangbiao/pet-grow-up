@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
@@ -7,15 +7,27 @@
   import SpiritAvatar from '$lib/components/spirit/SpiritAvatar.svelte';
   import SpiritGreeting from '$lib/components/spirit/SpiritGreeting.svelte';
   import BlindBoxAnimation from '$lib/components/daily/BlindBoxAnimation.svelte';
+  import SkeletonTemplates from '$lib/components/common/SkeletonTemplates.svelte';
+  import ErrorState from '$lib/components/common/ErrorState.svelte';
   import { getDailyRewardStatus, claimDailyReward, type DailyRewardStatus } from '$lib/api/daily-reward';
 
   let blindBox = $state<DailyRewardStatus | null>(null);
+  let loading = $state(true);
+  let loadError = $state('');
 
-  onMount(() => {
-    achievementStore.refresh();
-    spiritStore.refresh(authStore.user!.id);
-    spiritStore.checkStatus();
-    getDailyRewardStatus().then(s => blindBox = s).catch(() => {});
+  onMount(async () => {
+    try {
+      await Promise.all([
+        achievementStore.refresh(),
+        spiritStore.refresh(authStore.user!.id),
+        getDailyRewardStatus().then(s => blindBox = s).catch(() => {})
+      ]);
+      spiritStore.checkStatus();
+    } catch (e) {
+      loadError = '加载数据失败';
+    } finally {
+      loading = false;
+    }
   });
 
   async function handleBlindBoxClaim() {
@@ -23,7 +35,6 @@
     if (result.energyEarned > 0 && authStore.user) {
       authStore.user.currentEnergy += result.energyEarned;
     }
-    // Refresh status
     getDailyRewardStatus().then(s => blindBox = s).catch(() => {});
     return result;
   }
@@ -31,7 +42,7 @@
   function spiritMood(): 'happy' | 'excited' | 'hurt' | 'idle' | undefined {
     const s = spiritStore.activeSpirit;
     if (!s) return undefined;
-    if (spiritStore.dormancyLevel >= 2) return undefined; // sleeping, handled separately
+    if (spiritStore.dormancyLevel >= 2) return undefined;
     if (spiritStore.dormancyLevel >= 1) return 'hurt';
     if (s.happiness >= 80) return 'excited';
     if (s.happiness >= 50) return 'happy';
@@ -44,8 +55,12 @@
 </svelte:head>
 
 {#if authStore.user}
+  {#if loading}
+    <SkeletonTemplates name="dashboard" />
+  {:else if loadError}
+    <ErrorState type="server" message={loadError} onRetry={() => location.reload()} />
+  {:else}
   <div class="space-y-6 animate-slide-up">
-    <!-- Sprint C: Spirit greeting banner (shown after returning) -->
     {#if spiritStore.showGreeting && spiritStore.activeSpirit}
       <SpiritGreeting
         species={spiritStore.activeSpirit.species}
@@ -56,7 +71,6 @@
       />
     {/if}
 
-    <!-- Sprint F: Daily blind box -->
     {#if blindBox}
       <BlindBoxAnimation
         reward={blindBox.todayReward}
@@ -66,13 +80,12 @@
       />
     {/if}
 
-    <!-- Hero card: user greeting + active spirit -->
+    <!-- Hero card -->
     <div class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl shadow-lg p-6 text-white">
       <div class="flex items-start justify-between">
         <div class="flex-1">
           <h1 class="text-2xl font-bold">你好，{authStore.user.nickname}！</h1>
           <p class="text-white/80 mt-1">今天也要加油学习哦！</p>
-
           <div class="mt-4 flex flex-wrap gap-3">
             <div class="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2.5">
               <span class="text-xs text-white/70">学习能量</span>
@@ -101,7 +114,6 @@
             {/if}
           </div>
         </div>
-
         {#if spiritStore.activeSpirit}
           <button onclick={() => goto('/app/spirit')}
                 class="flex-shrink-0 -mt-2 -mr-2 p-2 rounded-full hover:bg-white/10 transition">
@@ -120,8 +132,6 @@
           </a>
         {/if}
       </div>
-
-      <!-- Spirit status bars -->
       {#if spiritStore.activeSpirit}
         <div class="mt-4 grid grid-cols-3 gap-3">
           <div>
@@ -179,9 +189,7 @@
       <a href="/app/achievements" class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
         <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-3">🏆</div>
         <h3 class="font-semibold text-gray-800">成就</h3>
-        <p class="text-sm text-gray-500 mt-1">
-          {achievementStore.unlockedCount}/{achievementStore.totalCount} 已解锁
-        </p>
+        <p class="text-sm text-gray-500 mt-1">{achievementStore.unlockedCount}/{achievementStore.totalCount} 已解锁</p>
       </a>
       <a href="/app/social" class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
         <div class="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center mb-3">👥</div>
@@ -210,4 +218,5 @@
       </a>
     </div>
   </div>
+  {/if}
 {/if}

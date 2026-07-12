@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { onMount } from 'svelte';
   import { getShopItems, buyItem } from '$lib/api/shop';
   import type { ItemDef } from '$lib/types/api';
@@ -7,7 +7,8 @@
   import GachaMachine from '$lib/components/shop/GachaMachine.svelte';
   import { toastStore } from '$lib/stores/toast.svelte';
   import { authStore } from '$lib/stores/auth.svelte';
-  import LoadingSpinner from '$lib/components/common/LoadingSpinner.svelte';
+  import SkeletonTemplates from '$lib/components/common/SkeletonTemplates.svelte';
+  import ErrorState from '$lib/components/common/ErrorState.svelte';
 
   const tabs = [
     { key: 'shop', label: '商品列表', icon: '🛒' },
@@ -27,12 +28,16 @@
   let activeCategory = $state('');
   let items = $state<ItemDef[]>([]);
   let loading = $state(true);
+  let loadError = $state('');
 
   async function loadShop() {
     loading = true;
+    loadError = '';
     try {
       items = await getShopItems(activeCategory || undefined);
-    } catch {}
+    } catch (e) {
+      loadError = '加载商品失败';
+    }
     loading = false;
   }
 
@@ -80,7 +85,6 @@
   </div>
 
   {#if activeTab === 'shop'}
-    <!-- Category filter -->
     <div class="flex gap-2">
       {#each categoryTabs as ct}
         <button
@@ -97,8 +101,10 @@
 
     {#if loading}
       <SkeletonTemplates name="shop" />
+    {:else if loadError}
+      <ErrorState type="server" message={loadError} onRetry={loadShop} />
     {:else if items.length === 0}
-      <div class="text-center py-12 text-gray-400">暂无商品</div>
+      <ErrorState type="empty" message="暂无商品" />
     {:else}
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {#each items as item (item.id)}

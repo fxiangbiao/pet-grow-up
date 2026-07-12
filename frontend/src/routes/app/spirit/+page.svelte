@@ -1,10 +1,12 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { getSpirits } from '$lib/api/spirit';
   import { goto } from '$app/navigation';
   import type { SpiritDTO } from '$lib/types/api';
   import SpiritAvatar from '$lib/components/spirit/SpiritAvatar.svelte';
   import DormancyOverlay from '$lib/components/spirit/DormancyOverlay.svelte';
   import { spiritStore } from '$lib/stores/spirit.svelte';
+  import SkeletonTemplates from '$lib/components/common/SkeletonTemplates.svelte';
+  import ErrorState from '$lib/components/common/ErrorState.svelte';
 
   let spirits = $state<SpiritDTO[]>([]);
   let loading = $state(true);
@@ -36,20 +38,9 @@
   {#if loading}
     <SkeletonTemplates name="spirits" />
   {:else if loadError}
-    <div class="max-w-md mx-auto text-center py-12">
-      <div class="text-5xl mb-4">🔒</div>
-      <p class="text-gray-500 mb-4">{loadError}</p>
-      <a href="/login" class="inline-block px-6 py-3 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition">
-        重新登录
-      </a>
-    </div>
+    <ErrorState type="auth" message={loadError} />
   {:else if spirits.length === 0}
-    <div class="text-center py-12">
-      <p class="text-gray-500 mb-4">还没有精灵，快去选择你的第一个伙伴！</p>
-      <a href="/app/spirit/choose" class="inline-block px-6 py-3 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition">
-        选择精灵
-      </a>
-    </div>
+    <ErrorState type="empty" message="还没有精灵，快去选择你的第一个伙伴！" actionLabel="选择精灵" onAction={() => goto('/app/spirit/choose')} />
   {:else}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {#each spirits as spirit}
