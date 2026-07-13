@@ -1,4 +1,4 @@
-package com.petgrowup.admin.dto;
+﻿package com.petgrowup.admin.dto;
 
 import lombok.Data;
 
@@ -11,5 +11,6 @@ public class UpdateNodeDTO {
     private Integer gradeLevel;
     private Long parentNodeId;
     private String prerequisiteNodes;
+    private String contentTemplate;
     private Integer orderIndex;
 }

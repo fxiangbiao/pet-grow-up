@@ -1,7 +1,7 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { startSession, submitAnswer } from '$lib/api/study';
   import type { QuestionDTO, AnswerResult } from '$lib/api/study';
   import CorrectIndicator from '$lib/components/feedback/CorrectIndicator.svelte';
@@ -34,7 +34,9 @@
   const nodeId = $derived(Number($page.url.searchParams.get('nodeId')));
 
   // ── Page phases ──
-  let phase = $state<'confirm' | 'playing' | 'result'>('confirm');
+  let phase = $state<'teaching' | 'confirm' | 'playing' | 'result'>('teaching');
+  let teachingCards = $state<TeachingCard[]>([]);
+  let teachingLoading = $state(true);
   let loading = $state(false);
   let error = $state('');
 
@@ -319,7 +321,20 @@
   <div class="max-w-2xl mx-auto animate-slide-up relative z-10 px-4">
 
   <!-- ═══ CONFIRM ═══ -->
-  {#if phase === 'confirm'}
+  {#if phase === 'teaching' && teachingCards.length > 0}
+    <div class="mb-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-2xl">{subjectData[subject]?.emoji || '馃實'}</span>
+        <h2 class="text-lg font-bold text-gray-800">{subjectData[subject]?.name || subject} - 鐭ヨ瘑鎺㈢储</h2>
+      </div>
+      <KnowledgeCards cards={teachingCards} onComplete={() => phase = 'confirm'} />
+    </div>
+  {:else if phase === 'teaching' && teachingLoading}
+    <div class="text-center py-12">
+      <div class="inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
+      <p class="mt-2 text-gray-500">鍔犺浇鐭ヨ瘑鍗＄墖...</p>
+    </div>
+  {:else if phase === 'confirm'}
     <ExploreConfirm
       {subject}
       subjectName={subjectData[subject]?.name || subject}

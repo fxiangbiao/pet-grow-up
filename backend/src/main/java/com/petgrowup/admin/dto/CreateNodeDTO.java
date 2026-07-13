@@ -1,4 +1,4 @@
-package com.petgrowup.admin.dto;
+﻿package com.petgrowup.admin.dto;
 
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -24,7 +24,9 @@ public class CreateNodeDTO {
 
     private Long parentNodeId;
 
-    private String prerequisiteNodes;   // JSON array
+    private String prerequisiteNodes;
+
+    private String contentTemplate;
 
     private Integer orderIndex = 0;
 }

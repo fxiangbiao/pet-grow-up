@@ -1,4 +1,4 @@
--- Insert spirit species: 3 subjects x 3 evolution stages each = 9 entries
+﻿-- Insert spirit species: 3 subjects x 3 evolution stages each = 9 entries
 -- Chinese (诗词大陆)
 INSERT IGNORE INTO spirit_species (species_key, name, subject, description, evolution_stage, evolves_from_id, evolution_energy_cost, base_affection, sprite_url, animation_data) VALUES
 ('chinese_basic', '小书仙', 'chinese', '诗词大陆中由文字灵气凝聚而成的小精灵，喜爱在书卷间嬉戏。', 1, NULL, NULL, 30, '/sprites/chinese/basic.svg', '{}'),
@@ -29,20 +29,84 @@ UPDATE spirit_species SET evolves_from_id = (SELECT t.id FROM (SELECT id FROM sp
 UPDATE spirit_species SET evolves_from_id = (SELECT t.id FROM (SELECT id FROM spirit_species WHERE species_key = 'english_basic') t) WHERE species_key = 'english_mid';
 UPDATE spirit_species SET evolves_from_id = (SELECT t.id FROM (SELECT id FROM spirit_species WHERE species_key = 'english_mid') t) WHERE species_key = 'english_advanced';
 
--- Knowledge Nodes: Chinese (诗词大陆)
-INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
-('chinese', 'chinese_intro', '语文入门', '认识拼音字母和基础汉字，朗读儿歌和古诗', 1, NULL, 1);
+-- ============================================================
+-- Knowledge Tree Structure
+-- Root nodes (parent_node_id=NULL) act as categories
+-- Child nodes contain specific skills
+-- ============================================================
 
--- Knowledge Nodes: Math (智慧王国) — 一年级数学（人教2024版）
+-- Knowledge Tree: Chinese
+-- Root
 INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
-('math', 'math_intro', '凑十法与10以内', '掌握凑十法、10以内加减法', 1, NULL, 1),
-('math', 'math_addsub20', '20以内加减', '掌握20以内进位加法和退位减法', 2, NULL, 2),
+('chinese', 'chinese_intro', '语文启蒙', '拼音、汉字、儿歌古诗的综合启蒙', 1, NULL, 1);
+
+-- Children
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('chinese', 'chinese_pinyin', '学拼音', '认识声母韵母和整体认读音节，掌握拼读规则', 1, NULL, 1),
+('chinese', 'chinese_characters', '认汉字', '学习常见独体字和简单合体字，理解基本笔画', 1, NULL, 2),
+('chinese', 'chinese_reading', '读儿歌', '朗读简单儿歌和古诗，培养语感和节奏感', 1, NULL, 3);
+
+-- Knowledge Tree: Math
+-- Root 1
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('math', 'math_intro', '10以内加法与凑十法', '掌握凑十法和10以内加法', 1, NULL, 1);
+
+-- Children
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('math', 'math_make_ten', '凑十法', '学会看大数拆小数，凑成十再加余数', 1, NULL, 1),
+('math', 'math_add_within10', '10以内加减', '掌握10以内的加法和减法运算', 1, NULL, 2);
+
+-- Root 2
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('math', 'math_addsub20', '20以内加减法', '掌握20以内进位加法和退位减法', 2, NULL, 2);
+
+-- Children
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('math', 'math_carry_add', '进位加法', '学会凑十法计算20以内进位加法', 2, NULL, 1),
+('math', 'math_borrow_sub', '退位减法', '学会破十法计算20以内退位减法', 2, NULL, 2);
+
+-- Root 3
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
 ('math', 'math_geometry', '认识图形', '认识圆形、正方形、三角形等基本图形', 3, NULL, 3);
 
--- Knowledge Nodes: English (魔法学院)
+-- Knowledge Tree: English
+-- Root 1
 INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
-('english', 'english_intro', '字母与发音', '掌握26个字母和基础发音', 1, NULL, 1),
-('english', 'english_vocab', '词汇积累', '学习日常生活中的常用词汇', 2, NULL, 2);
+('english', 'english_intro', '字母与发音', '掌握26个字母的认读和基础自然拼读', 1, NULL, 1);
+
+-- Children
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('english', 'english_letters', '认识字母', '认读26个大小写字母，了解字母顺序', 1, NULL, 1),
+('english', 'english_phonics', '自然拼读', '学习字母在单词中的常见发音规则', 1, NULL, 2);
+
+-- Root 2
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('english', 'english_vocab', '词汇积累', '学习日常生活中的常用英语词汇', 2, NULL, 2);
+
+-- Children
+INSERT IGNORE INTO knowledge_node (subject, node_key, name, description, difficulty, parent_node_id, order_index) VALUES
+('english', 'english_daily_words', '日常词汇', '学习颜色、数字、动物、食物等日常词汇', 2, NULL, 1);
+
+-- ============================================================
+-- Set parent_node_id to establish tree hierarchy
+-- ============================================================
+-- Chinese: children -> chinese_intro
+UPDATE knowledge_node SET parent_node_id = (SELECT t.id FROM (SELECT id FROM knowledge_node WHERE subject='chinese' AND node_key='chinese_intro') t) WHERE subject='chinese' AND node_key='chinese_pinyin';
+UPDATE knowledge_node SET parent_node_id = (SELECT t.id FROM (SELECT id FROM knowledge_node WHERE subject='chinese' AND node_key='chinese_intro') t) WHERE subject='chinese' AND node_key='chinese_characters';
+UPDATE knowledge_node SET parent_node_id = (SELECT t.id FROM (SELECT id FROM knowledge_node WHERE subject='chinese' AND node_key='chinese_intro') t) WHERE subject='chinese' AND node_key='chinese_reading';
+
+-- Math: children of math_intro
+UPDATE knowledge_node SET parent_node_id = (SELECT t.id FROM (SELECT id FROM knowledge_node WHERE subject='math' AND node_key='math_intro') t) WHERE subject='math' AND node_key='math_make_ten';
+UPDATE knowledge_node SET parent_node_id = (SELECT t.id FROM (SELECT id FROM knowledge_node WHERE subject='math' AND node_key='math_intro') t) WHERE subject='math' AND node_key='math_add_within10';
+-- Math: children of math_addsub20
+UPDATE knowledge_node SET parent_node_id = (SELECT t.id FROM (SELECT id FROM knowledge_node WHERE subject='math' AND node_key='math_addsub20') t) WHERE subject='math' AND node_key='math_carry_add';
+UPDATE knowledge_node SET parent_node_id = (SELECT t.id FROM (SELECT id FROM knowledge_node WHERE subject='math' AND node_key='math_addsub20') t) WHERE subject='math' AND node_key='math_borrow_sub';
+
+-- English: children of english_intro
+UPDATE knowledge_node SET parent_node_id = (SELECT t.id FROM (SELECT id FROM knowledge_node WHERE subject='english' AND node_key='english_intro') t) WHERE subject='english' AND node_key='english_letters';
+UPDATE knowledge_node SET parent_node_id = (SELECT t.id FROM (SELECT id FROM knowledge_node WHERE subject='english' AND node_key='english_intro') t) WHERE subject='english' AND node_key='english_phonics';
+-- English: children of english_vocab
+UPDATE knowledge_node SET parent_node_id = (SELECT t.id FROM (SELECT id FROM knowledge_node WHERE subject='english' AND node_key='english_vocab') t) WHERE subject='english' AND node_key='english_daily_words';
 
 -- Quiz Questions: Chinese (Sprint A: old poetry questions removed — see Sprint A pinyin/shizi/kewen sections below)
 
@@ -1228,3 +1292,20 @@ INSERT IGNORE INTO item_def (item_key, name, description, category, effect_type,
 -- Seed admin user (password: admin123)
 INSERT IGNORE INTO users (username, email, password_hash, nickname, role, total_energy, current_energy)
 VALUES ('admin', 'admin@petgrowup.com', '$2a$10$uKwLfEt7E6iyoy1NxTAKWuoGlmLpQsm/pbwaM1L1XcAQ9Kp7xNa5a', '系统管理员', 'ADMIN', 0, 0);
+
+-- ============================================================
+-- Teaching Content (contentTemplate) for key knowledge nodes
+-- ============================================================
+
+-- Math: 凑十法 teaching content
+UPDATE knowledge_node SET content_template = '{"cards":[{"id":1,"type":"intro","title":"小精灵的苹果园","content":"小精灵去果园摘苹果，树上有8个红苹果，地上又掉了2个青苹果。一共有几个苹果呢？","spriteAction":"wave","illustration":"apple_tree"},{"id":2,"type":"concept","title":"什么是凑十法","content":"凑十法就是：看到大数8，想一想还差几个能凑成10。8差2就是10！所以先把2补给8，变成10，再加剩下的。","animation":"make_ten_demo"},{"id":3,"type":"steps","title":"凑十法四步走","steps":["看大数：看到8，知道8接近10","拆小数：把另一个数拆开","凑成十：拿出2给8，凑成10","加剩余：剩下的加起来"]},{"id":4,"type":"example","title":"动手试试","content":"8 + 5 = ?","interactive":"drag_to_make_ten"},{"id":5,"type":"mnemonic","title":"凑十歌","content":"一九一九好朋友，\n二八二八手拉手，\n三七三七真亲密，\n四六四六一起走，\n五五凑成一双手。"}]}' WHERE node_key = 'math_make_ten';
+
+-- Math: 10以内加减 teaching content
+UPDATE knowledge_node SET content_template = '{"cards":[{"id":1,"type":"intro","title":"数字小世界","content":"欢迎来到数字小世界！在这里，数字们喜欢做游戏。加在一起变多，拿走一些变少。","spriteAction":"wave"},{"id":2,"type":"concept","title":"加法和减法","content":"加法就是合在一起数一数：3个苹果加2个苹果，一共5个！\n减法就是拿走一些数一数：5颗星星拿走2颗，还剩3颗。"},{"id":3,"type":"steps","title":"计算小窍门","steps":["用手指头数：伸出3根手指，再伸2根，一共5根","接着数：3加2，从3开始往后数2个：4、5！","倒着数：5减2，从5往前倒数2个：4、3！"]},{"id":4,"type":"example","title":"试试看","content":"3 + 4 = ?","interactive":"tap_answer"},{"id":5,"type":"mnemonic","title":"数字好朋友","content":"1和4是好朋友，加起来就是5；\n2和3手拉手，加起来也是5；\n5和5一双手，加起来就是10！"}]}' WHERE node_key = 'math_add_within10';
+
+-- English: 认识字母 teaching content
+UPDATE knowledge_node SET content_template = '{"cards":[{"id":1,"type":"intro","title":"字母魔法世界","content":"Welcome to the Alphabet World! 26个字母精灵住在魔法学院里，每个都有自己的名字和声音。","spriteAction":"wave"},{"id":2,"type":"concept","title":"字母表","content":"英文有26个字母，分大写和小写。\n大写字母像爸爸一样高大：A B C D E F...\n小写字母像孩子一样可爱：a b c d e f..."},{"id":3,"type":"steps","title":"学习顺序","steps":["先学前半：A B C D E F G H I J K L M","再学后半：N O P Q R S T U V W X Y Z","边读边写：读一个字母，写一个字母","唱字母歌：用ABC Song帮助记忆"]},{"id":4,"type":"example","title":"认一认","content":"A a  B b  C c","interactive":"letter_match"},{"id":5,"type":"mnemonic","title":"ABC字母歌","content":"A B C D E F G,\nH I J K L M N,\nO P Q, R S T,\nU V W, X Y Z.\nNow I know my ABCs,\nNext time won''t you sing with me!"}]}' WHERE node_key = 'english_letters';
+
+-- Chinese: 学拼音 teaching content
+UPDATE knowledge_node SET content_template = '{"cards":[{"id":1,"type":"intro","title":"拼音王国","content":"欢迎来到拼音王国！这里有声母家族和韵母家族，它们手拉手组成音节，帮你认识每一个汉字。","spriteAction":"wave"},{"id":2,"type":"concept","title":"声母和韵母","content":"声母：站在音节前面的字母，像 b p m f d t n l...\n韵母：站在音节后面的字母，像 a o e i u ü...\n声母 + 韵母 = 一个音节（就是一个字的读音）"},{"id":3,"type":"steps","title":"拼读四步法","steps":["认声母：看到 b，发「波」的音","认韵母：看到 a，发「啊」的音","拼在一起：b-a → ba（八）","加上声调：bā 八、bá 拔、bǎ 把、bà 爸"]},{"id":4,"type":"example","title":"拼一拼","content":"m + ā = ?","interactive":"pinyin_combine"},{"id":5,"type":"mnemonic","title":"声母口诀","content":"右下半圆 b b b，\n右上半圆 p p p，\n两个门洞 m m m，\n一根拐杖 f f f。"}]}' WHERE node_key = 'chinese_pinyin';
+

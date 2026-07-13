@@ -1,4 +1,4 @@
-package com.petgrowup.study.controller;
+﻿package com.petgrowup.study.controller;
 
 import com.petgrowup.common.response.ApiResponse;
 import com.petgrowup.study.dto.SubjectProgressDTO;
@@ -30,5 +30,10 @@ public class SubjectWorldController {
     public ApiResponse<List<SubjectProgressDTO>> getSubjectsProgress(
             @AuthenticationPrincipal Long userId) {
         return ApiResponse.success(worldService.getProgressList(userId));
+    }
+
+    @GetMapping("/nodes/{nodeId}/teaching")
+    public ApiResponse<Object> getTeachingContent(@PathVariable Long nodeId) {
+        return ApiResponse.success(worldService.getTeachingContent(nodeId));
     }
 }
