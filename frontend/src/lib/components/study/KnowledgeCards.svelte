@@ -1,5 +1,8 @@
 <script lang="ts">
   import type { TeachingCard } from '$lib/api/study';
+  import MathAnimation from './animations/MathAnimation.svelte';
+  import ChineseAnimation from './animations/ChineseAnimation.svelte';
+  import EnglishAnimation from './animations/EnglishAnimation.svelte';
 
   interface Props {
     cards: TeachingCard[];
@@ -179,7 +182,7 @@
           onclick={onComplete}
           class="px-5 py-2 rounded-lg text-sm font-bold text-white bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-md transition"
         >
-          开始挑战 →
+          开始练习 →
         </button>
       {:else}
         <button

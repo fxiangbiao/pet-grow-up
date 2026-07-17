@@ -1,4 +1,4 @@
-﻿package com.petgrowup.admin.service;
+package com.petgrowup.admin.service;
 
 import com.mybatisflex.core.query.QueryWrapper;
 import com.petgrowup.study.entity.QuizQuestion;

@@ -11,258 +11,299 @@
 
   // Subject themes
   const themes: Record<string, {
-    bg: string; trunk: string; leaf: string; leafLocked: string;
+    trunk: string; branch: string; leaf: string; leafLocked: string;
     leafCompleted: string; glow: string; icon: string; label: string;
+    bgFrom: string; bgTo: string;
   }> = {
     chinese: {
-      bg: 'from-green-50 to-amber-50',
-      trunk: '#8B6914',
-      leaf: '#22c55e',
-      leafLocked: '#d1d5db',
-      leafCompleted: '#eab308',
-      glow: '#fbbf24',
-      icon: '🌿',
-      label: '诗词树'
+      trunk: '#6B4423', branch: '#8B6914', leaf: '#22c55e',
+      leafLocked: '#d1d5db', leafCompleted: '#eab308', glow: '#fbbf24',
+      icon: '', label: '诗词大陆', bgFrom: '#f0fdf4', bgTo: '#fefce8'
     },
     math: {
-      bg: 'from-blue-50 to-indigo-50',
-      trunk: '#6366f1',
-      leaf: '#3b82f6',
-      leafLocked: '#d1d5db',
-      leafCompleted: '#f59e0b',
-      glow: '#60a5fa',
-      icon: '🏰',
-      label: '数学城堡'
+      trunk: '#4338ca', branch: '#6366f1', leaf: '#3b82f6',
+      leafLocked: '#d1d5db', leafCompleted: '#f59e0b', glow: '#60a5fa',
+      icon: '🏰', label: '数学城堡', bgFrom: '#eff6ff', bgTo: '#eef2ff'
     },
     english: {
-      bg: 'from-purple-50 to-pink-50',
-      trunk: '#9333ea',
-      leaf: '#a855f7',
-      leafLocked: '#d1d5db',
-      leafCompleted: '#f59e0b',
-      glow: '#c084fc',
-      icon: '🌸',
-      label: '魔法森林'
+      trunk: '#7e22ce', branch: '#9333ea', leaf: '#a855f7',
+      leafLocked: '#d1d5db', leafCompleted: '#f59e0b', glow: '#c084fc',
+      icon: '', label: '魔法森林', bgFrom: '#faf5ff', bgTo: '#fdf2f8'
     }
   };
 
   const theme = $derived(themes[subject] || themes.math);
 
   // Layout constants
-  const NODE_RADIUS = 36;
-  const CHILD_RADIUS = 28;
-  const ROOT_SPACING = 200;
-  const CHILD_SPACING = 90;
-  const VERTICAL_GAP = 120;
-  const PADDING = 60;
+  const NODE_R = 32;
+  const PADDING_X = 60;
+  const PADDING_Y = 40;
+  const ROW_GAP = 100; // 行间距
 
-  // Calculate SVG dimensions based on tree structure
-  const svgWidth = $derived(Math.max(
-    nodes.length * ROOT_SPACING,
-    ...nodes.map(n => Math.max(3, n.children?.length || 0) * CHILD_SPACING),
-    400
-  ));
-
-  const maxChildren = $derived(Math.max(1, ...nodes.map(n => n.children?.length || 0)));
-  const svgHeight = $derived(PADDING * 2 + NODE_RADIUS * 2 + (maxChildren > 0 ? VERTICAL_GAP + CHILD_RADIUS * 2 : 0));
-
-  // Calculate positions for root nodes
-  function getRootPositions() {
-    const totalWidth = (nodes.length - 1) * ROOT_SPACING;
-    const startX = (svgWidth - totalWidth) / 2;
-    return nodes.map((_, i) => ({
-      x: startX + i * ROOT_SPACING,
-      y: PADDING + NODE_RADIUS
-    }));
+  interface PathNode {
+    node: WorldNode;
+    x: number;
+    y: number;
+    index: number;
   }
 
-  // Calculate positions for children of a root node
-  function getChildPositions(rootX: number, rootY: number, childCount: number) {
-    if (childCount === 0) return [];
-    const totalWidth = (childCount - 1) * CHILD_SPACING;
-    const startX = rootX - totalWidth / 2;
-    const childY = rootY + VERTICAL_GAP;
-    return Array.from({ length: childCount }, (_, i) => ({
-      x: startX + i * CHILD_SPACING,
-      y: childY
-    }));
+  // 找到当前进度：第一个未完成的节点
+  function findCurrentProgress(nodes: WorldNode[]): number {
+    for (let i = 0; i < nodes.length; i++) {
+      if (!nodes[i].isCompleted) return i;
+    }
+    return nodes.length;
   }
 
-  const rootPositions = $derived(getRootPositions());
+  // 蛇形路径布局
+  function createSnakeLayout(nodes: WorldNode[], width: number, height: number): PathNode[] {
+    if (nodes.length === 0) return [];
 
-  // Star rendering
+    // 计算每行能放几个节点
+    const availableWidth = width - PADDING_X * 2;
+    const nodesPerRow = Math.max(3, Math.floor(availableWidth / (NODE_R * 2 + 40)));
+    
+    // 计算行数
+    const numRows = Math.ceil(nodes.length / nodesPerRow);
+    const availableHeight = height - PADDING_Y * 2;
+    const rowSpacing = Math.min(ROW_GAP, availableHeight / Math.max(1, numRows - 1));
+
+    const result: PathNode[] = [];
+
+    for (let i = 0; i < nodes.length; i++) {
+      const row = Math.floor(i / nodesPerRow);
+      const col = i % nodesPerRow;
+      
+      // 偶数行从左到右，奇数行从右到左（蛇形）
+      const actualCol = row % 2 === 0 ? col : (nodesPerRow - 1 - col);
+      
+      // 计算实际节点数（最后一行可能不满）
+      const nodesInRow = Math.min(nodesPerRow, nodes.length - row * nodesPerRow);
+      const rowWidth = (nodesInRow - 1) * (NODE_R * 2 + 40);
+      const startX = (width - rowWidth) / 2;
+      
+      const x = startX + actualCol * (NODE_R * 2 + 40);
+      const y = PADDING_Y + row * rowSpacing;
+
+      result.push({
+        node: nodes[i],
+        x,
+        y,
+        index: i
+      });
+    }
+
+    return result;
+  }
+
+  // 容器尺寸
+  const containerWidth = 800;
+  const containerHeight = 600;
+
+  // 生成布局
+  const pathNodes = $derived(() => {
+    if (nodes.length === 0) return [];
+    return createSnakeLayout(nodes, containerWidth, containerHeight);
+  });
+
+  // 当前进度索引
+  const currentProgress = $derived(() => findCurrentProgress(nodes));
+
+  // 连线数据
+  const edges = $derived(() => {
+    const result: {
+      from: PathNode;
+      to: PathNode;
+      type: 'completed' | 'current' | 'upcoming' | 'locked';
+    }[] = [];
+
+    const paths = pathNodes();
+    if (paths.length < 2) return result;
+
+    const progressIdx = currentProgress();
+
+    for (let i = 0; i < paths.length - 1; i++) {
+      const from = paths[i];
+      const to = paths[i + 1];
+
+      let type: 'completed' | 'current' | 'upcoming' | 'locked';
+
+      if (i < progressIdx - 1) {
+        type = 'completed';
+      } else if (i === progressIdx - 1) {
+        type = 'current';
+      } else if (i === progressIdx) {
+        type = 'upcoming';
+      } else {
+        type = 'locked';
+      }
+
+      result.push({ from, to, type });
+    }
+
+    return result;
+  });
+
   function renderStars(count: number): string {
     return '★'.repeat(count) + '☆'.repeat(3 - count);
   }
+
+  function getNodeStatus(node: WorldNode, index: number): 'completed' | 'current' | 'upcoming' | 'locked' {
+    const progressIdx = currentProgress();
+
+    if (index < progressIdx) return 'completed';
+    if (index === progressIdx) return 'current';
+    if (index === progressIdx + 1) return 'upcoming';
+    return 'locked';
+  }
 </script>
 
-<div class="knowledge-tree rounded-2xl border-2 border-white/50 bg-gradient-to-b {theme.bg} p-4 overflow-x-auto">
-  <!-- Title -->
+<div
+  class="knowledge-tree rounded-2xl border-2 border-white/50 p-4"
+  style="background: linear-gradient(to bottom, {theme.bgFrom}, {theme.bgTo})"
+>
   <div class="flex items-center gap-2 mb-3 px-2">
     <span class="text-2xl">{theme.icon}</span>
     <span class="font-bold text-gray-700">{theme.label}</span>
   </div>
 
-  <!-- SVG Tree -->
-  <svg
-    width={svgWidth}
-    height={svgHeight}
-    viewBox="0 0 {svgWidth} {svgHeight}"
-    class="mx-auto block"
-    role="img"
-    aria-label="{theme.label}知识树"
-  >
-    <!-- Connection lines: root to children -->
-    {#each nodes as node, i}
-      {#if node.children && node.children.length > 0}
-        {@const childPositions = getChildPositions(rootPositions[i].x, rootPositions[i].y, node.children.length)}
-        {#each childPositions as cp}
+  <div class="flex justify-center">
+    <svg
+      width={containerWidth}
+      height={containerHeight}
+      viewBox="0 0 {containerWidth} {containerHeight}"
+      class="block"
+      role="img"
+      aria-label="{theme.label}学习路径"
+    >
+      <!-- 路径连线 -->
+      {#each edges() as edge}
+        {#if edge.type === 'completed'}
+          <!-- 已完成：粗实线 -->
           <line
-            x1={rootPositions[i].x}
-            y1={rootPositions[i].y + NODE_RADIUS}
-            x2={cp.x}
-            y2={cp.y - CHILD_RADIUS}
-            stroke={node.isCompleted ? theme.leafCompleted : (node.isUnlocked ? theme.trunk : '#e5e7eb')}
-            stroke-width="3"
-            stroke-dasharray={node.isUnlocked ? 'none' : '6,4'}
-            opacity={node.isUnlocked ? 0.7 : 0.4}
+            x1={edge.from.x}
+            y1={edge.from.y}
+            x2={edge.to.x}
+            y2={edge.to.y}
+            stroke={theme.branch}
+            stroke-width="4"
+            opacity="0.7"
           />
-        {/each}
-      {/if}
-    {/each}
-
-    <!-- Root nodes -->
-    {#each nodes as node, i}
-      {@const pos = rootPositions[i]}
-      {@const isClickable = node.isUnlocked}
-
-      <g
-        class={isClickable ? 'cursor-pointer' : ''}
-        on:click={isClickable ? () => onNodeClick(node.nodeId) : undefined}
-        on:keydown={isClickable ? (e) => e.key === 'Enter' && onNodeClick(node.nodeId) : undefined}
-        role={isClickable ? 'button' : undefined}
-        tabindex={isClickable ? 0 : -1}
-        aria-label="{node.name} {node.isCompleted ? '已完成' : node.isUnlocked ? '可探险' : '未解锁'}"
-      >
-        <!-- Glow effect for completed -->
-        {#if node.isCompleted}
-          <circle cx={pos.x} cy={pos.y} r={NODE_RADIUS + 8} fill={theme.glow} opacity="0.3">
-            <animate attributeName="r" values="{NODE_RADIUS + 6};{NODE_RADIUS + 12};{NODE_RADIUS + 6}" dur="2s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.3;0.15;0.3" dur="2s" repeatCount="indefinite" />
-          </circle>
-        {/if}
-
-        <!-- Pulse for unlocked (not completed) -->
-        {#if node.isUnlocked && !node.isCompleted}
-          <circle cx={pos.x} cy={pos.y} r={NODE_RADIUS + 4} fill={theme.leaf} opacity="0.2">
-            <animate attributeName="r" values="{NODE_RADIUS + 2};{NODE_RADIUS + 10};{NODE_RADIUS + 2}" dur="1.5s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.3;0.1;0.3" dur="1.5s" repeatCount="indefinite" />
-          </circle>
-        {/if}
-
-        <!-- Main circle -->
-        <circle
-          cx={pos.x}
-          cy={pos.y}
-          r={NODE_RADIUS}
-          fill={node.isCompleted ? theme.leafCompleted : (node.isUnlocked ? theme.leaf : theme.leafLocked)}
-          stroke={node.isCompleted ? '#d97706' : (node.isUnlocked ? theme.trunk : '#9ca3af')}
-          stroke-width="3"
-        />
-
-        <!-- Lock icon for locked nodes -->
-        {#if !node.isUnlocked}
-          <text x={pos.x} y={pos.y + 2} text-anchor="middle" dominant-baseline="middle" font-size="20" fill="#6b7280">🔒</text>
-        {:else if node.isCompleted}
-          <!-- Star rating for completed -->
-          <text x={pos.x} y={pos.y - 4} text-anchor="middle" dominant-baseline="middle" font-size="14" fill="#92400e" font-weight="bold">
-            {renderStars(node.starRating)}
-          </text>
-          <text x={pos.x} y={pos.y + 14} text-anchor="middle" font-size="11" fill="#92400e" font-weight="600">✓</text>
+        {:else if edge.type === 'current' || edge.type === 'upcoming'}
+          <!-- 当前/下一个：虚线 -->
+          <line
+            x1={edge.from.x}
+            y1={edge.from.y}
+            x2={edge.to.x}
+            y2={edge.to.y}
+            stroke={theme.branch}
+            stroke-width="3"
+            stroke-dasharray="10,5"
+            opacity="0.6"
+          />
         {:else}
-          <!-- Difficulty level for unlocked -->
-          <text x={pos.x} y={pos.y + 2} text-anchor="middle" dominant-baseline="middle" font-size="16" fill="white" font-weight="bold">
-            Lv{node.difficulty}
-          </text>
+          <!-- 未解锁：淡虚线 -->
+          <line
+            x1={edge.from.x}
+            y1={edge.from.y}
+            x2={edge.to.x}
+            y2={edge.to.y}
+            stroke="#d1d5db"
+            stroke-width="2"
+            stroke-dasharray="6,4"
+            opacity="0.3"
+          />
         {/if}
+      {/each}
 
-        <!-- Name label below -->
-        <text x={pos.x} y={pos.y + NODE_RADIUS + 18} text-anchor="middle" font-size="13" fill={node.isUnlocked ? '#374151' : '#9ca3af'} font-weight="600">
-          {node.name}
-        </text>
-      </g>
-    {/each}
+      <!-- 节点 -->
+      {#each pathNodes() as pn, i}
+        {@const status = getNodeStatus(pn.node, i)}
+        {@const isClickable = status === 'current' || status === 'completed'}
+        {@const r = status === 'current' ? NODE_R + 4 : NODE_R}
 
-    <!-- Child nodes -->
-    {#each nodes as node, i}
-      {#if node.children && node.children.length > 0}
-        {@const childPositions = getChildPositions(rootPositions[i].x, rootPositions[i].y, node.children.length)}
-        {#each node.children as child, j}
-          {@const cp = childPositions[j]}
-          {@const childClickable = child.isUnlocked}
+        <g
+          class={isClickable ? 'cursor-pointer' : ''}
+          on:click={isClickable ? () => onNodeClick(pn.node.nodeId) : undefined}
+          on:keydown={isClickable ? (e) => e.key === 'Enter' && onNodeClick(pn.node.nodeId) : undefined}
+          role={isClickable ? 'button' : undefined}
+          tabindex={isClickable ? 0 : -1}
+          opacity={status === 'locked' ? 0.5 : 1}
+        >
+          <!-- 已完成节点光晕 -->
+          {#if status === 'completed'}
+            <circle cx={pn.x} cy={pn.y} r={r + 8} fill={theme.glow} opacity="0.4">
+              <animate attributeName="r" values="{r + 6};{r + 12};{r + 6}" dur="2s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.4;0.2;0.4" dur="2s" repeatCount="indefinite" />
+            </circle>
+          {/if}
 
-          <g
-            class={childClickable ? 'cursor-pointer' : ''}
-            on:click={childClickable ? () => onNodeClick(child.nodeId) : undefined}
-            on:keydown={childClickable ? (e) => e.key === 'Enter' && onNodeClick(child.nodeId) : undefined}
-            role={childClickable ? 'button' : undefined}
-            tabindex={childClickable ? 0 : -1}
-            aria-label="{child.name} {child.isCompleted ? '已完成' : child.isUnlocked ? '可探险' : '未解锁'}"
-          >
-            <!-- Glow for completed child -->
-            {#if child.isCompleted}
-              <circle cx={cp.x} cy={cp.y} r={CHILD_RADIUS + 6} fill={theme.glow} opacity="0.25">
-                <animate attributeName="r" values="{CHILD_RADIUS + 4};{CHILD_RADIUS + 8};{CHILD_RADIUS + 4}" dur="2s" repeatCount="indefinite" />
-              </circle>
-            {/if}
+          <!-- 当前节点脉冲 -->
+          {#if status === 'current'}
+            <circle cx={pn.x} cy={pn.y} r={r + 6} fill={theme.leaf} opacity="0.4">
+              <animate attributeName="r" values="{r + 4};{r + 12};{r + 4}" dur="1.5s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.5;0.2;0.5" dur="1.5s" repeatCount="indefinite" />
+            </circle>
+          {/if}
 
-            <!-- Pulse for unlocked child -->
-            {#if child.isUnlocked && !child.isCompleted}
-              <circle cx={cp.x} cy={cp.y} r={CHILD_RADIUS + 3} fill={theme.leaf} opacity="0.2">
-                <animate attributeName="r" values="{CHILD_RADIUS + 2};{CHILD_RADIUS + 7};{CHILD_RADIUS + 2}" dur="1.5s" repeatCount="indefinite" />
-              </circle>
-            {/if}
+          <!-- 主圆圈 -->
+          <circle
+            cx={pn.x}
+            cy={pn.y}
+            r={r}
+            fill={
+              status === 'completed' ? theme.leafCompleted :
+              status === 'current' ? theme.leaf :
+              theme.leafLocked
+            }
+            stroke={
+              status === 'completed' ? '#d97706' :
+              status === 'current' ? theme.trunk :
+              '#9ca3af'
+            }
+            stroke-width={status === 'current' ? 4 : 2.5}
+          />
 
-            <!-- Main circle -->
-            <circle
-              cx={cp.x}
-              cy={cp.y}
-              r={CHILD_RADIUS}
-              fill={child.isCompleted ? theme.leafCompleted : (child.isUnlocked ? theme.leaf : theme.leafLocked)}
-              stroke={child.isCompleted ? '#d97706' : (child.isUnlocked ? theme.trunk : '#9ca3af')}
-              stroke-width="2.5"
-            />
-
-            <!-- Content -->
-            {#if !child.isUnlocked}
-              <text x={cp.x} y={cp.y + 2} text-anchor="middle" dominant-baseline="middle" font-size="16" fill="#6b7280">🔒</text>
-            {:else if child.isCompleted}
-              <text x={cp.x} y={cp.y + 2} text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#92400e" font-weight="bold">
-                {renderStars(child.starRating)}
-              </text>
-            {:else}
-              <text x={cp.x} y={cp.y + 2} text-anchor="middle" dominant-baseline="middle" font-size="13" fill="white" font-weight="bold">
-                Lv{child.difficulty}
-              </text>
-            {/if}
-
-            <!-- Name label -->
-            <text x={cp.x} y={cp.y + CHILD_RADIUS + 16} text-anchor="middle" font-size="12" fill={child.isUnlocked ? '#374151' : '#9ca3af'} font-weight="500">
-              {child.name}
+          <!-- 节点内容 -->
+          {#if status === 'locked' || status === 'upcoming'}
+            <!-- 锁图标 -->
+            <text x={pn.x} y={pn.y + 2} text-anchor="middle" dominant-baseline="middle" font-size="18" fill="#6b7280">🔒</text>
+          {:else if status === 'completed'}
+            <!-- 星星评级 -->
+            <text x={pn.x} y={pn.y - 4} text-anchor="middle" dominant-baseline="middle" font-size="11" fill="#92400e" font-weight="bold">
+              {renderStars(pn.node.starRating)}
             </text>
-          </g>
-        {/each}
-      {/if}
-    {/each}
-  </svg>
+            <text x={pn.x} y={pn.y + 10} text-anchor="middle" font-size="12" fill="#92400e" font-weight="600">✓</text>
+          {:else}
+            <!-- 当前节点：显示等级 -->
+            <text x={pn.x} y={pn.y + 2} text-anchor="middle" dominant-baseline="middle" font-size="14" fill="white" font-weight="bold">
+              Lv{pn.node.difficulty}
+            </text>
+          {/if}
 
-  <!-- Legend -->
+          <!-- 名称标签 -->
+          <text
+            x={pn.x}
+            y={pn.y + r + 16}
+            text-anchor="middle"
+            font-size="11"
+            fill={status === 'locked' ? '#9ca3af' : '#374151'}
+            font-weight="500"
+          >
+            {pn.node.name}
+          </text>
+        </g>
+      {/each}
+    </svg>
+  </div>
+
+  <!-- 图例 -->
   <div class="flex items-center justify-center gap-4 mt-2 text-xs text-gray-500">
     <span class="flex items-center gap-1">
       <span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span> 已完成
     </span>
     <span class="flex items-center gap-1">
-      <span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span> 可探险
+      <span class="w-3 h-3 rounded-full bg-green-400 inline-block"></span> 可探险
     </span>
     <span class="flex items-center gap-1">
       <span class="w-3 h-3 rounded-full bg-gray-300 inline-block"></span> 未解锁

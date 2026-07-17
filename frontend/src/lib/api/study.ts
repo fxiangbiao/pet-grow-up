@@ -127,3 +127,12 @@ export function submitAnswer(data: {
 export function getSessionResult(sessionId: number, maxCombo: number = 0, bossDefeated: boolean = false): Promise<SessionResult> {
   return api.get<SessionResult>(`/exploration/sessions/${sessionId}/result?maxCombo=${maxCombo}&bossDefeated=${bossDefeated}`);
 }
+
+
+export function generateVariant(nodeId: number, originalQuestionId: number): Promise<any> {
+  return api.get<any>(`/study/nodes/${nodeId}/generate-variant?originalQuestionId=${originalQuestionId}`);
+}
+
+export function assessExplanation(nodeId: number, text: string): Promise<any> {
+  return api.post<any>(`/study/nodes/${nodeId}/explain`, { text });
+}

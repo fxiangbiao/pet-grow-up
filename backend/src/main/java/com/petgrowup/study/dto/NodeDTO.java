@@ -1,4 +1,4 @@
-﻿package com.petgrowup.study.dto;
+package com.petgrowup.study.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

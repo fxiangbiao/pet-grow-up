@@ -1,4 +1,4 @@
-﻿-- Insert spirit species: 3 subjects x 3 evolution stages each = 9 entries
+-- Insert spirit species: 3 subjects x 3 evolution stages each = 9 entries
 -- Chinese (诗词大陆)
 INSERT IGNORE INTO spirit_species (species_key, name, subject, description, evolution_stage, evolves_from_id, evolution_energy_cost, base_affection, sprite_url, animation_data) VALUES
 ('chinese_basic', '小书仙', 'chinese', '诗词大陆中由文字灵气凝聚而成的小精灵，喜爱在书卷间嬉戏。', 1, NULL, NULL, 30, '/sprites/chinese/basic.svg', '{}'),
