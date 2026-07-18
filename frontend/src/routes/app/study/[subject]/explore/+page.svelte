@@ -560,7 +560,7 @@
           <h3 class="text-base font-semibold text-gray-800">{practiceQuestion.questionText}</h3>
         </div>
 
-        {#if practiceQuestion.questionType === 'MULTIPLE_CHOICE' && practiceParsedOptions.length > 0}
+        {#if practiceParsedOptions.length > 0}
           <div class="space-y-2">
             {#each practiceParsedOptions as opt}
               <button onclick={() => selectPracticeAnswer(opt.key)} disabled={practiceSubmitted}
@@ -638,7 +638,17 @@
 
       {#if showHint && !practiceResult}
         <div class="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
-          <p class="text-sm text-blue-700">💡 <strong>提示:</strong> 想想刚才知识卡片里学到的内容，仔细思考哦！</p>
+          <p class="text-sm text-blue-700">💡 <strong>提示:</strong> 
+{#if practiceQuestion.questionType === 'MULTIPLE_CHOICE' || practiceQuestion.questionType === 'SCENE_TAP'}
+  逐个分析选项，排除明显错误的答案！
+{:else if practiceQuestion.questionType === 'TRUE_FALSE'}
+  回想相关知识点，判断说法是否正确！
+{:else if practiceQuestion.questionType === 'FILL_BLANK'}
+  根据题意，填写关键信息！
+{:else}
+  仔细观察题目，回忆相关知识点，一步步分析！
+{/if}
+</p>
         </div>
       {/if}
       {/key}
