@@ -1,16 +1,15 @@
 <script lang="ts">
   /**
-   * EnemySprite — SVG-drawn enemy/monster characters for adventure battles.
-   *
+   * EnemySprite — Cute cartoon SVG enemies for adventure battles.
    * Each subject has 3 minion variants + 1 boss.
-   * States: idle | attacking | hit | defeated
+   * States: idle | hit | defeated | attacking
    */
   let {
-    enemyType = 'minion', // 'minion' | 'boss' | 'elite' | 'guardian'
+    enemyType = 'minion',
     subject = 'chinese',
-    variant = 0,          // 0-2 for minions, 0 for boss/guardian
-    state = 'idle',       // 'idle' | 'attacking' | 'hit' | 'defeated' | 'purified'
-    size = 'md'           // 'sm' | 'md' | 'lg'
+    variant = 0,
+    state = 'idle',
+    size = 'md'
   }: {
     enemyType?: string;
     subject?: string;
@@ -19,50 +18,42 @@
     size?: string;
   } = $props();
 
-  const subjectColors: Record<string, { primary: string; secondary: string; accent: string }> = {
-    chinese: { primary: '#8B4513', secondary: '#D2691E', accent: '#FFD700' },
-    math: { primary: '#1E90FF', secondary: '#4169E1', accent: '#00CED1' },
-    english: { primary: '#9370DB', secondary: '#8A2BE2', accent: '#FF69B4' }
-  };
-  const c = $derived(subjectColors[subject] || subjectColors.chinese);
-
   const sizeDim = $derived(size === 'sm' ? 60 : size === 'lg' ? 140 : 100);
   const cx = $derived(sizeDim / 2);
   const cy = $derived(sizeDim / 2);
-  const unit = $derived(sizeDim / 20);
+  const u = $derived(sizeDim / 20); // unit
 
   const isDefeated = $derived(state === 'defeated');
-  const isPurified = $derived(state === 'purified');
   const isHit = $derived(state === 'hit');
   const isAttacking = $derived(state === 'attacking');
 
-  // Enemy type descriptions
-  const enemyData: Record<string, Record<number, { name: string; emoji: string }>> = {
+  // Cute enemy data with emoji fallbacks
+  const enemies: Record<string, Record<number, { name: string; emoji: string; color: string; bodyColor: string }>> = {
     chinese: {
-      0: { name: '墨水妖', emoji: '🔵' },
-      1: { name: '笔怪', emoji: '🖊' },
-      2: { name: '书虫', emoji: '🐛' },
-      3: { name: '文曲星君', emoji: '🐲' }
+      0: { name: '书虫', emoji: '🐛', color: '#8B6914', bodyColor: '#C4A44A' },
+      1: { name: '错别字怪', emoji: '👻', color: '#6B48A8', bodyColor: '#9B78D0' },
+      2: { name: '墨水妖', emoji: '🫧', color: '#2563EB', bodyColor: '#60A5FA' },
+      3: { name: '诗词巨龙', emoji: '🐉', color: '#DC2626', bodyColor: '#F87171' }
     },
     math: {
-      0: { name: '三角怪', emoji: '🔺' },
-      1: { name: '方块精', emoji: '🟫' },
-      2: { name: '圆球魔', emoji: '🟣' },
-      3: { name: '几何贤者', emoji: '🦉' }
+      0: { name: '数字怪', emoji: '🔢', color: '#1D4ED8', bodyColor: '#60A5FA' },
+      1: { name: '除号怪', emoji: '➗', color: '#059669', bodyColor: '#34D399' },
+      2: { name: '几何怪', emoji: '🔷', color: '#7C3AED', bodyColor: '#A78BFA' },
+      3: { name: '算术魔王', emoji: '👹', color: '#B91C1C', bodyColor: '#F87171' }
     },
     english: {
-      0: { name: '字母怪', emoji: '🔤' },
-      1: { name: '扫帚妖', emoji: '🧹' },
-      2: { name: '语法魔', emoji: '📝' },
-      3: { name: '字母精灵王', emoji: '🦄' }
+      0: { name: '字母怪', emoji: '🔤', color: '#7C3AED', bodyColor: '#A78BFA' },
+      1: { name: '语法怪', emoji: '📝', color: '#0891B2', bodyColor: '#22D3EE' },
+      2: { name: '发音魔', emoji: '🎵', color: '#DB2777', bodyColor: '#F472B6' },
+      3: { name: '单词巫师', emoji: '🧙', color: '#4338CA', bodyColor: '#818CF8' }
     }
   };
 
-  const data = $derived(enemyData[subject]?.[variant] || enemyData.chinese[0]);
+  const data = $derived(enemies[subject]?.[variant] || enemies.chinese[0]);
+  const isBoss = $derived(enemyType === 'boss');
 
   const containerClass = $derived(
     isDefeated ? 'opacity-30 grayscale scale-90' :
-    isPurified ? 'opacity-90 scale-105' :
     isHit ? 'animate-shake' :
     isAttacking ? 'animate-bounce-in' :
     'animate-breathe'
@@ -74,126 +65,115 @@
   role="img" aria-label={data.name}>
   <svg width={sizeDim} height={sizeDim} viewBox="0 0 {sizeDim} {sizeDim}" class="overflow-visible">
     <defs>
-      <filter id="es-glow-{variant}">
-        <feGaussianBlur stdDeviation="2" result="blur" />
+      <filter id="cute-glow-{subject}-{variant}">
+        <feGaussianBlur stdDeviation="1.5" result="blur" />
         <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
       </filter>
     </defs>
 
-    {#if enemyType === 'boss'}
-      <!-- === BOSS: Large menacing creature === -->
-      <!-- Boss body -->
-      <ellipse cx={cx} cy={cy + unit * 2} rx={unit * 8} ry={unit * 6}
-        fill="{c.primary}20" stroke={c.primary} stroke-width="2.5" filter="url(#es-glow-{variant})" />
-      <!-- Boss head -->
-      <circle cx={cx} cy={cy - unit * 2} r={unit * 5.5}
-        fill="{c.primary}15" stroke={c.primary} stroke-width="2.5" />
-      <!-- Menacing eyes -->
-      <ellipse cx={cx - unit * 2.5} cy={cy - unit * 3} rx={unit * 1.5} ry={unit * 1.8}
-        fill={c.primary} opacity="0.8" />
-      <ellipse cx={cx + unit * 2.5} cy={cy - unit * 3} rx={unit * 1.5} ry={unit * 1.8}
-        fill={c.primary} opacity="0.8" />
-      <circle cx={cx - unit * 2.5} cy={cy - unit * 2.8} r={unit * 0.5} fill="white" opacity="0.6" />
-      <circle cx={cx + unit * 2.5} cy={cy - unit * 2.8} r={unit * 0.5} fill="white" opacity="0.6" />
-      <!-- Angry mouth -->
-      <path d="M{cx - unit * 2.5},{cy} Q{cx},{cy + unit * 3} {cx + unit * 2.5},{cy}"
-        fill="none" stroke={c.primary} stroke-width="2" stroke-linecap="round" opacity="0.7" />
-      <!-- Boss horns/spikes -->
-      <polygon points="{cx - unit * 4},{cy - unit * 5} {cx - unit * 3},{cy - unit * 8} {cx - unit * 2},{cy - unit * 5}"
-        fill={c.secondary} opacity="0.5" />
-      <polygon points="{cx + unit * 2},{cy - unit * 5} {cx + unit * 3},{cy - unit * 8} {cx + unit * 4},{cy - unit * 5}"
-        fill={c.secondary} opacity="0.5" />
+    {#if isBoss}
+      <!-- === BOSS: Big cute but menacing === -->
+      <!-- Body -->
+      <ellipse cx={cx} cy={cy + u*2} rx={u*7} ry={u*5.5}
+        fill={data.bodyColor} opacity="0.3" />
+      <ellipse cx={cx} cy={cy + u*2} rx={u*7} ry={u*5.5}
+        fill="none" stroke={data.color} stroke-width="2.5" />
+      <!-- Head -->
+      <circle cx={cx} cy={cy - u*2} r={u*5}
+        fill={data.bodyColor} opacity="0.25" />
+      <circle cx={cx} cy={cy - u*2} r={u*5}
+        fill="none" stroke={data.color} stroke-width="2.5" />
+      <!-- Big cute eyes -->
+      <ellipse cx={cx - u*2} cy={cy - u*2.5} rx={u*1.8} ry={u*2}
+        fill="white" stroke={data.color} stroke-width="1.5" />
+      <ellipse cx={cx + u*2} cy={cy - u*2.5} rx={u*1.8} ry={u*2}
+        fill="white" stroke={data.color} stroke-width="1.5" />
+      <circle cx={cx - u*1.8} cy={cy - u*2.2} r={u*0.9} fill={data.color} />
+      <circle cx={cx + u*1.8} cy={cy - u*2.2} r={u*0.9} fill={data.color} />
+      <circle cx={cx - u*1.5} cy={cy - u*2.5} r={u*0.35} fill="white" />
+      <circle cx={cx + u*2.1} cy={cy - u*2.5} r={u*0.35} fill="white" />
+      <!-- Angry cute mouth -->
+      <path d="M{cx - u*2},{cy + u*0.5} Q{cx},{cy + u*2.5} {cx + u*2},{cy + u*0.5}"
+        fill="none" stroke={data.color} stroke-width="2" stroke-linecap="round" />
+      <!-- Boss horns -->
+      <circle cx={cx - u*3.5} cy={cy - u*5.5} r={u*1.2} fill={data.bodyColor} opacity="0.5" />
+      <circle cx={cx + u*3.5} cy={cy - u*5.5} r={u*1.2} fill={data.bodyColor} opacity="0.5" />
       <!-- Boss aura -->
-      <circle cx={cx} cy={cy} r={unit * 10}
-        fill="none" stroke={c.accent} stroke-width="1.5" opacity="0.25" stroke-dasharray="6 4" />
-      {#if !isDefeated}
-        <circle cx={cx} cy={cy} r={unit * 10}
-          fill="none" stroke={c.accent} stroke-width="1" opacity="0.15" class="animate-spin"
-          style="transform-origin: {cx}px {cy}px; animation-duration: 12s;" />
-      {/if}
+      <circle cx={cx} cy={cy} r={u*9}
+        fill="none" stroke={data.color} stroke-width="1" opacity="0.2" stroke-dasharray="4 3" />
+      <!-- Boss emoji label -->
+      <text x={cx} y={cy + u*8} text-anchor="middle" font-size={u*3}>{data.emoji}</text>
 
     {:else}
-      <!-- === MINION / ELITE === -->
-      <!-- Body blob -->
-      <ellipse cx={cx} cy={cy + unit * 1.5} rx={unit * 5} ry={unit * 4}
-        fill="{c.primary}15" stroke={c.primary} stroke-width="1.8" />
+      <!-- === MINION: Cute blob creature === -->
+      <!-- Body -->
+      <ellipse cx={cx} cy={cy + u*1.5} rx={u*4.5} ry={u*3.5}
+        fill={data.bodyColor} opacity="0.25" />
+      <ellipse cx={cx} cy={cy + u*1.5} rx={u*4.5} ry={u*3.5}
+        fill="none" stroke={data.color} stroke-width="1.8" />
       <!-- Head -->
-      <circle cx={cx} cy={cy - unit * 1.5} r={unit * 3.5}
-        fill="{c.primary}12" stroke={c.primary} stroke-width="1.8" />
-      <!-- Eyes (simple dots) -->
-      <circle cx={cx - unit * 1.5} cy={cy - unit * 2} r={unit * 0.8} fill={c.primary} opacity="0.7" />
-      <circle cx={cx + unit * 1.5} cy={cy - unit * 2} r={unit * 0.8} fill={c.primary} opacity="0.7" />
-      <!-- Mouth (grumpy) -->
-      <path d="M{cx - unit},{cy - unit * 0.3} Q{cx},{cy + unit * 1.5} {cx + unit},{cy - unit * 0.3}"
-        fill="none" stroke={c.primary} stroke-width="1.3" stroke-linecap="round" opacity="0.5" />
-      <!-- Subject-specific features -->
+      <circle cx={cx} cy={cy - u*1.5} r={u*3.2}
+        fill={data.bodyColor} opacity="0.2" />
+      <circle cx={cx} cy={cy - u*1.5} r={u*3.2}
+        fill="none" stroke={data.color} stroke-width="1.8" />
+      <!-- Cute eyes -->
+      <circle cx={cx - u*1.3} cy={cy - u*1.8} r={u*1} fill="white" stroke={data.color} stroke-width="1" />
+      <circle cx={cx + u*1.3} cy={cy - u*1.8} r={u*1} fill="white" stroke={data.color} stroke-width="1" />
+      <circle cx={cx - u*1.1} cy={cy - u*1.6} r={u*0.5} fill={data.color} />
+      <circle cx={cx + u*1.5} cy={cy - u*1.6} r={u*0.5} fill={data.color} />
+      <circle cx={cx - u*0.9} cy={cy - u*1.9} r={u*0.2} fill="white" />
+      <circle cx={cx + u*1.7} cy={cy - u*1.9} r={u*0.2} fill="white" />
+      <!-- Cute mouth -->
+      <path d="M{cx - u*0.8},{cy - u*0.2} Q{cx},{cy + u*0.8} {cx + u*0.8},{cy - u*0.2}"
+        fill="none" stroke={data.color} stroke-width="1.2" stroke-linecap="round" />
+      <!-- Blush -->
+      <ellipse cx={cx - u*2.5} cy={cy - u*0.8} rx={u*0.8} ry={u*0.5} fill="#FFB6C1" opacity="0.4" />
+      <ellipse cx={cx + u*2.5} cy={cy - u*0.8} rx={u*0.8} ry={u*0.5} fill="#FFB6C1" opacity="0.4" />
+      <!-- Subject-specific cute accessory -->
       {#if subject === 'chinese'}
-        <!-- Ink splotch -->
-        <circle cx={cx} cy={cy + unit * 3.5} r={unit * 2.5} fill={c.primary} opacity="0.12" />
-        {#if variant === 0}
-          <circle cx={cx - unit * 3.5} cy={cy + unit * 1} r={unit * 1.2} fill={c.primary} opacity="0.15" />
-        {:else if variant === 1}
-          <line x1={cx + unit * 3} y1={cy} x2={cx + unit * 6} y2={cy - unit * 2}
-            stroke={c.secondary} stroke-width="1.5" stroke-linecap="round" opacity="0.5" />
-        {:else}
-          <path d="M{cx - unit * 4},{cy - unit * 4} Q{cx},{cy - unit * 7} {cx + unit * 4},{cy - unit * 4}"
-            fill="none" stroke={c.secondary} stroke-width="1.2" opacity="0.4" />
-        {/if}
+        <text x={cx} y={cy - u*5} text-anchor="middle" font-size={u*2.5} opacity="0.6">
+          {variant === 0 ? '📖' : variant === 1 ? '✏️' : '📜'}
+        </text>
       {:else if subject === 'math'}
-        <!-- Geometric decorations -->
-        {#if variant === 0}
-          <polygon points="{cx},{cy - unit * 5.5} {cx + unit * 4},{cy + unit * 1.5} {cx - unit * 4},{cy + unit * 1.5}"
-            fill="none" stroke={c.accent} stroke-width="1" opacity="0.4" />
-        {:else if variant === 1}
-          <rect x={cx - unit * 3} y={cy - unit * 3} width={unit * 6} height={unit * 6}
-            fill="none" stroke={c.accent} stroke-width="1" opacity="0.4" rx="1" />
-        {:else}
-          <circle cx={cx} cy={cy + unit * 2} r={unit * 3}
-            fill="none" stroke={c.accent} stroke-width="1" opacity="0.4" />
-        {/if}
+        <text x={cx} y={cy - u*5} text-anchor="middle" font-size={u*2.5} opacity="0.6">
+          {variant === 0 ? '🔢' : variant === 1 ? '➗' : '📐'}
+        </text>
       {:else}
-        <!-- Magical marks -->
-        {#if variant === 0}
-          <text x={cx} y={cy + unit * 5} text-anchor="middle" font-size={unit * 4}
-            fill={c.primary} opacity="0.15">?</text>
-        {:else if variant === 1}
-          <line x1={cx - unit * 4} y1={cy + unit * 2} x2={cx + unit * 4} y2={cy + unit * 2}
-            stroke={c.secondary} stroke-width="1.5" opacity="0.4" />
-        {:else}
-          <circle cx={cx} cy={cy + unit * 3} r={unit * 1.5} fill="none"
-            stroke={c.accent} stroke-width="1" opacity="0.5" stroke-dasharray="3 2" />
-        {/if}
+        <text x={cx} y={cy - u*5} text-anchor="middle" font-size={u*2.5} opacity="0.6">
+          {variant === 0 ? '🔤' : variant === 1 ? '📝' : '🎵'}
+        </text>
       {/if}
+      <!-- Little feet -->
+      <ellipse cx={cx - u*2} cy={cy + u*4.5} rx={u*1.5} ry={u*0.8} fill={data.bodyColor} opacity="0.3" />
+      <ellipse cx={cx + u*2} cy={cy + u*4.5} rx={u*1.5} ry={u*0.8} fill={data.bodyColor} opacity="0.3" />
     {/if}
 
-    <!-- Defeated marker -->
+    <!-- Defeated X marks -->
     {#if isDefeated}
-      <line x1={cx - unit * 7} y1={cy - unit * 7} x2={cx + unit * 7} y2={cy + unit * 7}
-        stroke="#ef4444" stroke-width="2" opacity="0.6" />
-      <line x1={cx + unit * 7} y1={cy - unit * 7} x2={cx - unit * 7} y2={cy + unit * 7}
-        stroke="#ef4444" stroke-width="2" opacity="0.6" />
-    {/if}
-
-    <!-- Purified marker (white glow ring) -->
-    {#if isPurified}
-      <circle cx={cx} cy={cy} r={unit * 9}
-        fill="none" stroke="#fbbf24" stroke-width="2.5" opacity="0.8" filter="url(#es-glow-{variant})" />
-      <circle cx={cx} cy={cy} r={unit * 10.5}
-        fill="none" stroke="white" stroke-width="1.5" opacity="0.5" stroke-dasharray="4 3">
-        <animate attributeName="r" from={unit * 10} to={unit * 13} dur="2s" repeatCount="indefinite" />
-        <animate attributeName="opacity" from="0.6" to="0" dur="2s" repeatCount="indefinite" />
-      </circle>
+      <line x1={cx - u*1.5} y1={cy - u*2.5} x2={cx - u*0.5} y2={cy - u*1.5}
+        stroke="#ef4444" stroke-width="2" opacity="0.7" />
+      <line x1={cx - u*0.5} y1={cy - u*2.5} x2={cx - u*1.5} y2={cy - u*1.5}
+        stroke="#ef4444" stroke-width="2" opacity="0.7" />
+      <line x1={cx + u*0.5} y1={cy - u*2.5} x2={cx + u*1.5} y2={cy - u*1.5}
+        stroke="#ef4444" stroke-width="2" opacity="0.7" />
+      <line x1={cx + u*1.5} y1={cy - u*2.5} x2={cx + u*0.5} y2={cy - u*1.5}
+        stroke="#ef4444" stroke-width="2" opacity="0.7" />
     {/if}
 
     <!-- Hit flash -->
     {#if isHit}
-      <circle cx={cx} cy={cy} r={unit * 9} fill="white" opacity="0.3" class="animate-sparkle" />
+      <circle cx={cx} cy={cy} r={u*8} fill="white" opacity="0.3">
+        <animate attributeName="opacity" from="0.4" to="0" dur="0.4s" fill="freeze" />
+      </circle>
+      <!-- Stars -->
+      <text x={cx - u*4} y={cy - u*4} font-size={u*2} opacity="0.8">⭐</text>
+      <text x={cx + u*3} y={cy - u*5} font-size={u*1.5} opacity="0.6">💫</text>
     {/if}
   </svg>
 
-  <!-- Enemy name label -->
-  {#if size !== 'sm' && enemyType !== 'minion'}
-    <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-500 whitespace-nowrap">
+  <!-- Name label for boss -->
+  {#if size !== 'sm' && isBoss}
+    <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-500 whitespace-nowrap bg-white/70 px-1.5 rounded">
       {data.name}
     </div>
   {/if}

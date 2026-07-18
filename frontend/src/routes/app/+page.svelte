@@ -1,4 +1,4 @@
-﻿<script lang="ts">
+<script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { authStore } from '$lib/stores/auth.svelte';
@@ -205,11 +205,6 @@
         <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-3">📅</div>
         <h3 class="font-semibold text-gray-800">每日</h3>
         <p class="text-sm text-gray-500 mt-1">完成挑战赢取能量</p>
-      </a>
-      <a href="/app/story" class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
-        <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mb-3">📖</div>
-        <h3 class="font-semibold text-gray-800">剧情</h3>
-        <p class="text-sm text-gray-500 mt-1">探索学习能量宇宙</p>
       </a>
       <a href="/app/pet-room" class="bg-white rounded-2xl shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
         <div class="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center mb-3">🏠</div>

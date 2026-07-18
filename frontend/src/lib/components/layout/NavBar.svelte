@@ -34,7 +34,6 @@
     { href: '/app/social', label: '社交', icon: '👥' },
     { href: '/app/shop', label: '商店', icon: '🛒' },
     { href: '/app/daily', label: '每日', icon: '📅' },
-    { href: '/app/story', label: '剧情', icon: '📖' },
     { href: '/app/pet-room', label: '小屋', icon: '🏡' },
   ];
 
