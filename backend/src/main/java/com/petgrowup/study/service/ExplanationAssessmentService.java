@@ -40,11 +40,11 @@ public class ExplanationAssessmentService {
 
         String encouragement;
         if (score >= 0.8) {
-            encouragement = "Amazing! You explained it so clearly! You're a true little teacher!";
+            encouragement = "哇！你讲解得太棒了！你是真正的小老师！";
         } else if (score >= 0.5) {
-            encouragement = "Great job! You covered the key points. Keep practicing!";
+            encouragement = "做得好！你涵盖了关键知识点，继续加油！";
         } else {
-            encouragement = "Good try! Let's review the key points together.";
+            encouragement = "不错哦！让我们一起复习关键知识点吧！";
         }
 
         Map<String, Object> result = new HashMap<>();

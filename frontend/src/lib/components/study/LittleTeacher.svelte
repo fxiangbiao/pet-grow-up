@@ -23,6 +23,18 @@
   let assessing = $state(false);
   let assessmentResult = $state<any>(null);
   let error = $state('');
+
+  // Translate Web Speech API errors to Chinese
+  function translateSpeechError(err: string): string {
+    const map: Record<string, string> = {
+      'no-speech': '未检测到语音，请重试',
+      'audio-capture': '未找到麦克风',
+      'not-allowed': '麦克风权限被拒绝',
+      'network': '网络错误，请检查网络',
+      'aborted': '语音识别已取消',
+    };
+    return map[err] || err;
+  }
   let spiritSpeaking = $state(false);
   let timerCountdown = $state(0);
   let timerInterval: ReturnType<typeof setInterval> | null = null;
@@ -30,8 +42,8 @@
   const supported = $derived(isSpeechRecognitionSupported);
 
   const questions = $derived.by(() => [
-    `Can you tell me what ${nodeName} is?`,
-    `Great! Now can you give me an example of ${nodeName}?`
+    `你能给小精灵讲讲什么是${nodeName}吗？`,
+    `太棒了！那你能举个${nodeName}的例子吗？`
   ]);
 
   function startPhase() {
@@ -60,7 +72,7 @@
           stopTimer();
         }
       },
-      (err) => { error = err; stopTimer(); },
+      (err) => { error = translateSpeechError(err); stopTimer(); },
       () => { if (!interimText) stopTimer(); }
     );
     if (!stopFn) { stopTimer(); }
@@ -73,8 +85,8 @@
       if (timerCountdown <= 0) {
         stopTimer();
         if (stopFn) { stopFn(); stopFn = null; }
-        if (phase === 'listening' && !transcript1) { transcript1 = interimText || '(No speech)'; phase = 'recognized'; }
-        else if (phase === 'listening2' && !transcript2) { transcript2 = interimText || '(No speech)'; phase = 'recognized2'; }
+        if (phase === 'listening' && !transcript1) { transcript1 = interimText || '(无语音)'; phase = 'recognized'; }
+        else if (phase === 'listening2' && !transcript2) { transcript2 = interimText || '（未识别到语音）'; phase = 'recognized2'; }
       }
     }, 1000);
   }
@@ -97,11 +109,11 @@
       assessmentResult = await assessExplanation(nodeId, fullText);
       phase = 'result';
       const msg = assessmentResult.score >= 80
-        ? "Wow! You explained it so well! You're a true little teacher!"
-        : assessmentResult.score >= 50 ? "Great job! You covered the key points!" : "Good try! Let's review together!";
-      speak(msg, { lang: 'en-US', rate: 1.0, pitch: 1.4 });
+        ? "哇！你讲解得太棒了！你是真正的小老师！"
+        : assessmentResult.score >= 50 ? "做得好！你涵盖了关键知识点！" : "不错！让我们一起复习吧！";
+      speak(msg, { lang: 'zh-CN', rate: 1.0, pitch: 1.4 });
     } catch (e: any) {
-      error = e.message || 'Assessment failed';
+      error = e.message || '评估失败';
       phase = 'result';
     } finally { assessing = false; }
   }
@@ -138,14 +150,14 @@
   {#if phase === 'intro'}
     <div class="text-center py-4">
       <div class="text-6xl mb-4 animate-bounce">&#127891;</div>
-      <h3 class="text-xl font-bold text-purple-800 mb-2">Little Teacher Challenge!</h3>
+      <h3 class="text-xl font-bold text-purple-800 mb-2">小老师挑战！</h3>
       <p class="text-sm text-gray-600 mb-2">
-        Now YOU are the teacher! Can you teach the spirit about <strong>{nodeName}</strong>?
+        现在你是小老师！你能教小精灵关于 <strong>{nodeName}</strong> 的知识吗？
       </p>
-      <p class="text-xs text-purple-500 mb-4">Use your voice to explain!</p>
+      <p class="text-xs text-purple-500 mb-4">用语音来讲解吧！</p>
       <button onclick={startPhase}
         class="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-bold rounded-2xl hover:from-purple-600 hover:to-pink-600 transition active:scale-95 shadow-lg animate-pulse">
-        &#127908; Start Teaching!
+        &#127908; 开始教学！
       </button>
     </div>
 
@@ -167,13 +179,13 @@
       </div>
       <button onclick={() => startListeningRound(1)}
         class="px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-xl hover:from-green-500 hover:to-emerald-600 transition active:scale-95 shadow-md">
-        &#127908; I'm Ready to Answer!
+        &#127908; 我准备好回答了！
       </button>
     </div>
 
   {:else if phase === 'listening' || phase === 'listening2'}
     <div class="text-center py-4">
-      <p class="text-sm text-purple-600 mb-3 font-medium">&#127908; Listening... ({timerCountdown}s)</p>
+      <p class="text-sm text-purple-600 mb-3 font-medium">&#127908; 正在聆听... ({timerCountdown}秒)</p>
       <div class="relative inline-block mb-4">
         <div class="w-28 h-28 rounded-full {phase === 'listening' ? 'bg-gradient-to-br from-purple-400 to-pink-500' : 'bg-gradient-to-br from-green-400 to-teal-500'} flex items-center justify-center shadow-xl">
           <span class="text-5xl">&#127908;</span>
@@ -188,40 +200,40 @@
       {/if}
       {#if !supported}
         <div class="mt-3">
-          <p class="text-xs text-gray-500 mb-2">Voice not supported. Type your answer:</p>
+          <p class="text-xs text-gray-500 mb-2">语音功能不可用，请输入你的答案：</p>
           {#if phase === 'listening'}
             <input type="text" bind:value={transcript1}
               class="w-full px-4 py-2 border-2 border-purple-300 rounded-xl text-sm focus:border-purple-500 outline-none"
-              placeholder="Type here..." />
+              placeholder="在此输入..." />
           {:else}
             <input type="text" bind:value={transcript2}
               class="w-full px-4 py-2 border-2 border-purple-300 rounded-xl text-sm focus:border-purple-500 outline-none"
-              placeholder="Type here..." />
+              placeholder="在此输入..." />
           {/if}
           <button onclick={() => { if (phase === 'listening') { phase = 'recognized'; } else { phase = 'recognized2'; } }}
-            class="mt-2 px-4 py-2 bg-purple-500 text-white rounded-xl text-sm">Submit</button>
+            class="mt-2 px-4 py-2 bg-purple-500 text-white rounded-xl text-sm">提交</button>
         </div>
       {/if}
       <button onclick={() => finishListening(phase === 'listening' ? 1 : 2)}
         class="mt-3 px-4 py-2 bg-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-300 transition">
-        Done Speaking
+        说完啦
       </button>
     </div>
 
   {:else if phase === 'recognized'}
     <div class="text-center py-4">
       <div class="text-4xl mb-3">&#10024;</div>
-      <p class="text-sm text-gray-500 mb-2">You said:</p>
+      <p class="text-sm text-gray-500 mb-2">你说的是：</p>
       <div class="bg-white rounded-xl p-4 mb-4 shadow-sm border border-green-200">
-        <p class="text-base text-gray-800">"{transcript1 || '(empty)'}"</p>
+        <p class="text-base text-gray-800">"{transcript1 || '(空)'}"</p>
       </div>
       {#if !transcript1}
         <button onclick={() => startListeningRound(1)}
-          class="px-4 py-2 bg-orange-400 text-white rounded-xl text-sm mr-2 hover:bg-orange-500 transition">&#128260; Try Again</button>
+          class="px-4 py-2 bg-orange-400 text-white rounded-xl text-sm mr-2 hover:bg-orange-500 transition">&#128260; 再试一次</button>
       {/if}
       <button onclick={handleSpiritFollowup}
         class="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-xl hover:from-purple-600 hover:to-pink-600 transition active:scale-95 shadow-md">
-        Continue &#10148;
+        继续 &#10148;
       </button>
     </div>
 
@@ -243,31 +255,31 @@
       </div>
       <button onclick={() => startListeningRound(2)}
         class="px-6 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-xl hover:from-green-500 hover:to-emerald-600 transition active:scale-95 shadow-md">
-        &#127908; Let Me Explain!
+        &#127908; 让我来讲解！
       </button>
     </div>
 
   {:else if phase === 'recognized2'}
     <div class="text-center py-4">
       <div class="text-4xl mb-3">&#10024;</div>
-      <p class="text-sm text-gray-500 mb-2">You also said:</p>
+      <p class="text-sm text-gray-500 mb-2">你还说了：</p>
       <div class="bg-white rounded-xl p-4 mb-4 shadow-sm border border-green-200">
-        <p class="text-base text-gray-800">"{transcript2 || '(empty)'}"</p>
+        <p class="text-base text-gray-800">"{transcript2 || "（未识别到语音）"}"</p>
       </div>
       {#if !transcript2}
         <button onclick={() => startListeningRound(2)}
-          class="px-4 py-2 bg-orange-400 text-white rounded-xl text-sm mr-2 hover:bg-orange-500 transition">&#128260; Try Again</button>
+          class="px-4 py-2 bg-orange-400 text-white rounded-xl text-sm mr-2 hover:bg-orange-500 transition">&#128260; 再试一次</button>
       {/if}
       <button onclick={submitForAssessment} disabled={assessing}
         class="px-6 py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold rounded-xl hover:from-amber-500 hover:to-orange-600 transition active:scale-95 shadow-md disabled:opacity-50">
-        {assessing ? 'Evaluating...' : '&#127775; See My Score!'}
+        {assessing ? "评估中..." : "✨ 查看我的得分！"}
       </button>
     </div>
 
   {:else if phase === 'assessing'}
     <div class="text-center py-8">
       <div class="text-5xl mb-4 animate-spin" style="animation-duration:2s">&#128302;</div>
-      <p class="text-lg font-bold text-purple-700">Evaluating your explanation...</p>
+      <p class="text-lg font-bold text-purple-700">正在评估你的讲解...</p>
       <div class="mt-4 flex justify-center gap-1">
         {#each Array(5) as _, i}
           <div class="w-2 h-8 bg-purple-400 rounded-full animate-pulse" style="animation-delay:{i * 0.15}s"></div>
@@ -278,10 +290,10 @@
   {:else if phase === 'result' && assessmentResult}
     <div class="text-center py-4">
       <div class="text-6xl mb-3 {assessmentResult.score >= 80 ? 'animate-bounce' : ''}">
-        {assessmentResult.score >= 80 ? '&#127942;' : assessmentResult.score >= 50 ? '&#127775;' : '&#128170;'}
+        {assessmentResult.score >= 80 ? '🏆' : assessmentResult.score >= 50 ? '✨' : '💪'}
       </div>
       <h3 class="text-xl font-bold text-purple-800 mb-2">
-        {assessmentResult.score >= 80 ? 'Amazing Little Teacher!' : assessmentResult.score >= 50 ? 'Great Explanation!' : 'Good Try!'}
+        {assessmentResult.score >= 80 ? '太棒了，小老师！' : assessmentResult.score >= 50 ? '讲解得很好！' : '继续加油！'}
       </h3>
       <div class="bg-white rounded-xl p-4 mb-4 shadow-sm border border-purple-200">
         <div class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 mb-2">
@@ -290,7 +302,7 @@
         <p class="text-sm text-gray-600 mb-3">{assessmentResult.encouragement}</p>
         {#if assessmentResult.foundKeywords?.length > 0}
           <div class="mb-2">
-            <p class="text-xs text-green-600 font-medium">Key concepts covered:</p>
+            <p class="text-xs text-green-600 font-medium">已涉及的关键概念：</p>
             <div class="flex flex-wrap gap-1 mt-1 justify-center">
               {#each assessmentResult.foundKeywords as kw}
                 <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">&#10003; {kw}</span>
@@ -300,7 +312,7 @@
         {/if}
         {#if assessmentResult.missingKeywords?.length > 0}
           <div>
-            <p class="text-xs text-orange-600 font-medium">You can also mention:</p>
+            <p class="text-xs text-orange-600 font-medium">还可以提到：</p>
             <div class="flex flex-wrap gap-1 mt-1 justify-center">
               {#each assessmentResult.missingKeywords as kw}
                 <span class="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs">{kw}</span>
@@ -310,16 +322,16 @@
         {/if}
       </div>
       <div class="bg-gradient-to-r from-amber-100 to-yellow-100 rounded-xl p-3 mb-4 border border-amber-300">
-        <p class="text-sm font-bold text-amber-700">&#9889; +{assessmentResult.energyReward} energy earned!</p>
+        <p class="text-sm font-bold text-amber-700">&#9889; +{assessmentResult.energyReward} 能量获得！</p>
       </div>
       <button onclick={handleComplete}
         class="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-bold rounded-2xl hover:from-purple-600 hover:to-pink-600 transition active:scale-95 shadow-lg">
-        &#127881; Continue
+        &#127881; 继续
       </button>
     </div>
   {/if}
 
   {#if error}
-    <div class="mt-3 bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">{error}</div>
+    <div class="mt-3 bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">{translateSpeechError(error)}</div>
   {/if}
 </div>

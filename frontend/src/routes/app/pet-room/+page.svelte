@@ -19,6 +19,36 @@
   let placementX = $state(200);
   let placementY = $state(220);
 
+  // Preset positions for different furniture types (more natural layout)
+  const presetPositions: Record<string, { x: number; y: number }[]> = {
+    'deco_bed_small':    [{ x: 80, y: 210 }, { x: 320, y: 210 }],
+    'deco_sofa':         [{ x: 200, y: 230 }, { x: 100, y: 230 }, { x: 300, y: 230 }],
+    'deco_bookshelf':    [{ x: 50, y: 180 }, { x: 350, y: 180 }],
+    'deco_lamp':         [{ x: 120, y: 200 }, { x: 280, y: 200 }],
+    'deco_plant':        [{ x: 60, y: 220 }, { x: 340, y: 220 }, { x: 200, y: 240 }],
+    'deco_rug_round':    [{ x: 200, y: 250 }],
+    'deco_window':       [{ x: 200, y: 100 }],
+    'deco_poster':       [{ x: 150, y: 80 }, { x: 250, y: 80 }],
+    'deco_toy_ball':     [{ x: 180, y: 245 }, { x: 220, y: 245 }, { x: 150, y: 240 }],
+    'deco_star_mobile':  [{ x: 200, y: 60 }],
+    'deco_table':        [{ x: 200, y: 220 }],
+    'deco_clock':        [{ x: 200, y: 70 }],
+  };
+
+  function getNaturalPosition(itemKey: string, existingFurniture: any[]): { x: number; y: number } {
+    const presets = presetPositions[itemKey] || [{ x: 180 + Math.random() * 40, y: 210 + Math.random() * 30 }];
+    for (const pos of presets) {
+      const tooClose = existingFurniture.some(f => {
+        const fx = f.x ?? 200;
+        const fy = f.y ?? 220;
+        const dist = Math.sqrt((fx - pos.x) ** 2 + (fy - pos.y) ** 2);
+        return dist < 50;
+      });
+      if (!tooClose) return pos;
+    }
+    return { x: 100 + Math.random() * 200, y: 180 + Math.random() * 60 };
+  }
+
   let themes = $derived(getAllThemes());
 
   onMount(async () => {
@@ -62,7 +92,8 @@
   async function handleSelectDecoration(item: PlacedItem) {
     showDecorationPicker = false;
     try {
-      room = await placeItem(item.userItemId ?? item.itemDefId, placementX, placementY);
+      const pos = getNaturalPosition(item.itemKey, room?.furniture || []);
+      room = await placeItem(item.userItemId ?? item.itemDefId, pos.x, pos.y);
       selectedItemId = null;
       await loadDecorations();
       toastStore.success(`已放置 ${item.name}`);
