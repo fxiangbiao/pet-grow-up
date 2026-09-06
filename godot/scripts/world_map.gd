@@ -484,8 +484,8 @@ func _add_path(from_pos: Vector2, to_pos: Vector2, connected: bool, inter_island
 		cp2 = Vector2(gap_mid_x, to_pos.y)
 	else:
 		# 岛内路径：根据主次方向选择控制点，保持小径在岛内部
-		var dx := abs(to_pos.x - from_pos.x)
-		var dy := abs(to_pos.y - from_pos.y)
+		var dx: float = abs(to_pos.x - from_pos.x)
+		var dy: float = abs(to_pos.y - from_pos.y)
 		var mid := (from_pos + to_pos) / 2.0
 		if dx >= dy:
 			cp1 = Vector2(mid.x, from_pos.y)
