@@ -49,3 +49,6 @@ desktop.ini
 .claude/settings.local.json
 .superpowers/
 .qoder-cn/
+
+# ===== Godot =====
+godot/.godot/
