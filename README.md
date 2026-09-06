@@ -91,35 +91,41 @@ Pet Grow Up 是一个将小学 1-6 年级学习内容与宠物养成游戏结合
 
 ## 快速开始
 
-### Docker 全栈部署（推荐）
+> Docker 在本机部署于 WSL2（Ubuntu）。统一运维入口为 **`petgrowup.sh`**（已合并旧的
+> deploy.sh / dev.sh / restart.sh），完整说明见 **`docs/部署使用说明.md`**。
+
+### Docker 全栈部署（推荐，WSL 内执行）
 
 ```bash
-# 一键启动所有服务
-docker compose up --build -d
+# 一键：同步 Windows 源码 -> WSL + 构建 + 启动（开发栈，前端热重载）
+wsl -u root -e bash /mnt/d/ALAN/Codes/pet-grow-up/petgrowup.sh dev-up
+
+# 生产栈
+wsl -u root -e bash /mnt/d/ALAN/Codes/pet-grow-up/petgrowup.sh prod-up
+
+# 常用运维：dev-down / dev-restart backend / status / logs / docker-up
+wsl -u root -e bash /mnt/d/ALAN/Codes/pet-grow-up/petgrowup.sh status
 ```
 
 - 前端：**http://localhost:3000**
 - 后端 API：**http://localhost:8080**
 - 默认管理员：`admin` / `admin123`
 
-### 本地开发模式
+### 本地开发模式（Windows 原生 + MySQL 容器）
 
 ```bash
-# 1. 启动 MySQL
-docker compose up -d mysql
+# 1. 在 WSL 启动开发栈的 MySQL（或 docker compose up -d mysql）
+wsl -u root -e bash /mnt/d/ALAN/Codes/pet-grow-up/petgrowup.sh dev-up   # 整套，或仅:
+wsl -u root -e bash -lc "cd /home/fxb_2/pet-grow-up && docker compose -f docker-compose.dev.yml up -d mysql"
 
 # 2. 启动后端（端口 8080，自动建表 + 播种数据）
-cd backend && mvn spring-boot:run -Dspring-boot.run.profiles=dev
+cd backend && mvn spring-boot:run
 
 # 3. 启动前端（端口 5173）
 cd frontend && npm install && npm run dev
 ```
 
-访问 **http://localhost:5173**
-
-### WSL 开发环境
-
-MySQL 用 Docker 容器，后端/前端在 WSL 中原生运行（Java 17 + Maven + Node.js 22）。
+访问 **http://localhost:5173**；Godot 客户端（`godot/`，Godot 4.7）按 F5 离线试玩或连 `http://127.0.0.1:8080`。
 
 ## 项目结构
 

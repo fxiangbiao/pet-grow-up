@@ -135,6 +135,7 @@ func start_session(subject: String, session_type: String, difficulty: int, node_
 
 
 ## 提交答案，返回 AnswerResultDTO（含 nextQuestion / sceneRewardItem）
+## 注意：后端 SubmitAnswerRequest 要求 body 内也必须带 sessionId（@NotNull）
 func submit_answer(session_id: int, question_id: int, answer: String, time_spent: int, on_done: Callable) -> void:
 	var body := {
 		"sessionId": session_id,

@@ -1,8 +1,16 @@
 extends PanelContainer
 ##
 ## MakeTenUI — 凑十法交互组件（点苹果凑十）
-## 大数已作为红苹果放在十格阵里，孩子点绿苹果：先补齐到 10，再把余下的放进「剩余」区。
-## 全部放完后发出 completed(答案字符串)。guided=true 为引导演示（不判分）。
+## 大数已作为红苹果放在十格阵里，孩子点绿苹果补进十格阵。
+##
+## 两种模式：
+##   sum        —— 先补齐到 10，再把余下的苹果放进「剩余」区（用于 "A + B = ?"
+##                 的教学示范与离线练习，答案 = A+B，如 8+5）
+##   complement —— 篮子里正好放 (10-A) 个绿苹果，全部点进十格阵凑满 10 即答对
+##                 （用于后端 SCENE_DRAG "凑十法：A + ? = 10" 在线练习，答案 = 补数）
+## guided=true 为引导演示（不判分，宠物/提示更温和）。
+##
+## 全部放完后发出 completed(答案字符串)。
 
 signal completed(answer: String)
 signal ten_reached
@@ -13,22 +21,30 @@ const TEX_SLOT := preload("res://assets/sprites/pet/slot_empty.png")
 
 var _big := 8
 var _small := 5
+var _need := 2            # 补满 10 需要的个数（10 - _big）
 var _guided := false
+var _mode := "sum"        # "sum" | "complement"
 
 var _slots: Array = []          # 10 个 TextureRect
 var _frame_filled := 0          # 已补进十格阵的绿苹果数（不含 _big）
 var _rest := 0
 var _basket: HBoxContainer
 var _rest_box: HBoxContainer
+var _rest_col: Control          # sum 模式的「剩余」列
 var _status: Label
 var _hint: Label
-var _defer_build := false        # setup 在入树前调用时，延迟到 _ready 构建
+var _defer_build := false       # setup 在入树前调用时，延迟到 _ready 构建
 
 
-func setup(big: int, small: int, guided: bool) -> void:
-	_big = clampi(big, 1, 10)
+func setup(big: int, small: int, guided: bool, mode: String = "sum") -> void:
+	_big = clampi(big, 0, 10)
 	_small = maxi(small, 0)
 	_guided = guided
+	_mode = mode
+	_need = 10 - _big
+	# complement 模式只展示恰好补齐所需的苹果数
+	if _mode == "complement":
+		_small = min(_need, _small)
 	# 必须在进入场景树后构建：_font_scale() 依赖 get_viewport().size，
 	# 未入树时 get_viewport() 返回 null 会崩溃。
 	if is_inside_tree():
@@ -73,7 +89,10 @@ func _build() -> void:
 
 	# 提示语
 	_hint = Label.new()
-	_hint.text = "👉 先点绿苹果凑满 10，再把剩下的放进「剩余」"
+	if _mode == "complement":
+		_hint.text = "👉 还差 %d 个凑成 10，把绿苹果点进十格阵补满吧！" % _need
+	else:
+		_hint.text = "👉 先点绿苹果凑满 10，再把剩下的放进「剩余」"
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint.add_theme_font_size_override("font_size", int(16 * scale))
 	_hint.add_theme_color_override("font_color", Color(0.2, 0.45, 0.55))
@@ -113,7 +132,7 @@ func _build() -> void:
 		_slots.append(slot)
 		frame.add_child(slot)
 
-	# 篮子 + 剩余 横向并排，节省纵向空间
+	# 篮子 + 剩余 横向并排，节省纵向空间（complement 模式不建剩余列）
 	var pool_row := HBoxContainer.new()
 	pool_row.add_theme_constant_override("separation", int(24 * scale))
 	pool_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -125,7 +144,10 @@ func _build() -> void:
 	pool_row.add_child(basket_col)
 
 	var basket_label := Label.new()
-	basket_label.text = "🧺 篮子里的苹果："
+	if _mode == "complement":
+		basket_label.text = "🧺 需要拖的苹果（%d 个）：" % _small
+	else:
+		basket_label.text = "🧺 篮子里的苹果："
 	basket_label.add_theme_font_size_override("font_size", int(16 * scale))
 	basket_label.add_theme_color_override("font_color", Color(0.15, 0.35, 0.4))
 	basket_col.add_child(basket_label)
@@ -143,20 +165,21 @@ func _build() -> void:
 		if i == 0:
 			_start_pulse(apple)
 
-	var rest_col := VBoxContainer.new()
-	rest_col.add_theme_constant_override("separation", int(6 * scale))
-	rest_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	pool_row.add_child(rest_col)
+	if _mode != "complement":
+		_rest_col = VBoxContainer.new()
+		_rest_col.add_theme_constant_override("separation", int(6 * scale))
+		_rest_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pool_row.add_child(_rest_col)
 
-	var rest_label := Label.new()
-	rest_label.text = "📦 剩余："
-	rest_label.add_theme_font_size_override("font_size", int(16 * scale))
-	rest_label.add_theme_color_override("font_color", Color(0.15, 0.35, 0.4))
-	rest_col.add_child(rest_label)
+		var rest_label := Label.new()
+		rest_label.text = "📦 剩余："
+		rest_label.add_theme_font_size_override("font_size", int(16 * scale))
+		rest_label.add_theme_color_override("font_color", Color(0.15, 0.35, 0.4))
+		_rest_col.add_child(rest_label)
 
-	_rest_box = HBoxContainer.new()
-	_rest_box.add_theme_constant_override("separation", int(6 * scale))
-	rest_col.add_child(_rest_box)
+		_rest_box = HBoxContainer.new()
+		_rest_box.add_theme_constant_override("separation", int(6 * scale))
+		_rest_col.add_child(_rest_box)
 
 	_status = Label.new()
 	_status.text = "开始吧～"
@@ -186,6 +209,14 @@ func _stop_pulse(apple: TextureButton) -> void:
 
 func _on_apple_pressed(apple: TextureButton) -> void:
 	_stop_pulse(apple)
+	if _mode == "complement":
+		_handle_complement(apple)
+	else:
+		_handle_sum(apple)
+
+
+## sum 模式：先补满十格阵，多余的绿苹果点进「剩余」
+func _handle_sum(apple: TextureButton) -> void:
 	var need := 10 - _big
 	if _frame_filled < need:
 		var idx := _big + _frame_filled
@@ -217,3 +248,22 @@ func _on_apple_pressed(apple: TextureButton) -> void:
 			_hint.text = "继续点绿苹果，把十格阵补满～"
 		elif _basket.get_child_count() > 0:
 			_hint.text = "十格阵已经满了，把剩下的绿苹果点进「剩余」"
+
+
+## complement 模式：绿苹果数 = 补齐数，全部点进十格阵即答对
+func _handle_complement(apple: TextureButton) -> void:
+	if _frame_filled >= _need:
+		return
+	var idx := _big + _frame_filled
+	_slots[idx].texture = TEX_GREEN
+	_frame_filled += 1
+	apple.queue_free()
+	if _frame_filled == _need:
+		_status.text = "🎉 凑成 10 啦！"
+		_status.add_theme_color_override("font_color", Color(0.9, 0.35, 0.25))
+		ten_reached.emit()
+		_status.text = "✅ 完成！ %d + %d = 10" % [_big, _need]
+		_status.add_theme_color_override("font_color", Color(0.15, 0.55, 0.3))
+		completed.emit(str(_need))
+	else:
+		_hint.text = "继续点苹果补满十格阵～（还差 %d 个）" % (_need - _frame_filled)

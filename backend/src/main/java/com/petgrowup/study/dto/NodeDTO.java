@@ -13,6 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 public class NodeDTO {
     private Long nodeId;
+    private String nodeKey;
     private String name;
     private String description;
     private Integer difficulty;

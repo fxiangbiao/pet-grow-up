@@ -70,11 +70,13 @@ public class SubjectWorldService {
             List<NodeDTO> childDTOs = new ArrayList<>();
             for (KnowledgeNode child : children) {
                 boolean childCompleted = completedNodeIds.contains(child.getId());
-                // Child unlock: parent must be completed
-                boolean childUnlocked = rootCompleted;
+                // 关卡解锁：所属主题岛（root）一旦解锁，其下学习关卡即可进入；
+                // 主题岛之间的先后顺序仍由 rootUnlocked（前一主题完成）控制。
+                boolean childUnlocked = rootUnlocked;
 
                 childDTOs.add(NodeDTO.builder()
                         .nodeId(child.getId())
+                        .nodeKey(child.getNodeKey())
                         .name(child.getName())
                         .description(child.getDescription())
                         .difficulty(child.getDifficulty())
@@ -87,6 +89,7 @@ public class SubjectWorldService {
 
             NodeDTO rootDTO = NodeDTO.builder()
                     .nodeId(root.getId())
+                    .nodeKey(root.getNodeKey())
                     .name(root.getName())
                     .description(root.getDescription())
                     .difficulty(root.getDifficulty())

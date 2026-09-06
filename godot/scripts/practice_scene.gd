@@ -48,6 +48,9 @@ func _next_offline_question() -> void:
 func _on_session_start(data: Variant) -> void:
 	if typeof(data) == TYPE_DICTIONARY and data.has("questionText"):
 		_current_q = data
+		# 记录后端会话 id：后续 submit 都要带它（此前固定用 1 会提交失败）
+		if data.has("sessionId"):
+			_session_id = int(data["sessionId"])
 		if data.has("totalQuestions"):
 			_total = int(data["totalQuestions"])
 		_locked = false
@@ -69,11 +72,14 @@ func _render_question(q: Dictionary) -> void:
 	lbl.add_theme_color_override("font_color", Color(0.15, 0.35, 0.4))
 	_q_area.add_child(lbl)
 
-	var is_make_ten := (str(ctx.get("node_key", "")) == "math_make_ten") or str(q.get("questionType", "")) == "make_ten"
+	# 凑十交互：math_make_ten 节点 / make_ten 题型 / 后端 SCENE_DRAG 补十题
+	var qt_type := str(q.get("questionType", ""))
+	var is_make_ten := (str(ctx.get("node_key", "")) == "math_make_ten") \
+		or ["make_ten", "SCENE_DRAG"].has(qt_type)
 	if is_make_ten:
-		var ab := _parse_add(qt)
+		var pq := _parse_question(qt)
 		var ui = preload("res://scripts/make_ten_ui.gd").new()
-		ui.setup(ab[0], ab[1], false)
+		ui.setup(int(pq["big"]), int(pq["small"]), false, str(pq["mode"]))
 		ui.completed.connect(_on_answer)
 		ui.ten_reached.connect(_on_ten_reached)
 		_q_area.add_child(ui)
@@ -95,9 +101,17 @@ func _add_choice_buttons(opts: String) -> void:
 			items.append(s.strip_edges())
 	for it in items:
 		var b := Button.new()
-		b.text = str(it)
+		var label := ""
+		var value := ""
+		if typeof(it) == TYPE_DICTIONARY:
+			label = str(it.get("text", ""))
+			value = str(it.get("key", ""))
+		else:
+			label = str(it).strip_edges()
+			value = label
+		b.text = label if label != "" else value
 		b.custom_minimum_size = Vector2(200, 40)
-		b.pressed.connect(_on_answer.bind(str(it)))
+		b.pressed.connect(_on_answer.bind(value))
 		_q_area.add_child(b)
 
 

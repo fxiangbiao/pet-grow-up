@@ -241,6 +241,7 @@ public class ExplorationService {
                                 .options(q.getOptions())
                                 .points(q.getPoints())
                                 .build();
+                        nextQuestion.setSessionId(session.getId());
                         nextQuestion.setTotalQuestions(session.getTotalQuestions());
                         nextQuestion.setAnsweredCount((int) answeredCount);
                         break;

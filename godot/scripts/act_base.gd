@@ -117,10 +117,59 @@ func toast(msg: String) -> void:
 		root.toast(msg)
 
 
-## 从 "8 + 5 = ?" 这类文本解析出 [a, b]
+## 从 "8 + 5 = ?" 这类文本解析出 [a, b]（求和形式，兼容旧调用方）
 func _parse_add(text: String) -> Array:
-	var s := text.replace(" ", "").replace("=?", "").replace("=", "")
-	var parts := s.split("+")
+	var p := _parse_question(text)
+	return [int(p["big"]), int(p["small"])]
+
+
+## 统一题型解析：
+##   sum        — "A + B = ?"：十格阵摆 A，篮子里放 B 个苹果；先补满十，
+##                余下的点进「剩余」，答案 = A + B（离线演示/教学卡）
+##   complement — "凑十法：A + ? = 10"：十格阵摆 A 个红苹果，篮子里放
+##                (10-A) 个绿苹果；点满十格阵即答对，答案 = 10-A
+##                （后端 SCENE_DRAG 按缺加数判分）
+func _parse_question(text: String) -> Dictionary:
+	var s := text.replace(" ", "").replace("？", "?")
+	# 缺加数形式：A + ? = N（可能带中文前缀，如 "凑十法：8+?=10"）
+	if s.contains("?="):
+		var eq := s.split("=")
+		if eq.size() >= 2:
+			var target := _last_int(eq[eq.size() - 1])
+			var nums := eq[0].split("+")
+			if nums.size() >= 2:
+				var big := _first_int(nums[0])
+				var need := maxi(target - big, 0)
+				return {"mode": "complement", "big": big, "small": need,
+						"target": target, "answer": str(need)}
+	# 求和形式：A + B = ?
+	var parts := s.replace("=?", "").replace("=", "").split("+")
 	if parts.size() >= 2:
-		return [int(parts[0]), int(parts[1])]
-	return [0, 0]
+		var a := _first_int(parts[0])
+		var b := _first_int(parts[1])
+		return {"mode": "sum", "big": a, "small": b, "target": a + b, "answer": str(a + b)}
+	return {"mode": "sum", "big": 0, "small": 0, "target": 0, "answer": ""}
+
+
+## 取出字符串中第一个整数（"凑十法：8+?=10" → 8；"8+5=?" → 8）
+func _first_int(s: String) -> int:
+	for i in range(s.length()):
+		var c := s[i]
+		if c.is_valid_int():
+			var j := i
+			while j < s.length() and s[j].is_valid_int():
+				j += 1
+			return int(s.substr(i, j - i))
+	return 0
+
+
+## 取出字符串中最后一个整数（"凑十法：8+?=10" → 10）
+func _last_int(s: String) -> int:
+	for i in range(s.length() - 1, -1, -1):
+		var c := s[i]
+		if c.is_valid_int():
+			var j := i
+			while j >= 0 and s[j].is_valid_int():
+				j -= 1
+			return int(s.substr(j + 1, i - j))
+	return 0

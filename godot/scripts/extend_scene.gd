@@ -81,11 +81,13 @@ func _render_variant(q: Dictionary) -> void:
 	lbl.add_theme_color_override("font_color", Color(0.15, 0.35, 0.4))
 	_q_area.add_child(lbl)
 
-	var is_make_ten := (str(ctx.get("node_key", "")) == "math_make_ten") or str(q.get("questionType", "")) == "make_ten"
+	var qt_type := str(q.get("questionType", ""))
+	var is_make_ten := (str(ctx.get("node_key", "")) == "math_make_ten") \
+		or ["make_ten", "SCENE_DRAG"].has(qt_type)
 	if is_make_ten:
-		var ab := _parse_add(str(q.get("questionText", "")))
+		var pq := _parse_question(str(q.get("questionText", "")))
 		var ui = preload("res://scripts/make_ten_ui.gd").new()
-		ui.setup(ab[0], ab[1], false)
+		ui.setup(int(pq["big"]), int(pq["small"]), false, str(pq["mode"]))
 		ui.completed.connect(_on_variant_answer)
 		ui.ten_reached.connect(_on_ten_reached)
 		_q_area.add_child(ui)
@@ -108,13 +110,24 @@ func _on_ten_reached() -> void:
 
 func _on_variant_answer(answer: String) -> void:
 	answer = answer.strip_edges()
-	# 变式题也用离线/在线判分
 	var res: Dictionary
-	if _mode == "offline":
+	# 在线变式：后端返回的 correctAnswer 最可靠（generate-variant 会把同节点另一
+	# 道题的 correctAnswer/explanation 一并返回），优先用它判分。
+	if _variant_q.has("correctAnswer"):
+		var expect := str(_variant_q["correctAnswer"]).strip_edges()
+		res = {
+			"isCorrect": expect.to_lower() == answer.to_lower(),
+			"explanation": str(_variant_q.get("explanation", "")),
+		}
+	elif _mode == "offline":
 		res = Demo.demo_answer(1, _variant_q, answer, 1, 5)
 	else:
-		# 简化：用离线判分逻辑确认正确性（在线 submit 略）
-		res = Demo.demo_answer(1, _variant_q, answer, 1, 5)
+		# 兜底：按题面本地解析判分（sum 求总和 / complement 求补数）
+		var pq := _parse_question(str(_variant_q.get("questionText", "")))
+		res = {
+			"isCorrect": str(pq.get("answer", "")) == answer,
+			"explanation": "先凑成 10，答案就是补上的个数。",
+		}
 	_show_variant_result(res)
 
 
