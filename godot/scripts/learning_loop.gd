@@ -122,8 +122,8 @@ func _on_act_finished() -> void:
 	if _idx < _acts.size() - 1:
 		_start_act(_idx + 1)
 	else:
-		toast("四幕完成！宠物获得成长，去看看奖励吧~")
-		get_tree().change_scene_to_file("res://scenes/pet_room.tscn")
+		pet_say("四幕完成！宠物获得成长，去小屋看看奖励吧~")
+		UiKit.change_scene(get_tree(), "res://scenes/pet_room.tscn")
 
 
 func _on_req_fail(msg: String) -> void:

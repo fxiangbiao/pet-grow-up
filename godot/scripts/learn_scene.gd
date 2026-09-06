@@ -43,14 +43,15 @@ func _on_make_ten_done(_answer: String) -> void:
 	if pet: pet.cheer()
 	if not _done:
 		_done = true
-		toast("你真棒！学会凑十法啦～")
+		pet_say("你真棒！学会凑十法啦～")
 
 
 func _finish_button() -> void:
 	var b := Button.new()
 	b.text = "练一练，下一幕 →"
-	b.custom_minimum_size = Vector2(240, 44)
+	b.custom_minimum_size = Vector2(260, 50)
 	b.pressed.connect(_on_done)
+	UiKit.style_button(b, true, 14, 17)
 	_scroll.add_child(b)
 
 

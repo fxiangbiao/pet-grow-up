@@ -50,6 +50,7 @@ var _detail_open := false          # 详情卡片是否展开
 var _scroll_connected := false
 var _resize_pending := false
 var _page_idx := 0
+var _drag_acc := 0.0
 var _pager: Control
 var _btn_prev: Button
 var _btn_next: Button
@@ -59,6 +60,7 @@ var _page_label: Label
 func _on_setup() -> void:
 	back_scene_path = "res://scenes/main_menu.tscn"
 	set_process_unhandled_input(true)
+	set_process_input(true)
 	_build_layout()
 	_build_detail()
 	_build_pager()
@@ -315,6 +317,7 @@ func _finish_world(roots: Array) -> void:
 	_show_guide()
 	_update_pager_state()
 	_scroll_to_recommended()
+	_play_entrance()
 
 
 # ===================== 构建主题岛与关卡点 =====================
@@ -688,7 +691,7 @@ func _on_start() -> void:
 		"key": _safe_str(_selected, "nodeKey", ""),
 		"subject": _current_subject
 	}
-	get_tree().change_scene_to_file("res://scenes/learning_loop.tscn")
+	UiKit.change_scene(get_tree(), "res://scenes/learning_loop.tscn")
 
 
 func _show_guide() -> void:
@@ -697,10 +700,11 @@ func _show_guide() -> void:
 		if node.get("isUnlocked", true) and not node.get("isCompleted", false):
 			if pet:
 				pet.wave()
-			toast("小精灵：先去「%s」探险吧！" % _safe_str(node, "name", "关卡"))
+			pet_say("先去「%s」探险吧！" % _safe_str(node, "name", "关卡"))
 			return
 	if pet:
 		pet.cheer()
+	pet_say("今天都好厉害！去小屋休息一下吧~")
 
 
 func _island_color(idx: int) -> Color:
@@ -899,6 +903,38 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_END:
 				_scroll_to_island(_islands.size() - 1)
 				accept_event()
+
+
+# ===================== 入场动效 & 触屏滑动 =====================
+
+## 世界淡入 + 轻微上移入场
+func _play_entrance() -> void:
+	if _world_layer == null:
+		return
+	_world_layer.modulate.a = 0.0
+	var base := _world_layer.position
+	_world_layer.position = base + Vector2(0, 16)
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(_world_layer, "modulate:a", 1.0, 0.32).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_world_layer, "position", base, 0.34).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+## 触屏左右滑动翻岛（点按不动则忽略，交给按钮/关卡）
+func _input(event: InputEvent) -> void:
+	if _btn_prev == null or not _btn_prev.visible:
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			_drag_acc = 0.0
+		else:
+			var thresh := maxf(_scroll.size.x * 0.18, 70.0)
+			if _drag_acc <= -thresh:
+				_on_page_next()
+			elif _drag_acc >= thresh:
+				_on_page_prev()
+			_drag_acc = 0.0
+	elif event is InputEventScreenDrag:
+		_drag_acc += event.relative.x
 
 
 # ===================== 离线示例数据（三块大陆） =====================

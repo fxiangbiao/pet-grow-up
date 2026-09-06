@@ -139,6 +139,8 @@ func _show_variant_result(res: Dictionary) -> void:
 	if pet:
 		if res.get("isCorrect", false): pet.cheer()
 		else: pet.wrong()
+	if res.get("isCorrect", false):
+		pet_say("变式也难不倒你，真会举一反三！")
 	var fb := Label.new()
 	fb.text = ("✅ 变式也答对啦！\n" if res.get("isCorrect", false) else "❌ 再想想～\n")
 	if res.has("explanation"):

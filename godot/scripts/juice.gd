@@ -51,23 +51,46 @@ static func popup_text(parent: Node, at: Vector2, text: String, color: Color = C
 
 
 static func sfx_correct(parent: Node) -> void:
-	_play(parent, CORRECT, -8.0)
+	_play(parent, CORRECT, -8.0, true)
 
 
 static func sfx_wrong(parent: Node) -> void:
-	_play(parent, WRONG, -12.0)
+	_play(parent, WRONG, -12.0, false)
 
 
 static func sfx_levelup(parent: Node) -> void:
-	_play(parent, LEVELUP, -6.0)
+	_play(parent, LEVELUP, -6.0, true)
 
 
-static func _play(parent: Node, stream: AudioStream, vol: float) -> void:
+## 轻微震屏（可被设置里的“震动”关闭）；作用于 Control 根节点
+static func shake(ctrl: Control, strength: float = 6.0, dur: float = 0.32) -> void:
+	if ctrl == null or not ctrl.is_inside_tree():
+		return
+	if not Settings.shake_enabled:
+		return
+	var base: Vector2 = ctrl.position
+	var step := maxf(dur / 6.0, 0.02)
+	var tw := ctrl.create_tween()
+	var sign := 1.0
+	for i in range(6):
+		var off := Vector2(strength * sign * (1.0 - float(i) / 8.0), 0.0)
+		tw.tween_property(ctrl, "position", base + off, step)
+		sign = -sign
+	tw.tween_property(ctrl, "position", base, step * 1.4)
+
+
+static func _play(parent: Node, stream: AudioStream, vol: float, random_pitch: bool = false) -> void:
 	if parent == null:
 		return
 	var p := AudioStreamPlayer.new()
 	p.stream = stream
-	p.volume_db = vol
+	p.volume_db = vol + (randf_range(-1.2, 1.2) if random_pitch else 0.0)
+	if random_pitch:
+		p.pitch_scale = randf_range(0.92, 1.12)
+	# 音效走独立 Sfx 总线（由 Settings autoload 创建并控制音量）
+	var tree := parent.get_tree()
+	if tree != null and tree.root != null and tree.root.has_node("Settings"):
+		p.bus = "Sfx"
 	parent.add_child(p)
 	p.play()
 	p.finished.connect(p.queue_free)
