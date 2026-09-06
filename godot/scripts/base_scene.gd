@@ -18,12 +18,27 @@ var _exp_bar: ProgressBar
 func _ready() -> void:
 	layout_mode = 1  # LAYOUT_MODE_ANCHORS：避免默认 UNCONTROLLED 下预设 anchors 不生效
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	set_process_unhandled_key_input(true)
 	_draw_background()
 	_build_top_bar()
 	_build_content()
 	_on_setup()          # 优先构建子类内容，确保界面不被后续步骤（如宠物实例化）阻断
 	_place_pet()         # 宠物放最后；即便 spawn 出错也不影响内容显示
 	refresh_energy()
+
+
+## Esc 返回上一页（若当前有输入控件持有焦点则不拦截，避免误伤正在输入的文本）
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not show_back:
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ESCAPE:
+			var focus_owner := get_viewport().gui_get_focus_owner()
+			if focus_owner is LineEdit or focus_owner is TextEdit:
+				return
+			if not get_tree().current_scene == self:
+				return
+			_on_back()
 
 
 func _on_login_ok() -> void:

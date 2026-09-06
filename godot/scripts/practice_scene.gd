@@ -68,6 +68,8 @@ func _render_question(q: Dictionary) -> void:
 	var qt := str(q.get("questionText", ""))
 	var lbl := Label.new()
 	lbl.text = qt
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.add_theme_font_size_override("font_size", 24)
 	lbl.add_theme_color_override("font_color", Color(0.15, 0.35, 0.4))
 	_q_area.add_child(lbl)

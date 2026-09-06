@@ -31,6 +31,8 @@ func _render_base(q: Dictionary) -> void:
 	_clear_q()
 	var lbl := Label.new()
 	lbl.text = "基础题：" + str(q.get("questionText", ""))
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.add_theme_font_size_override("font_size", 22)
 	lbl.add_theme_color_override("font_color", Color(0.15, 0.35, 0.4))
 	_q_area.add_child(lbl)
@@ -77,6 +79,8 @@ func _render_variant(q: Dictionary) -> void:
 	_clear_q()
 	var lbl := Label.new()
 	lbl.text = "✨ 变式题：" + str(q.get("questionText", ""))
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.add_theme_font_size_override("font_size", 22)
 	lbl.add_theme_color_override("font_color", Color(0.15, 0.35, 0.4))
 	_q_area.add_child(lbl)

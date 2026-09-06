@@ -10,6 +10,9 @@ const ISLAND_H := 360
 const NODE_SIZE := 72
 const ISLAND_PAD := 24
 const ISLAND_GAP := 120
+const ISLAND_TOP := 64           # 岛屿在画布内的顶部坐标（留出上方呼吸区）
+const MAP_H := 560               # 地图画布高度（含岛下沿与路径留白）
+const ARROW_SIZE := 60           # 左右翻页按钮边长
 
 const SUBJECT_NAMES := {
 	"chinese": "语文大陆",
@@ -38,13 +41,31 @@ var _all_nodes: Array = []         # 全部关卡点，用于画路径与引导
 var _subjects: Array = []          # [{key, stars, completed, total}]
 var _current_subject: String = ""
 
+# ---- 布局/翻页状态 ----
+var _map_w := 0                    # 当前画布宽度（max(所需宽度, 视口宽)）
+var _left_off := 0.0               # 岛屿行水平居中偏移
+var _island_targets: Array = []    # 每个主题岛中心的横向坐标（用于整岛翻页）
+var _cur_roots: Array = []         # 当前大陆的 root 缓存（窗口缩放后无网络重建）
+var _detail_open := false          # 详情卡片是否展开
+var _scroll_connected := false
+var _resize_pending := false
+var _page_idx := 0
+var _pager: Control
+var _btn_prev: Button
+var _btn_next: Button
+var _page_label: Label
+
 
 func _on_setup() -> void:
 	back_scene_path = "res://scenes/main_menu.tscn"
+	set_process_unhandled_input(true)
 	_build_layout()
 	_build_detail()
+	_build_pager()
 	ApiClient.request_failed.connect(_on_req_fail)
 	_load_subjects()
+	resized.connect(_on_window_resized)
+	_layout_pager()
 	prints("[WorldMap] _on_setup 完成：布局容器=", _vbox != null, " 地图层=", _world_layer != null, " 大陆栏按钮数=", _tab_buttons.size())
 
 
@@ -65,12 +86,16 @@ func _build_layout() -> void:
 	_tabs.custom_minimum_size = Vector2(0, 60)
 	_vbox.add_child(_tabs)
 
-	# 地图滚动区（横向滚动，纵向禁用）
+	# 地图滚动区：横向用 ◀ ▶ 整岛翻页代替拖动滚动条（隐藏原生条），
+	# 纵向保留自动滚动作为“窗口过矮”时的兜底，避免内容被裁掉。
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	var hbar := _scroll.get_h_scroll_bar()
+	if hbar != null:
+		hbar.visible = false
 	_vbox.add_child(_scroll)
 
 	_map = Control.new()
@@ -181,6 +206,7 @@ func _populate_tabs() -> void:
 		btn.custom_minimum_size = Vector2(170, 72) * scale
 		btn.pressed.connect(_on_tab_pressed.bind(key))
 		btn.set_meta("subject_key", key)
+		btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		_tabs.add_child(btn)
 		_tab_buttons.append(btn)
 	_highlight_tab(_current_subject)
@@ -263,8 +289,7 @@ func _on_world_map(data: Variant) -> void:
 	if roots.is_empty():
 		_load_demo_world()
 		return
-	_build_islands(roots)
-	_show_guide()
+	_finish_world(roots)
 
 
 ## 网络/接口失败时统一回退：学科栏没数据→示例学科；世界地图空白→示例地图。
@@ -279,24 +304,38 @@ func _on_req_fail(_msg: String) -> void:
 
 
 func _load_demo_world() -> void:
-	var roots: Array = _demo_world(_current_subject)
+	_finish_world(_demo_world(_current_subject))
+
+
+## 渲染世界并做一次“进岛引导”：缓存 roots 供窗口缩放时无网络重建
+func _finish_world(roots: Array) -> void:
+	_cur_roots = roots
+	_hide_detail()
 	_build_islands(roots)
 	_show_guide()
+	_update_pager_state()
+	_scroll_to_recommended()
 
 
 # ===================== 构建主题岛与关卡点 =====================
 
 func _build_islands(roots: Array) -> void:
 	var scale := _font_scale()
-	var map_w := int(roots.size() * (ISLAND_W + ISLAND_GAP) + ISLAND_GAP)
-	var map_h := 620
-	_map.custom_minimum_size = Vector2(map_w, map_h)
-	_map.size = Vector2(map_w, map_h)
+	# 所需宽度 = 岛屿总宽 + 首尾留白；视口宽 = 内容区可用宽度（去掉左右 44px 边距）
+	var needed := int(roots.size() * (ISLAND_W + ISLAND_GAP) + ISLAND_GAP)
+	var client_w: float = maxf(self.size.x - 88.0, 480.0)
+	_map_w = maxi(needed, int(client_w))
+	_left_off = maxf(0.0, (client_w - float(needed)) * 0.5)
+	_clear_world()
+	_island_targets.clear()
+	_map.custom_minimum_size = Vector2(_map_w, MAP_H)
+	_map.size = Vector2(_map_w, MAP_H)
 
 	for i in range(roots.size()):
 		var root: Dictionary = roots[i]
-		var ix := ISLAND_GAP + i * (ISLAND_W + ISLAND_GAP)
-		var iy := 60
+		var ix := int(ISLAND_GAP + _left_off + i * (ISLAND_W + ISLAND_GAP))
+		var iy := ISLAND_TOP
+		_island_targets.append(float(ix + ISLAND_W / 2))
 		_build_island(i, root, ix, iy, scale)
 
 	_draw_paths()
@@ -436,9 +475,15 @@ func _build_node_button(node: Dictionary, _island_idx: int, _node_idx: int, scal
 	normal.shadow_size = 10
 	normal.shadow_offset = Vector2(0, 4)
 	btn.add_theme_stylebox_override("normal", normal)
-	btn.add_theme_stylebox_override("hover", normal)
-	btn.add_theme_stylebox_override("pressed", normal)
+	# 悬停/按下高亮：外发光更亮，提示可点
+	var hovered := normal.duplicate()
+	hovered.border_color = Color(1.0, 1.0, 0.85, 0.98)
+	hovered.shadow_size = 18
+	btn.add_theme_stylebox_override("hover", hovered)
+	btn.add_theme_stylebox_override("pressed", hovered)
+	btn.add_theme_stylebox_override("focus", hovered)
 	btn.add_theme_stylebox_override("disabled", normal)
+	btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 
 	var star_str: String = "★".repeat(stars) if stars > 0 else ""
 	if not unlocked:
@@ -586,6 +631,7 @@ func _build_detail() -> void:
 	_detail_btn.custom_minimum_size = Vector2(200, 44) * _font_scale()
 	_detail_btn.pressed.connect(_on_start)
 	_detail_btn.add_theme_font_size_override("font_size", int(16 * _font_scale()))
+	_detail_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	btn_row.add_child(_detail_btn)
 
 	var close := Button.new()
@@ -593,6 +639,7 @@ func _build_detail() -> void:
 	close.custom_minimum_size = Vector2(100, 44) * _font_scale()
 	close.pressed.connect(_hide_detail)
 	close.add_theme_font_size_override("font_size", int(16 * _font_scale()))
+	close.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	btn_row.add_child(close)
 
 
@@ -620,11 +667,15 @@ func _on_node_selected(node: Dictionary) -> void:
 	else:
 		_detail_btn.text = "尚未解锁"
 
+	_detail_open = true
+	_update_pager_state()
 	var tw := create_tween()
 	tw.tween_property(_detail, "modulate:a", 1.0, 0.25)
 
 
 func _hide_detail() -> void:
+	_detail_open = false
+	_update_pager_state()
 	var tw := create_tween()
 	tw.tween_property(_detail, "modulate:a", 0.0, 0.2)
 
@@ -661,6 +712,193 @@ func _island_color(idx: int) -> Color:
 		Color(0.92, 0.88, 0.72),
 	]
 	return palette[idx % palette.size()]
+
+
+# ===================== 翻页导航 & 交互增强 =====================
+
+func _build_pager() -> void:
+	_pager = Control.new()
+	_pager.name = "MapPager"
+	_pager.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_pager.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_pager)
+
+	_btn_prev = _make_pager_button("◀", "上一主题岛（←）")
+	_btn_prev.pressed.connect(_on_page_prev)
+	_btn_next = _make_pager_button("▶", "下一主题岛（→）")
+	_btn_next.pressed.connect(_on_page_next)
+
+	_page_label = Label.new()
+	_page_label.name = "PageLabel"
+	_page_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_page_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_page_label.add_theme_font_size_override("font_size", int(13 * _font_scale()))
+	_page_label.add_theme_color_override("font_color", Color(0.3, 0.5, 0.55))
+	_pager.add_child(_page_label)
+
+
+func _make_pager_button(icon: String, tip: String) -> Button:
+	var b := Button.new()
+	b.text = icon
+	b.tooltip_text = tip
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.custom_minimum_size = Vector2(ARROW_SIZE, ARROW_SIZE)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(1, 1, 1, 0.82)
+	normal.border_color = Color(0.55, 0.8, 0.85)
+	normal.border_width_left = 2
+	normal.border_width_top = 2
+	normal.border_width_right = 2
+	normal.border_width_bottom = 2
+	normal.corner_radius_top_left = ARROW_SIZE / 2
+	normal.corner_radius_top_right = ARROW_SIZE / 2
+	normal.corner_radius_bottom_left = ARROW_SIZE / 2
+	normal.corner_radius_bottom_right = ARROW_SIZE / 2
+	normal.shadow_color = Color(0.1, 0.3, 0.35, 0.25)
+	normal.shadow_size = 8
+	var hovered := normal.duplicate()
+	hovered.bg_color = Color(1.0, 0.92, 0.72, 0.95)
+	hovered.shadow_size = 14
+	b.add_theme_stylebox_override("normal", normal)
+	b.add_theme_stylebox_override("hover", hovered)
+	b.add_theme_stylebox_override("pressed", hovered)
+	b.add_theme_stylebox_override("focus", hovered)
+	b.add_theme_font_size_override("font_size", int(24 * _font_scale()))
+	b.add_theme_color_override("font_color", Color(0.15, 0.4, 0.45))
+	b.add_theme_color_override("font_disabled_color", Color(0.6, 0.7, 0.72, 0.5))
+	_pager.add_child(b)
+	return b
+
+
+func _layout_pager() -> void:
+	if _pager == null or self.size.y <= 0:
+		return
+	# 地图内容区纵向中心 ≈ (内容顶 88 + 底 24 之间)：左右翻页键贴在地图两侧
+	var cy := (self.size.y + 134.0) * 0.5
+	_btn_prev.position = Vector2(14, cy - ARROW_SIZE / 2)
+	_btn_next.position = Vector2(maxf(self.size.x - 14 - ARROW_SIZE, 14), cy - ARROW_SIZE / 2)
+	_page_label.size = Vector2(maxf(self.size.x - 200, 200), 26)
+	_page_label.position = Vector2(100, maxf(self.size.y - 118, 60))
+
+
+func _on_page_prev() -> void:
+	_scroll_to_island(_page_idx - 1)
+
+
+func _on_page_next() -> void:
+	_scroll_to_island(_page_idx + 1)
+
+
+## 平滑滚动到第 i 个主题岛（按整岛居中）
+func _scroll_to_island(i: int) -> void:
+	if i < 0 or i >= _islands.size():
+		return
+	var client := _scroll.size.x
+	if client <= 0:
+		client = maxf(self.size.x - 88.0, 480.0)
+	var target := clampf(float(_island_targets[i]) - client * 0.5,
+			0.0, maxf(0.0, float(_map_w) - client))
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_scroll, "scroll_horizontal", target, 0.32)
+	_page_idx = clampi(i, 0, maxi(_islands.size() - 1, 0))
+	_update_pager_state()
+
+
+func _update_pager_state() -> void:
+	if _pager == null:
+		return
+	_ensure_scroll_tracking()
+	var client := _scroll.size.x
+	if client <= 0:
+		client = maxf(self.size.x - 88.0, 480.0)
+	var needs_paging: bool = _islands.size() > 1 and _map_w > int(client) + 2
+	_btn_prev.visible = needs_paging
+	_btn_next.visible = needs_paging
+	if needs_paging:
+		_btn_prev.disabled = _page_idx <= 0
+		_btn_next.disabled = _page_idx >= _islands.size() - 1
+	_page_label.visible = needs_paging and not _detail_open
+	if needs_paging:
+		_page_label.text = "关卡页 %d / %d · 点击 ◀ ▶ 或键盘 ←→ 翻岛" % [_page_idx + 1, _islands.size()]
+
+
+func _ensure_scroll_tracking() -> void:
+	if _scroll_connected or _scroll == null:
+		return
+	var hbar := _scroll.get_h_scroll_bar()
+	if hbar == null:
+		return
+	_scroll_connected = true
+	hbar.value_changed.connect(_on_scroll_value_changed)
+
+
+func _on_scroll_value_changed(_v: float) -> void:
+	if _islands.is_empty():
+		return
+	var client := maxf(_scroll.size.x, 480.0)
+	var view_center := _scroll.scroll_horizontal + client * 0.5
+	var best := 0
+	var best_d := 1e18
+	for i in range(_islands.size()):
+		var d := absf(float(_island_targets[i]) - view_center)
+		if d < best_d:
+			best_d = d
+			best = i
+	if best != _page_idx:
+		_page_idx = best
+		_update_pager_state()
+
+
+func _scroll_to_recommended() -> void:
+	# 等两三帧让布局完成（ScrollContainer 需要先算出尺寸）
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if _islands.is_empty():
+		return
+	var rec := _find_recommended_island()
+	_scroll_to_island(rec)
+
+
+func _find_recommended_island() -> int:
+	for i in range(_islands.size()):
+		for rec in _islands[i]["nodes"]:
+			var data: Dictionary = rec["data"]
+			if bool(data.get("isUnlocked", true)) and not bool(data.get("isCompleted", false)):
+				return i
+	return 0
+
+
+## 窗口大小变化：内容宽度变了就（防抖）用缓存重建一次地图，让岛屿行重新居中
+func _on_window_resized() -> void:
+	if _resize_pending or _cur_roots.is_empty() or self.size.x <= 0:
+		return
+	_resize_pending = true
+	await get_tree().create_timer(0.25).timeout
+	_resize_pending = false
+	if _cur_roots.is_empty() or not is_inside_tree():
+		return
+	_layout_pager()
+	_finish_world(_cur_roots)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if _btn_prev == null or not _btn_prev.visible:
+			return
+		match event.keycode:
+			KEY_LEFT:
+				_scroll_to_island(_page_idx - 1)
+				accept_event()
+			KEY_RIGHT:
+				_scroll_to_island(_page_idx + 1)
+				accept_event()
+			KEY_HOME:
+				_scroll_to_island(0)
+				accept_event()
+			KEY_END:
+				_scroll_to_island(_islands.size() - 1)
+				accept_event()
 
 
 # ===================== 离线示例数据（三块大陆） =====================
