@@ -1,21 +1,26 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { getTodayChallenges, claimReward } from '$lib/api/challenge';
   import type { DailyChallenge } from '$lib/types/api';
   import { authStore } from '$lib/stores/auth.svelte';
   import { toastStore } from '$lib/stores/toast.svelte';
-  import LoadingSpinner from '$lib/components/common/LoadingSpinner.svelte';
+  import SkeletonTemplates from '$lib/components/common/SkeletonTemplates.svelte';
+  import ErrorState from '$lib/components/common/ErrorState.svelte';
 
   let challenges = $state<DailyChallenge[]>([]);
   let loading = $state(true);
+  let loadError = $state('');
   let claiming = $state<number | null>(null);
 
   async function load() {
     loading = true;
+    loadError = '';
     try {
       challenges = await getTodayChallenges();
-    } catch {}
+    } catch (e) {
+      loadError = '加载挑战失败';
+    }
     loading = false;
   }
 
@@ -65,7 +70,9 @@
   </div>
 
   {#if loading}
-    <LoadingSpinner size="md" text="加载今日挑战..." />
+    <SkeletonTemplates name="daily" />
+  {:else if loadError}
+    <ErrorState type="server" message={loadError} onRetry={load} />
   {:else}
     <div class="space-y-3">
       {#each challenges as c (c.id)}

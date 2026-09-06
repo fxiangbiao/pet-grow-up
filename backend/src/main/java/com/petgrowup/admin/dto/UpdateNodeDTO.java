@@ -11,5 +11,6 @@ public class UpdateNodeDTO {
     private Integer gradeLevel;
     private Long parentNodeId;
     private String prerequisiteNodes;
+    private String contentTemplate;
     private Integer orderIndex;
 }

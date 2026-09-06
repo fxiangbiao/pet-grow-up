@@ -441,3 +441,44 @@ CREATE TABLE IF NOT EXISTS pet_room (
     INDEX idx_pet_room_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+
+CREATE TABLE IF NOT EXISTS learning_weakness (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    knowledge_node_id BIGINT DEFAULT NULL,
+    subject VARCHAR(20) NOT NULL,
+    wrong_count INT NOT NULL DEFAULT 1,
+    last_wrong_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    mastery_level INT NOT NULL DEFAULT 0 COMMENT '0-100, increases with correct answers',
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_node_subject (user_id, knowledge_node_id, subject),
+    INDEX idx_user_weakness (user_id, mastery_level ASC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS practice_attempt (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    knowledge_node_id BIGINT NOT NULL,
+    question_id BIGINT NOT NULL,
+    user_answer VARCHAR(500),
+    is_correct BOOLEAN DEFAULT FALSE,
+    time_spent INT DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_practice_user_node (user_id, knowledge_node_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS analogy_record (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    knowledge_node_id BIGINT NOT NULL,
+    original_question_id BIGINT NOT NULL,
+    variant_question_id BIGINT NOT NULL,
+    user_answer VARCHAR(500),
+    is_correct BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_analogy_user_node (user_id, knowledge_node_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

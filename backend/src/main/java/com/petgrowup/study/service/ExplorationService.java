@@ -17,6 +17,7 @@ import com.petgrowup.spirit.service.SpiritService;
 import com.petgrowup.study.dto.*;
 import com.petgrowup.study.entity.*;
 import com.petgrowup.study.mapper.*;
+import com.petgrowup.study.service.WeaknessService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,8 +46,10 @@ public class ExplorationService {
     private final ChallengeService challengeService;
     private final StoryService storyService;
     private final RandomEventService randomEventService;
+    private final WeaknessService weaknessService;
 
     private static final int QUESTIONS_PER_SESSION = 5;
+    private static final int PRACTICE_QUESTIONS = 3;
     private static final long BASE_REWARD = 100;
     private static final int EXPECTED_DURATION_SECONDS = 120;
 
@@ -58,7 +61,8 @@ public class ExplorationService {
                               AchievementService achievementService,
                               ChallengeService challengeService,
                               StoryService storyService,
-                              RandomEventService randomEventService) {
+                              RandomEventService randomEventService,
+                              WeaknessService weaknessService) {
         this.sessionMapper = sessionMapper;
         this.recordMapper = recordMapper;
         this.quizService = quizService;
@@ -71,6 +75,7 @@ public class ExplorationService {
         this.challengeService = challengeService;
         this.storyService = storyService;
         this.randomEventService = randomEventService;
+        this.weaknessService = weaknessService;
     }
 
     @Transactional
@@ -81,7 +86,13 @@ public class ExplorationService {
         KnowledgeNode node = quizService.getKnowledgeNodeById(request.getKnowledgeNodeId());
         if (node == null) throw new ResourceNotFoundException("KnowledgeNode", request.getKnowledgeNodeId());
 
-        List<QuestionDTO> questions = quizService.getQuestionsForSession(request.getKnowledgeNodeId(), QUESTIONS_PER_SESSION);
+        boolean isPractice = "PRACTICE".equals(request.getSessionType());
+        List<QuestionDTO> questions;
+        if (isPractice) {
+            questions = quizService.getPracticeQuestionsForSession(request.getKnowledgeNodeId(), PRACTICE_QUESTIONS);
+        } else {
+            questions = quizService.getQuestionsForSession(request.getKnowledgeNodeId(), QUESTIONS_PER_SESSION);
+        }
         if (questions.isEmpty()) {
             throw new BusinessException("该节点暂无可用题目");
         }
@@ -91,7 +102,7 @@ public class ExplorationService {
                 .map(q -> String.valueOf(q.getQuestionId()))
                 .collect(Collectors.joining(","));
 
-        int streak = updateStreak(user);
+        int streak = isPractice ? 0 : updateStreak(user);
 
         StudySession session = StudySession.builder()
                 .userId(userId)
@@ -149,6 +160,17 @@ public class ExplorationService {
 
         recordMapper.insert(record);
 
+        boolean isPracticeSession = "PRACTICE".equals(session.getSessionType());
+
+        // Track weakness (skip for practice)
+        if (!isPracticeSession) {
+            if (isCorrect) {
+                weaknessService.recordCorrectAnswer(userId, question.getKnowledgeNodeId(), session.getSubject());
+            } else {
+                weaknessService.recordWrongAnswer(userId, question.getKnowledgeNodeId(), session.getSubject());
+            }
+        }
+
         // Update session
         int newCorrect = session.getCorrectAnswers() + (isCorrect ? 1 : 0);
         session.setCorrectAnswers(newCorrect);
@@ -156,8 +178,9 @@ public class ExplorationService {
             session.setActualDuration(session.getActualDuration() + request.getTimeSpent());
         }
 
-        // Track combo and boss defeat
+        // Track combo and boss defeat (skip for practice)
         int currentCombo = session.getCurrentCombo() != null ? session.getCurrentCombo() : 0;
+        if (!isPracticeSession) {
         if (isCorrect) {
             currentCombo++;
             int maxCombo = session.getMaxCombo() != null ? session.getMaxCombo() : 0;
@@ -167,6 +190,7 @@ public class ExplorationService {
         } else {
             currentCombo = 0;
         }
+        }
         session.setCurrentCombo(currentCombo);
 
         // Check if session is complete
@@ -175,13 +199,17 @@ public class ExplorationService {
 
         boolean isSessionComplete = answeredCount >= session.getTotalQuestions();
 
-        // Last question correct = boss defeated
-        if (isSessionComplete && isCorrect) {
+        // Last question correct = boss defeated (skip for practice)
+        if (isSessionComplete && isCorrect && !isPracticeSession) {
             session.setBossDefeated(true);
         }
 
         if (isSessionComplete) {
-            completeSession(session, userId);
+            if (isPracticeSession) {
+                completePracticeSession(session);
+            } else {
+                completeSession(session, userId);
+            }
         } else {
             sessionMapper.update(session);
         }
@@ -213,6 +241,7 @@ public class ExplorationService {
                                 .options(q.getOptions())
                                 .points(q.getPoints())
                                 .build();
+                        nextQuestion.setSessionId(session.getId());
                         nextQuestion.setTotalQuestions(session.getTotalQuestions());
                         nextQuestion.setAnsweredCount((int) answeredCount);
                         break;
@@ -272,6 +301,20 @@ public class ExplorationService {
                 .build();
     }
 
+    /**
+     * Complete a practice session - no rewards, no progress, no achievements.
+     */
+    private void completePracticeSession(StudySession session) {
+        double accuracy = session.getTotalQuestions() > 0
+                ? (double) session.getCorrectAnswers() / session.getTotalQuestions()
+                : 0.0;
+        session.setAccuracy(BigDecimal.valueOf(accuracy).setScale(2, RoundingMode.HALF_UP));
+        session.setEnergyEarned(0L);
+        session.setStatus("COMPLETED");
+        session.setCompletedAt(LocalDateTime.now());
+        sessionMapper.update(session);
+    }
+
     private void completeSession(StudySession session, Long userId) {
         double accuracy = session.getTotalQuestions() > 0
                 ? (double) session.getCorrectAnswers() / session.getTotalQuestions()
@@ -314,6 +357,12 @@ public class ExplorationService {
                     user.getCurrentSpiritId(), accuracy,
                     session.getActualDuration(), session.getExpectedDuration(),
                     session.getStreakAtTime());
+
+            // Add experience based on energy earned (exp = energy * 0.5)
+            int expGain = (int) (energyEarned * 0.5);
+            if (expGain > 0) {
+                spiritService.addExperience(userId, user.getCurrentSpiritId(), expGain);
+            }
         }
 
         // Update subject world progress

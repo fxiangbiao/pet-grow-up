@@ -24,7 +24,9 @@ public class CreateNodeDTO {
 
     private Long parentNodeId;
 
-    private String prerequisiteNodes;   // JSON array
+    private String prerequisiteNodes;
+
+    private String contentTemplate;
 
     private Integer orderIndex = 0;
 }

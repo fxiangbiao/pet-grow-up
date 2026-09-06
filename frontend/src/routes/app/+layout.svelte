@@ -35,7 +35,7 @@
 {#if authStore.isAuthenticated}
   <div role="presentation" class="min-h-screen bg-gray-50" onclick={handleInteraction}>
     <NavBar />
-    <main class="max-w-6xl mx-auto px-4 py-6">
+    <main class="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6">
       {#key $page.url.pathname}
         <div transition:fly={{ y: 20, duration: 300, opacity: 0 }}>
           {@render children()}

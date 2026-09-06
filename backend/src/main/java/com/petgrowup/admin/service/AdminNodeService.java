@@ -98,6 +98,7 @@ public class AdminNodeService {
                 .parentNodeId(dto.getParentNodeId())
                 .prerequisiteNodes(dto.getPrerequisiteNodes())
                 .orderIndex(dto.getOrderIndex() != null ? dto.getOrderIndex() : 0)
+                .contentTemplate(dto.getContentTemplate())
                 .build();
         nodeMapper.insert(node);
         return node;
@@ -116,6 +117,7 @@ public class AdminNodeService {
         if (dto.getParentNodeId() != null) node.setParentNodeId(dto.getParentNodeId());
         if (dto.getPrerequisiteNodes() != null) node.setPrerequisiteNodes(dto.getPrerequisiteNodes());
         if (dto.getOrderIndex() != null) node.setOrderIndex(dto.getOrderIndex());
+        if (dto.getContentTemplate() != null) node.setContentTemplate(dto.getContentTemplate());
 
         nodeMapper.update(node);
         return node;

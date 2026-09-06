@@ -12,6 +12,7 @@ import com.petgrowup.study.mapper.KnowledgeNodeMapper;
 import com.petgrowup.study.mapper.StudyRecordMapper;
 import com.petgrowup.study.mapper.StudySessionMapper;
 import com.petgrowup.study.mapper.SubjectWorldMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -24,6 +25,7 @@ public class SubjectWorldService {
     private final KnowledgeNodeMapper knowledgeNodeMapper;
     private final StudySessionMapper sessionMapper;
     private final StudyRecordMapper recordMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public SubjectWorldService(SubjectWorldMapper worldMapper, KnowledgeNodeMapper knowledgeNodeMapper,
                                StudySessionMapper sessionMapper, StudyRecordMapper recordMapper) {
@@ -43,26 +45,68 @@ public class SubjectWorldService {
         Set<Long> completedNodeIds = getCompletedNodeIds(userId, subject);
         Map<Long, Integer> nodeStars = getNodeStarRatings(userId, subject);
 
-        List<NodeDTO> nodeDTOs = new ArrayList<>();
-        for (int i = 0; i < nodes.size(); i++) {
-            KnowledgeNode node = nodes.get(i);
-            boolean isCompleted = completedNodeIds.contains(node.getId());
-            boolean isUnlocked = i == 0 || completedNodeIds.contains(nodes.get(i - 1).getId());
-            nodeDTOs.add(NodeDTO.builder()
-                    .nodeId(node.getId())
-                    .name(node.getName())
-                    .description(node.getDescription())
-                    .difficulty(node.getDifficulty())
-                    .isUnlocked(isUnlocked)
-                    .isCompleted(isCompleted)
-                    .starRating(nodeStars.getOrDefault(node.getId(), 0))
-                    .build());
+        // Separate root nodes and child nodes
+        List<KnowledgeNode> rootNodes = nodes.stream()
+                .filter(n -> n.getParentNodeId() == null)
+                .collect(Collectors.toList());
+
+        // Group children by parentId
+        Map<Long, List<KnowledgeNode>> childrenByParent = nodes.stream()
+                .filter(n -> n.getParentNodeId() != null)
+                .collect(Collectors.groupingBy(KnowledgeNode::getParentNodeId,
+                        LinkedHashMap::new, Collectors.toList()));
+
+        // Build tree: root nodes with their children
+        List<NodeDTO> treeNodes = new ArrayList<>();
+        for (int i = 0; i < rootNodes.size(); i++) {
+            KnowledgeNode root = rootNodes.get(i);
+            boolean rootCompleted = completedNodeIds.contains(root.getId());
+
+            // Root unlock logic: first root always unlocked, others need previous root completed
+            boolean rootUnlocked = i == 0 || completedNodeIds.contains(rootNodes.get(i - 1).getId());
+
+            // Build children for this root
+            List<KnowledgeNode> children = childrenByParent.getOrDefault(root.getId(), Collections.emptyList());
+            List<NodeDTO> childDTOs = new ArrayList<>();
+            for (KnowledgeNode child : children) {
+                boolean childCompleted = completedNodeIds.contains(child.getId());
+                // 关卡解锁：所属主题岛（root）一旦解锁，其下学习关卡即可进入；
+                // 主题岛之间的先后顺序仍由 rootUnlocked（前一主题完成）控制。
+                boolean childUnlocked = rootUnlocked;
+
+                childDTOs.add(NodeDTO.builder()
+                        .nodeId(child.getId())
+                        .nodeKey(child.getNodeKey())
+                        .name(child.getName())
+                        .description(child.getDescription())
+                        .difficulty(child.getDifficulty())
+                        .isUnlocked(childUnlocked)
+                        .isCompleted(childCompleted)
+                        .starRating(nodeStars.getOrDefault(child.getId(), 0))
+                        .parentId(root.getId())
+                        .build());
+            }
+
+            NodeDTO rootDTO = NodeDTO.builder()
+                    .nodeId(root.getId())
+                    .nodeKey(root.getNodeKey())
+                    .name(root.getName())
+                    .description(root.getDescription())
+                    .difficulty(root.getDifficulty())
+                    .isUnlocked(rootUnlocked)
+                    .isCompleted(rootCompleted)
+                    .starRating(nodeStars.getOrDefault(root.getId(), 0))
+                    .parentId(null)
+                    .children(childDTOs)
+                    .build();
+
+            treeNodes.add(rootDTO);
         }
 
         return WorldMapDTO.builder()
                 .subject(subject)
                 .worldLevel(world != null ? world.getWorldLevel() : 1)
-                .nodes(nodeDTOs)
+                .nodes(treeNodes)
                 .build();
     }
 
@@ -168,5 +212,17 @@ public class SubjectWorldService {
             starRatings.put(entry.getKey(), stars);
         }
         return starRatings;
+    }
+
+    public Object getTeachingContent(Long nodeId) {
+        KnowledgeNode node = knowledgeNodeMapper.selectOneById(nodeId);
+        if (node == null || node.getContentTemplate() == null || node.getContentTemplate().isEmpty()) {
+            return null;
+        }
+        try {
+            return objectMapper.readTree(node.getContentTemplate());
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

@@ -1,9 +1,9 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-  import { onDestroy } from 'svelte';
-  import { startSession, submitAnswer } from '$lib/api/study';
-  import type { QuestionDTO, AnswerResult } from '$lib/api/study';
+  import { onDestroy, onMount } from 'svelte';
+  import { startSession, submitAnswer, getTeachingContent } from '$lib/api/study';
+  import type { QuestionDTO, AnswerResult, TeachingCard } from '$lib/api/study';
   import CorrectIndicator from '$lib/components/feedback/CorrectIndicator.svelte';
   import WrongIndicator from '$lib/components/feedback/WrongIndicator.svelte';
   import SessionResult from '$lib/components/study/SessionResult.svelte';
@@ -17,7 +17,6 @@
   import EnergyBar from '$lib/components/study/EnergyBar.svelte';
   import GuardianEncounter from '$lib/components/study/GuardianEncounter.svelte';
   import TreasureChest from '$lib/components/study/TreasureChest.svelte';
-  import ExploreConfirm from '$lib/components/study/ExploreConfirm.svelte';
   import SceneMathTen from '$lib/components/study/SceneMathTen.svelte';
   import SceneTap from '$lib/components/study/SceneTap.svelte';
   import SceneMatch from '$lib/components/study/SceneMatch.svelte';
@@ -28,17 +27,59 @@
   import ScenePinyinBubble from '$lib/components/study/ScenePinyinBubble.svelte';
   import SceneCharBuild from '$lib/components/study/SceneCharBuild.svelte';
   import { spiritStore } from '$lib/stores/spirit.svelte';
+  import KnowledgeCards from '$lib/components/study/KnowledgeCards.svelte';
+  import LittleTeacher from '$lib/components/study/LittleTeacher.svelte';
+  import LearnByAnalogy from '$lib/components/study/LearnByAnalogy.svelte';
+  import ChapterIntro from '$lib/components/study/ChapterIntro.svelte';
   import { soundManager } from '$lib/audio/sound-manager';
+
+  // ── Chapter intro data (per subject) ──
+  const chapterData: Record<string, { title: string; narrative: string; npcName: string; npcDialogue: string }> = {
+    chinese: {
+      title: '诗词大陆',
+      narrative: '在遥远的诗词大陆上，文字蕴含着神奇的力量。小精灵感受到了知识的召唤，准备踏上探索之旅...',
+      npcName: '书仙',
+      npcDialogue: '欢迎来到诗词大陆！每一个汉字都有它的故事，让我们一起发现吧！'
+    },
+    math: {
+      title: '智慧王国',
+      narrative: '智慧王国里充满了数字和图形的奥秘。小精灵拿起智慧的钥匙，准备解开数学的谜题...',
+      npcName: '数字精灵',
+      npcDialogue: '你好呀！在智慧王国里，数字会跳舞，图形会唱歌。准备好和我一起探索了吗？'
+    },
+    english: {
+      title: '魔法学院',
+      narrative: '魔法学院的字母们正在等待新的学徒。小精灵握紧魔法杖，准备学习字母的奥秘...',
+      npcName: '魔法导师',
+      npcDialogue: 'Welcome! 在魔法学院，每个字母都有神奇的力量。学会它们，你就能施展英语魔法！'
+    }
+  };
+
+  // ── Page phases ──
+  let phase = $state<'chapter_intro' | 'teaching' | 'practice' | 'playing' | 'expand' | 'result'>('chapter_intro');
 
   const subject = $derived($page.params.subject as string);
   const nodeId = $derived(Number($page.url.searchParams.get('nodeId')));
+  let nodeName = $state('');
 
-  // ── Page phases ──
-  let phase = $state<'confirm' | 'playing' | 'result'>('confirm');
-  let loading = $state(false);
-  let error = $state('');
+  // Teaching state
+  let teachingCards = $state<TeachingCard[]>([]);
+  let teachingLoading = $state(true);
 
-  // ── Question state ──
+  // Practice state
+  let practiceLoading = $state(false);
+  let practiceQuestion = $state<QuestionDTO | null>(null);
+  let practiceSessionId = $state<number>(0);
+  let practiceAnswer = $state('');
+  let practiceSubmitted = $state(false);
+  let practiceResult = $state<AnswerResult | null>(null);
+  let practiceTotal = $state(0);
+  let practiceAnswered = $state(0);
+  let practiceResults = $state<Array<boolean | null>>([]);
+  let showHint = $state(false);
+  let practiceStartTime = $state<number>(0);
+
+  // Question state
   let question = $state<QuestionDTO | null>(null);
   let sessionId = $state<number>(0);
   let selectedAnswer = $state('');
@@ -48,7 +89,7 @@
   let answeredCount = $state(0);
   let questionStartTime = $state<number>(0);
 
-  // ── Adventure state (purification) ──
+  // Adventure state
   let energy = $state(100);
   let combo = $state(0);
   let maxCombo = $state(0);
@@ -56,27 +97,37 @@
   let guardianThemePlayed = $state(false);
   let treasuresFound = $state(0);
   let results = $state<Array<boolean | null>>([]);
-
-  // ── Crystal node purification tracking ──
   let nodePurified = $state<boolean[]>([]);
 
-  // ── Guardian encounter (replaces Boss battle) ──
+  // Guardian encounter
   let showGuardianEncounter = $state(false);
   let guardianAnswerTimeMs = $state(0);
   let encounterResolved = $state(false);
 
-  // ── Purify animation ──
+  // Purify animation
   let purifyState = $state<'idle' | 'player_purify' | 'enemy_encourage' | 'guardian_purified'>('idle');
 
-  // ── Map animation ──
+  // Map animation
   let animatingToNode = $state(-1);
 
-  // ── Treasure chest ──
+  // Treasure chest
   let showTreasureChest = $state(false);
   let treasureTier = $state<'small' | 'big'>('small');
   let treasureEnergy = $state(0);
 
-  // ── Derived ──
+  // Expand state
+  let showAnalogy = $state(false);
+  let analogyCompleted = $state(false);
+  let showLittleTeacher = $state(false);
+  let littleTeacherCompleted = $state(false);
+  let littleTeacherEnergy = $state(0);
+  let expandStep = $state<'analogy' | 'summary' | 'done'>('analogy');
+
+  // General
+  let loading = $state(false);
+  let error = $state('');
+
+  // Derived
   const isLastQuestion = $derived(answeredCount >= totalQuestions - 1);
   const currentPurified = $derived(nodePurified[answeredCount] ?? false);
 
@@ -104,50 +155,162 @@
   const sceneTypes = ['SCENE_DRAG', 'SCENE_TAP', 'SCENE_MATCH', 'SCENE_WHACK_MOLE',
     'SCENE_SHAPE_PUZZLE', 'SCENE_CLOCK', 'SCENE_SHOP', 'SCENE_PINYIN', 'SCENE_CHAR_BUILD'];
 
-  // ── Guardian theme activation (after last answer, not before) ──
+  // Guardian theme activation
   $effect(() => {
     if (isLastQuestion && phase === 'playing' && !guardianThemePlayed) {
       soundManager.playBossTheme?.();
       guardianThemePlayed = true;
-      // Don't show the encounter yet — wait for answer submission
     }
   });
 
-  // ── BGM lifecycle ──
+  // BGM lifecycle
   onDestroy(() => { soundManager.stopBGM(); });
   $effect(() => {
     if (phase === 'result') { soundManager.stopBGM(); }
   });
 
-  // ── Init purification nodes ──
+  // Init node purification
   function initNodePurified(total: number) {
     nodePurified = Array(total).fill(false);
   }
-
   function purifyNode(index: number) {
     const updated = [...nodePurified];
     updated[index] = true;
     nodePurified = updated;
   }
-
   function resetAdventure() {
-    energy = 100;
-    combo = 0;
-    maxCombo = 0;
-    guardianPurified = false;
-    guardianThemePlayed = false;
-    showGuardianEncounter = false;
-    guardianAnswerTimeMs = 0;
-    encounterResolved = false;
-    purifyState = 'idle';
-    treasuresFound = 0;
-    results = [];
-    showTreasureChest = false;
-    animatingToNode = -1;
+    energy = 100; combo = 0; maxCombo = 0;
+    guardianPurified = false; guardianThemePlayed = false;
+    showGuardianEncounter = false; guardianAnswerTimeMs = 0;
+    encounterResolved = false; purifyState = 'idle';
+    treasuresFound = 0; results = [];
+    showTreasureChest = false; animatingToNode = -1;
     nodePurified = [];
   }
 
-  async function handleStart() {
+  // Initialize
+  onMount(async () => {
+    if (nodeId && nodeId > 0) {
+      try {
+        const teachingContent = await getTeachingContent(nodeId);
+        nodeName = teachingContent?.cards?.[0]?.title || subject;
+        if (teachingContent && teachingContent.cards && teachingContent.cards.length > 0) {
+          teachingCards = teachingContent.cards;
+        }
+      } catch (e) {
+        console.log('No teaching content for this node');
+      } finally {
+        teachingLoading = false;
+      }
+    } else {
+      teachingLoading = false;
+    }
+  });
+
+  // ── Chapter intro handlers ──
+  function handleChapterComplete() {
+    if (teachingCards.length > 0) {
+      phase = 'teaching';
+    } else {
+      handleStartPractice();
+    }
+  }
+  function handleChapterSkip() {
+    handleStartPractice();
+  }
+
+  // ── Teaching skip ──
+  function handleTeachingSkip() {
+    handleStartPractice();
+  }
+
+  // ── Practice session handlers ──
+  async function handleStartPractice() {
+    practiceLoading = true;
+    error = '';
+    try {
+      const result = await startSession({ subject, sessionType: 'PRACTICE', difficultyLevel: 1, knowledgeNodeId: nodeId });
+      practiceSessionId = result.sessionId;
+      practiceQuestion = result;
+      practiceTotal = result.totalQuestions ?? 3;
+      practiceAnswered = result.answeredCount ?? 0;
+      practiceResults = Array(practiceTotal).fill(null);
+      phase = 'practice';
+      practiceStartTime = Date.now();
+    } catch (e: any) {
+      error = e.message || 'Practice session failed';
+    } finally {
+      practiceLoading = false;
+    }
+  }
+
+  function selectPracticeAnswer(answer: string) {
+    if (practiceSubmitted) return;
+    practiceAnswer = answer;
+  }
+
+  async function handlePracticeSubmit() {
+    if (!practiceAnswer || practiceSubmitted || !practiceQuestion) return;
+    practiceSubmitted = true;
+    try {
+      const result = await submitAnswer({
+        sessionId: practiceSessionId, questionId: practiceQuestion.questionId,
+        answer: practiceAnswer,
+        timeSpent: Math.max(0, Math.floor((Date.now() - practiceStartTime) / 1000)),
+      });
+      practiceResult = result;
+      practiceResults[practiceAnswered] = result.isCorrect;
+    } catch (e: any) {
+      error = e.message;
+      practiceSubmitted = false;
+    }
+  }
+
+  function handlePracticeRetry() {
+    practiceAnswer = '';
+    practiceSubmitted = false;
+    practiceResult = null;
+    showHint = false;
+  }
+
+  function handlePracticeNext() {
+    if (!practiceResult) return;
+    if (practiceResult.isSessionComplete) {
+      phase = 'playing';
+      startMainSession();
+      return;
+    }
+    if (practiceResult.nextQuestion) {
+      practiceQuestion = practiceResult.nextQuestion;
+      practiceAnswered = practiceResult.nextQuestion.answeredCount ?? practiceAnswered + 1;
+      practiceAnswer = '';
+      practiceSubmitted = false;
+      practiceResult = null;
+      showHint = false;
+      practiceStartTime = Date.now();
+    }
+  }
+
+  function handlePracticeSkip() {
+    phase = 'playing';
+    startMainSession();
+  }
+
+  let practiceParsedOptions = $derived.by(() => {
+    const opts = practiceQuestion?.options;
+    if (!opts) return [];
+    if (Array.isArray(opts)) return opts as Array<{ key: string; text: string }>;
+    if (typeof opts === 'string') {
+      try { const p = JSON.parse(opts); if (Array.isArray(p)) return p as Array<{ key: string; text: string }>; } catch {}
+    }
+    if (typeof opts === 'object' && opts !== null) {
+      try { const arr = Object.entries(opts).map(([k, v]) => ({ key: k, text: String(v) })); if (arr.length > 0) return arr; } catch {}
+    }
+    return [];
+  });
+
+  // ── Main session ──
+  async function startMainSession() {
     loading = true;
     error = '';
     resetAdventure();
@@ -160,9 +323,8 @@
       answeredCount = result.answeredCount ?? 0;
       results = Array(totalQuestions).fill(null);
       initNodePurified(totalQuestions);
-      phase = 'playing';
       questionStartTime = Date.now();
-      spiritStore.recordInteraction(); // wake up spirit
+      spiritStore.recordInteraction();
       soundManager.playBGM(subject);
     } catch (e: any) {
       error = e.message || '启动失败';
@@ -176,7 +338,6 @@
     selectedAnswer = answer;
   }
 
-  // ── Main submit ──
   async function handleSubmit() {
     if (!selectedAnswer || submitted || !question) return;
     submitted = true;
@@ -192,14 +353,12 @@
     }
   }
 
-  // ── Scene result ──
   async function handleSceneResult(result: AnswerResult) {
     if (!result) { phase = 'result'; return; }
     submitted = true;
     processResult(result);
   }
 
-  // ── Unified result processing (purification system) ──
   function processResult(result: AnswerResult) {
     lastResult = result;
     results[answeredCount] = result.isCorrect;
@@ -207,20 +366,13 @@
     if (result.isCorrect) {
       combo++;
       maxCombo = Math.max(maxCombo, combo);
-
-      // 🌟 Purify the current crystal!
       purifyState = 'player_purify';
       setTimeout(() => { purifyState = 'idle'; }, 600);
-
-      // Mark current crystal as purified
       purifyNode(answeredCount);
-
-      // Energy bonus
       energy = Math.min(100, energy + 5);
 
       if (result.isLastQuestion) {
         guardianAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
-        // Show GuardianEncounter AFTER correct answer (don't block the question)
         setTimeout(() => { showGuardianEncounter = true; }, 600);
       } else {
         if (combo >= 2 && combo % 2 === 0) {
@@ -233,25 +385,22 @@
       }
     } else {
       combo = 0;
-
-      // 💫 Brief flash — no damage, no death
       purifyState = 'enemy_encourage';
       setTimeout(() => { purifyState = 'idle'; }, 600);
-
       if (result.isLastQuestion) {
         guardianAnswerTimeMs = Math.max(0, Math.floor(Date.now() - questionStartTime));
-        encounterResolved = true; // skip Guardian encounter, go straight to result
+        encounterResolved = true;
       }
     }
 
     // Session complete?
     if (result.isSessionComplete) {
       if (!result.isLastQuestion || encounterResolved) {
-        setTimeout(() => { phase = 'result'; }, 2000);
+        setTimeout(() => { phase = 'expand'; startExpand(); }, 1500);
       } else {
         setTimeout(() => {
-          if (phase === 'playing') { encounterResolved = true; phase = 'result'; }
-        }, 10000);
+          if (phase === 'playing') { encounterResolved = true; phase = 'expand'; startExpand(); }
+        }, 4000);
       }
     } else if (result.nextQuestion) {
       const nextQ = result.nextQuestion;
@@ -267,6 +416,32 @@
         animatingToNode = -1;
       }, 800);
     }
+  }
+
+  // ── Expand phase (mandatory) ──
+  function startExpand() {
+    expandStep = 'analogy';
+    showAnalogy = true;
+    showLittleTeacher = false;
+  }
+
+  function handleAnalogyComplete(success: boolean) {
+    showAnalogy = false;
+    analogyCompleted = true;
+    expandStep = 'summary';
+    showLittleTeacher = true;
+  }
+
+  function handleLittleTeacherComplete(success: boolean, energyReward: number) {
+    showLittleTeacher = false;
+    littleTeacherCompleted = true;
+    littleTeacherEnergy = energyReward;
+    energy = Math.min(100, energy + energyReward);
+    expandStep = 'done';
+  }
+
+  function handleExpandDone() {
+    phase = 'result';
   }
 
   function onNewTypeAnswer(answer: string) {
@@ -318,24 +493,171 @@
 <div class="min-h-screen {subject === 'chinese' ? 'adventure-bg-chinese' : subject === 'math' ? 'adventure-bg-math' : 'adventure-bg-english'} {phase === 'playing' ? 'pb-8' : ''}">
   <div class="max-w-2xl mx-auto animate-slide-up relative z-10 px-4">
 
-  <!-- ═══ CONFIRM ═══ -->
-  {#if phase === 'confirm'}
-    <ExploreConfirm
-      {subject}
-      subjectName={subjectData[subject]?.name || subject}
-      subjectEmoji={subjectData[subject]?.emoji || '🌍'}
-      species={spiritStore.activeSpirit?.species ?? null}
-      evolutionStage={spiritStore.activeSpirit?.currentEvolutionStage ?? 1}
-      mood={spiritMood}
-      {loading} {error}
-      onStart={handleStart}
-    />
+  <!-- ═══ CHAPTER INTRO ═══ -->
+  {#if phase === 'chapter_intro'}
+    <div class="mb-4">
+      <button onclick={() => goto(`/app/study/${subject}`)} class="text-gray-500 hover:text-gray-700 mb-4 flex items-center gap-1">
+        ← 返回地图
+      </button>
+      <ChapterIntro
+        chapter={chapterData[subject] || chapterData.chinese}
+        {subject}
+        onComplete={handleChapterComplete}
+        onSkip={handleChapterSkip}
+      />
+    </div>
+
+  <!-- ═══ TEACHING ═══ -->
+  {:else if phase === 'teaching' && teachingCards.length > 0}
+    <div class="mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">{subjectData[subject]?.emoji || '📚'}</span>
+          <h2 class="text-lg font-bold text-gray-800">知识卡片</h2>
+        </div>
+        <button onclick={handleTeachingSkip} class="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
+          跳过 →
+        </button>
+      </div>
+      <KnowledgeCards cards={teachingCards} onComplete={() => handleStartPractice()} />
+    </div>
+
+  {:else if phase === 'teaching' && teachingLoading}
+    <div class="text-center py-12">
+      <div class="inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
+      <p class="mt-2 text-gray-500">加载知识卡片...</p>
+    </div>
+
+  <!-- ═══ PRACTICE (Warm-up) ═══ -->
+  {:else if phase === 'practice' && practiceLoading}
+    <div class="text-center py-12">
+      <div class="inline-block w-8 h-8 border-4 border-green-200 border-t-green-500 rounded-full animate-spin"></div>
+      <p class="mt-2 text-gray-500">准备热身练习...</p>
+    </div>
+
+  {:else if phase === 'practice' && practiceQuestion}
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-5 border-2 border-green-300">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-2xl">🎯</span>
+        <div>
+          <h2 class="text-lg font-bold text-green-800">热身练习</h2>
+          <p class="text-xs text-green-600">不计分，轻松热身！</p>
+        </div>
+        <button onclick={handlePracticeSkip} class="ml-auto px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
+          跳过 →
+        </button>
+        <div class="flex gap-1">
+          {#each Array(practiceTotal) as _, i}
+            <div class="w-3 h-3 rounded-full {i < practiceAnswered ? (practiceResults[i] ? 'bg-green-400' : 'bg-orange-300') : i === practiceAnswered ? 'bg-green-200 animate-pulse' : 'bg-gray-200'}"></div>
+          {/each}
+        </div>
+      </div>
+
+      {#key practiceQuestion.questionId}
+      <div class="mb-4">
+        <div class="bg-green-50 rounded-xl p-4 mb-3">
+          <p class="text-sm text-green-600 font-medium mb-1">第 {practiceAnswered + 1} / {practiceTotal} 题</p>
+          <h3 class="text-base font-semibold text-gray-800">{practiceQuestion.questionText}</h3>
+        </div>
+
+        {#if practiceParsedOptions.length > 0}
+          <div class="space-y-2">
+            {#each practiceParsedOptions as opt}
+              <button onclick={() => selectPracticeAnswer(opt.key)} disabled={practiceSubmitted}
+                class={['w-full text-left px-4 py-3 rounded-xl border-2 transition text-sm',
+                  practiceAnswer === opt.key ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300',
+                  practiceSubmitted && opt.key === practiceResult?.correctAnswer ? 'border-green-500 bg-green-100' : ''].join(' ')}>
+                <span class="font-medium">{opt.key}.</span> {opt.text}
+              </button>
+            {/each}
+          </div>
+        {:else if practiceQuestion.questionType === 'TRUE_FALSE'}
+          <div class="grid grid-cols-2 gap-4">
+            <button onclick={() => selectPracticeAnswer('true')} disabled={practiceSubmitted}
+              class={['py-4 rounded-xl border-2 text-center transition text-lg font-medium',
+                practiceAnswer === 'true' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'].join(' ')}>
+              正确
+            </button>
+            <button onclick={() => selectPracticeAnswer('false')} disabled={practiceSubmitted}
+              class={['py-4 rounded-xl border-2 text-center transition text-lg font-medium',
+                practiceAnswer === 'false' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-gray-300'].join(' ')}>
+              错误
+            </button>
+          </div>
+        {:else}
+          <input type="text" bind:value={practiceAnswer} disabled={practiceSubmitted}
+                 placeholder="输入答案..." class="w-full px-4 py-3 border-2 border-green-300 rounded-xl focus:border-green-500 outline-none transition" />
+        {/if}
+      </div>
+
+      {#if practiceResult}
+        <div class="mb-3 p-3 rounded-xl {practiceResult.isCorrect ? 'bg-green-100 border border-green-300' : 'bg-orange-50 border border-orange-200'}">
+          {#if practiceResult.isCorrect}
+            <div class="flex items-center gap-2 text-green-700">
+              <span class="text-xl">✅</span>
+              <span class="font-medium">太棒了！</span>
+            </div>
+          {:else}
+            <div class="flex items-center gap-2 text-orange-700">
+              <span class="text-xl">💪</span>
+              <span class="font-medium">没关系，继续加油！</span>
+            </div>
+            <p class="text-sm text-orange-600 mt-1">正确答案: <strong>{practiceResult.correctAnswer}</strong></p>
+            {#if practiceResult.explanation}
+              <p class="text-sm text-gray-600 mt-1">{practiceResult.explanation}</p>
+            {/if}
+          {/if}
+        </div>
+        <div class="flex gap-2">
+          {#if !practiceResult.isCorrect}
+            <button onclick={handlePracticeRetry}
+              class="flex-1 py-3 bg-orange-400 text-white font-bold rounded-xl hover:bg-orange-500 transition active:scale-95">
+              🔄 再试一次
+            </button>
+          {/if}
+          {#if practiceResult.isCorrect || practiceResult.isSessionComplete}
+            <button onclick={handlePracticeNext}
+              class="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-xl hover:from-green-600 hover:to-emerald-600 transition active:scale-95 shadow-md">
+              {practiceResult.isSessionComplete ? '🏆 开始挑战！' : '➡️ 下一题'}
+            </button>
+          {/if}
+        </div>
+      {:else}
+        <div class="flex gap-2">
+          <button onclick={() => showHint = !showHint}
+            class="px-4 py-3 bg-blue-100 text-blue-700 font-medium rounded-xl hover:bg-blue-200 transition text-sm">
+            {showHint ? '💡 隐藏提示' : '💡 显示提示'}
+          </button>
+          <button onclick={handlePracticeSubmit} disabled={!practiceAnswer}
+            class="flex-1 py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-bold rounded-xl
+              hover:from-green-500 hover:to-emerald-600 disabled:from-gray-300 disabled:text-gray-400 transition-all active:scale-95 shadow-lg">
+            ✏️ 提交
+          </button>
+        </div>
+      {/if}
+
+      {#if showHint && !practiceResult}
+        <div class="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
+          <p class="text-sm text-blue-700">💡 <strong>提示:</strong> 
+{#if practiceQuestion.questionType === 'MULTIPLE_CHOICE' || practiceQuestion.questionType === 'SCENE_TAP'}
+  逐个分析选项，排除明显错误的答案！
+{:else if practiceQuestion.questionType === 'TRUE_FALSE'}
+  回想相关知识点，判断说法是否正确！
+{:else if practiceQuestion.questionType === 'FILL_BLANK'}
+  根据题意，填写关键信息！
+{:else}
+  仔细观察题目，回忆相关知识点，一步步分析！
+{/if}
+</p>
+        </div>
+      {/if}
+      {/key}
+    </div>
 
   <!-- ═══ PLAYING ═══ -->
   {:else if phase === 'playing' && question}
     <div class="bg-white/85 backdrop-blur-sm rounded-2xl shadow-lg p-4 border-2 {subjectTheme.border}">
 
-      <!-- ═══ COSMIC ADVENTURE MAP ═══ -->
       <div class="mb-3">
         <AdventureMap
           {subject}
@@ -350,13 +672,11 @@
         />
       </div>
 
-      <!-- ═══ STATS BAR: Energy + Combo ═══ -->
       <div class="flex items-center justify-between mb-2">
         <EnergyBar {energy} maxEnergy={100} />
         <ComboCounter {combo} />
       </div>
 
-      <!-- ═══ PURIFY SCENE: Spirit vs Dark Crystal ═══ -->
       <div class="mb-3">
         <BattleScene
           {subject}
@@ -373,7 +693,6 @@
         />
       </div>
 
-      <!-- ═══ GUARDIAN ENCOUNTER ═══ -->
       {#if showGuardianEncounter}
         <GuardianEncounter
           visible={true}
@@ -386,17 +705,16 @@
             encounterResolved = true;
             purifyState = 'guardian_purified';
             soundManager.playBossDefeated?.();
-            setTimeout(() => { phase = 'result'; }, 2500);
+            setTimeout(() => { phase = 'expand'; startExpand(); }, 2500);
           }}
           onEncounterEnd={() => {
             encounterResolved = true;
             soundManager.playComplete?.();
-            setTimeout(() => { phase = 'result'; }, 2000);
+            setTimeout(() => { phase = 'expand'; startExpand(); }, 1500);
           }}
         />
       {/if}
 
-      <!-- ═══ QUESTION AREA ═══ -->
       <div class="question-fade" style="animation: qFadeIn 0.3s ease-out;">
       {#key question.questionId}
       {#if sceneTypes.includes(question.questionType)}
@@ -486,7 +804,6 @@
       </div>
     </div>
 
-    <!-- Feedback -->
     {#if lastResult}
       <div class="mt-3">
         {#if lastResult.isCorrect}
@@ -497,9 +814,60 @@
       </div>
     {/if}
 
-    <!-- Treasure Chest -->
     <TreasureChest show={showTreasureChest} tier={treasureTier} energyBonus={treasureEnergy} {subject}
       onCollected={() => { showTreasureChest = false; }} />
+
+  <!-- ═══ EXPAND (拓展环节) ═══ -->
+  {:else if phase === 'expand'}
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 border-2 border-purple-300">
+      <h2 class="text-xl font-bold text-purple-800 mb-4 flex items-center gap-2">
+        <span>🌈</span> 举一反三
+      </h2>
+
+      <!-- Step 1: Analogy (变式题) -->
+      {#if expandStep === 'analogy' && showAnalogy && question}
+        <div class="mb-4">
+          <p class="text-sm text-purple-600 mb-3">💡 来一道类似的题目，看看你掌握了没有！</p>
+          <LearnByAnalogy
+            nodeId={nodeId}
+            originalQuestionId={question.questionId}
+            originalText={question.questionText}
+            originalAnswer={lastResult?.correctAnswer || ''}
+            {subject}
+            onComplete={handleAnalogyComplete}
+          />
+        </div>
+
+      <!-- Step 2: Summary (知识总结) -->
+      {:else if expandStep === 'summary' && showLittleTeacher}
+        <div class="mb-4">
+          <LittleTeacher
+            nodeId={nodeId}
+            nodeName={nodeName || subject}
+            {subject}
+            onComplete={handleLittleTeacherComplete}
+          />
+        </div>
+
+      <!-- Step 3: Done -->
+      {:else if expandStep === 'done'}
+        <div class="text-center py-6">
+          <div class="text-5xl mb-3">🎉</div>
+          <h3 class="text-lg font-bold text-gray-800 mb-2">太棒了！</h3>
+          <p class="text-gray-600 mb-4">你已经完成了今天的学习！</p>
+          {#if littleTeacherEnergy > 0}
+            <div class="bg-gradient-to-r from-amber-100 to-yellow-100 rounded-xl p-3 mb-4 border border-amber-300 inline-block">
+              <p class="text-sm font-bold text-amber-700">⚡ +{littleTeacherEnergy} 能量获得！</p>
+            </div>
+          {/if}
+          <br/>
+          <button onclick={handleExpandDone}
+            class="mt-2 px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-bold rounded-2xl hover:from-purple-600 hover:to-pink-600 transition active:scale-95 shadow-lg">
+            查看成绩 →
+          </button>
+        </div>
+      {/if}
+    </div>
 
   <!-- ═══ RESULT ═══ -->
   {:else if phase === 'result'}

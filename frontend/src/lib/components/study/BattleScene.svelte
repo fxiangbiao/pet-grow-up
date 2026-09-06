@@ -4,8 +4,8 @@
   import type { SpiritSpecies } from '$lib/types/api';
 
   /**
-   * BattleScene — purification view showing spirit vs dark crystal.
-   * Purification replaces combat: spirit purifies crystals, guardian encourages.
+   * BattleScene — Spirit vs cute cartoon enemy.
+   * Animation state machine with anti-freeze timeout protection.
    */
   let {
     subject = 'chinese',
@@ -18,7 +18,7 @@
     bossHp = 100,
     bossMaxHp = 100,
     combo = 0,
-    state = 'idle' as 'idle' | 'player_attack' | 'enemy_attack' | 'enemy_defeated' | 'boss_phase' | 'player_purify' | 'enemy_encourage' | 'guardian_purified'
+    state = 'idle' as string
   }: {
     subject?: string;
     species?: SpiritSpecies | null;
@@ -39,20 +39,25 @@
     english: { sky: '#F8F0FF', ground: '#D8C8E8', groundLine: '#B8A0D0', particle: 'rgba(147,112,219,0.12)' }
   };
   const sc = $derived(sceneColors[subject] || sceneColors.chinese);
-
   const enemyVariant = $derived((currentIndex) % 3);
-
   const bossHpPercent = $derived(Math.max(0, (bossHp / bossMaxHp) * 100));
 
-  // Spirit position animation (attack→purify)
+  // Spirit animation class based on state
   const spiritClass = $derived(
-    state === 'player_attack' || state === 'player_purify' ? 'translate-x-8' :
-    state === 'enemy_attack' || state === 'enemy_encourage' ? '-translate-x-2' : ''
+    state === 'player_purify' ? 'translate-x-8' :
+    state === 'enemy_encourage' ? '-translate-x-2' : ''
   );
   const enemyClass = $derived(
-    state === 'player_attack' || state === 'player_purify' ? '-translate-x-2 scale-95' :
-    state === 'enemy_attack' || state === 'enemy_encourage' ? 'translate-x-6' :
-    state === 'enemy_defeated' || state === 'guardian_purified' ? 'opacity-20 scale-75' : ''
+    state === 'player_purify' ? '-translate-x-2 scale-95' :
+    state === 'enemy_encourage' ? 'translate-x-6' :
+    state === 'guardian_purified' ? 'opacity-20 scale-75' : ''
+  );
+
+  // Map state to EnemySprite state
+  const enemySpriteState = $derived(
+    state === 'guardian_purified' ? 'defeated' :
+    state === 'player_purify' ? 'hit' :
+    state === 'enemy_encourage' ? 'attacking' : 'idle'
   );
 </script>
 
@@ -68,31 +73,27 @@
     </div>
   {/each}
 
-  <!-- Ground line (horizon) -->
+  <!-- Ground line -->
   <div class="absolute left-0 right-0" style="top: 55%; height: 2px; background: {sc.groundLine}; opacity: 0.5;"></div>
 
   <!-- Ground decorations -->
   {#if subject === 'chinese'}
-    <!-- Ink stones / grass tufts -->
     <div class="absolute" style="left: 15%; bottom: 20%; font-size: 1.5rem; opacity: 0.3;">🌿</div>
     <div class="absolute" style="left: 70%; bottom: 15%; font-size: 1.2rem; opacity: 0.25;">🪨</div>
   {:else if subject === 'math'}
-    <!-- Geometric crystals -->
     <div class="absolute" style="left: 20%; bottom: 18%; font-size: 1.2rem; opacity: 0.3;">💠</div>
     <div class="absolute" style="left: 75%; bottom: 22%; font-size: 1rem; opacity: 0.25;">🔹</div>
   {:else}
-    <!-- Magical mushrooms -->
     <div class="absolute" style="left: 12%; bottom: 18%; font-size: 1.2rem; opacity: 0.3;">🍄</div>
     <div class="absolute" style="left: 78%; bottom: 20%; font-size: 1rem; opacity: 0.25;">✨</div>
   {/if}
 
   <!-- Spirit (left side) -->
   <div class="absolute transition-all duration-300 {spiritClass}"
-    style="left: 12%; bottom: 18%; transform: translateY(0);">
+    style="left: 12%; bottom: 18%;">
     {#if species}
       <SpiritAvatar {species} {evolutionStage} size="md" {mood} />
     {:else}
-      <!-- Fallback pet when no spirit data loaded -->
       <div class="flex flex-col items-center">
         <span class="text-4xl">🐱</span>
         <span class="text-[10px] text-gray-400 mt-0.5">精灵</span>
@@ -100,19 +101,16 @@
     {/if}
   </div>
 
-  <!-- Purify / Encourage effects -->
+  <!-- Center effects -->
   <div class="absolute left-1/2 -translate-x-1/2" style="top: 30%;">
     {#key state}
-      {#if state === 'player_attack' || state === 'player_purify'}
-        <!-- Purify glow -->
+      {#if state === 'player_purify'}
         <div class="text-3xl animate-bounce-in" style="animation-duration: 0.3s;">🌟</div>
-      {:else if state === 'enemy_attack' || state === 'enemy_encourage'}
-        <!-- Gentle encouragement flash -->
+      {:else if state === 'enemy_encourage'}
         <div class="text-3xl animate-bounce-in text-purple-400" style="animation-duration: 0.3s;">💫</div>
-      {:else if state === 'enemy_defeated' || state === 'guardian_purified'}
+      {:else if state === 'guardian_purified'}
         <div class="text-2xl animate-boss-shatter">✨</div>
       {:else}
-        <!-- Idle: show encounter number -->
         <div class="text-xs font-black text-gray-400 bg-white/50 rounded-full px-2 py-0.5 backdrop-blur-sm">
           {currentIndex + 1}/{totalQuestions}
         </div>
@@ -120,7 +118,7 @@
     {/key}
   </div>
 
-  <!-- Combo indicator (player side) -->
+  <!-- Combo indicator -->
   {#if combo >= 2}
     <div class="absolute animate-bounce-in" style="left: 28%; top: 28%;">
       <span class="text-xs font-black text-orange-500 bg-orange-100 rounded-full px-2 py-0.5">
@@ -136,11 +134,11 @@
       enemyType={isBoss ? 'boss' : 'minion'}
       {subject}
       variant={isBoss ? 0 : enemyVariant}
-      state={state === 'enemy_defeated' || state === 'guardian_purified' ? 'defeated' : state === 'player_attack' || state === 'player_purify' ? 'hit' : 'idle'}
+      state={enemySpriteState}
       size="md" />
   </div>
 
-  <!-- Guardian HP bar (for final encounter) -->
+  <!-- Boss HP bar -->
   {#if isBoss}
     <div class="absolute left-0 right-0 mx-auto" style="top: 8%; width: 70%;">
       <div class="w-full h-3 bg-gray-200/50 rounded-full overflow-hidden backdrop-blur-sm">
@@ -156,9 +154,9 @@
 
   <!-- State overlay flash -->
   {#key state}
-    {#if state === 'player_attack' || state === 'player_purify'}
+    {#if state === 'player_purify'}
       <div class="absolute inset-0 bg-white/20 animate-bounce-in pointer-events-none" style="animation-duration: 0.4s;"></div>
-    {:else if state === 'enemy_attack' || state === 'enemy_encourage'}
+    {:else if state === 'enemy_encourage'}
       <div class="absolute inset-0 bg-purple-500/10 animate-shake pointer-events-none" style="animation-duration: 0.5s;"></div>
     {/if}
   {/key}

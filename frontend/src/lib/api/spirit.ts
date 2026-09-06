@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { SpiritDTO, SpiritSpecies, SpiritStatus } from '$lib/types/api';
+import type { SpiritDTO, SpiritSpecies, SpiritStatus, WeaknessDTO } from '$lib/types/api';
 
 export function getSpecies(): Promise<SpiritSpecies[]> {
   return api.get<SpiritSpecies[]>('/spirits/species');
@@ -52,4 +52,8 @@ export function equipAccessory(spiritId: number, slot: string, itemDefId: number
 
 export function unequipAccessory(spiritId: number, slot: string): Promise<AccessoryDTO[]> {
   return api.put<AccessoryDTO[]>(`/spirits/${spiritId}/accessories`, { slot });
+}
+
+export function getWeaknesses(limit = 10): Promise<WeaknessDTO[]> {
+  return api.get<WeaknessDTO[]>(`/study/weaknesses?limit=${limit}`);
 }

@@ -58,6 +58,33 @@ public class QuizService {
         );
     }
 
+
+    /**
+     * Get practice questions sorted by difficulty (low to high), limited to count.
+     */
+    public List<QuestionDTO> getPracticeQuestionsForSession(Long knowledgeNodeId, int count) {
+        List<QuizQuestion> questions = questionMapper.selectListByQuery(
+                QueryWrapper.create()
+                        .select(QUIZ_QUESTION.ID, QUIZ_QUESTION.QUESTION_TYPE,
+                                QUIZ_QUESTION.QUESTION_TEXT, QUIZ_QUESTION.OPTIONS,
+                                QUIZ_QUESTION.POINTS, QUIZ_QUESTION.KNOWLEDGE_NODE_ID,
+                                QUIZ_QUESTION.DIFFICULTY)
+                        .where(QUIZ_QUESTION.KNOWLEDGE_NODE_ID.eq(knowledgeNodeId))
+                        .orderBy(QUIZ_QUESTION.DIFFICULTY, true)
+        );
+
+        return questions.stream()
+                .limit(count)
+                .map(q -> QuestionDTO.builder()
+                        .questionId(q.getId())
+                        .questionType(q.getQuestionType())
+                        .questionText(q.getQuestionText())
+                        .options(q.getOptions())
+                        .points(q.getPoints())
+                        .build()
+                ).collect(Collectors.toList());
+    }
+
     public KnowledgeNode getKnowledgeNodeById(Long nodeId) {
         return knowledgeNodeMapper.selectOneById(nodeId);
     }

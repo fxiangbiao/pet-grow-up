@@ -1,11 +1,14 @@
 <script lang="ts">
-  import { getSpiritDetail, feedSpirit, evolveSpirit, getEquippedAccessories, equipAccessory, unequipAccessory, type AccessoryDTO } from '$lib/api/spirit';
+  import { getSpiritDetail, feedSpirit, evolveSpirit, getEquippedAccessories, equipAccessory, unequipAccessory, getWeaknesses, type AccessoryDTO } from '$lib/api/spirit';
   import { getInventory } from '$lib/api/shop';
   import type { UserItem } from '$lib/types/api';
   import { page } from '$app/stores';
-  import type { SpiritDTO } from '$lib/types/api';
+  import type { SpiritDTO, WeaknessDTO } from '$lib/types/api';
   import PersonalityRadar from '$lib/components/spirit/PersonalityRadar.svelte';
   import SpiritAvatar from '$lib/components/spirit/SpiritAvatar.svelte';
+  import ExperienceBar from '$lib/components/spirit/ExperienceBar.svelte';
+  import EvolutionAnimation from '$lib/components/spirit/EvolutionAnimation.svelte';
+  import LearningProfileCard from '$lib/components/spirit/LearningProfileCard.svelte';
   import CelebrationOverlay from '$lib/components/feedback/CelebrationOverlay.svelte';
   import { authStore } from '$lib/stores/auth.svelte';
   import { toastStore } from '$lib/stores/toast.svelte';
@@ -18,6 +21,9 @@
   let feedAmount = $state(50);
   let feeding = $state(false);
   let evolving = $state(false);
+  let showEvolution = $state(false);
+  let evolvingFrom = $state(1);
+  let evolvingTo = $state(2);
   let message = $state('');
   let messageType = $state<'success' | 'error' | ''>('');
   let showCelebration = $state(false);
@@ -29,6 +35,7 @@
   let showChangeFlags = $state({ happiness: false, energy: false });
   let accessories = $state<AccessoryDTO[]>([]);
   let inventory = $state<UserItem[]>([]);
+  let weaknesses = $state<WeaknessDTO[]>([]);
 
   let heartIdCounter = $state(0);
 
@@ -43,6 +50,7 @@
         // Load accessories and inventory
         getEquippedAccessories(id).then(a => accessories = a).catch(() => {});
         getInventory().then(inv => inventory = inv).catch(() => {});
+        getWeaknesses().then(w => weaknesses = w).catch(() => {});
       }).catch(() => {
         loading = false;
         loadError = '无法加载精灵详情，请检查网络或重新登录';
@@ -134,13 +142,14 @@
     message = '';
     messageType = '';
     try {
+      evolvingFrom = spirit.currentEvolutionStage;
+      evolvingTo = spirit.currentEvolutionStage + 1;
       spirit = await evolveSpirit(spirit.id);
+      showEvolution = true;
       message = `✨ ${spirit.nickname} 进化成了 ${spirit.species.name}！`;
       messageType = 'success';
-      showCelebration = true;
-      soundManager.playEvolve();
+      soundManager.playEvolve?.();
       authStore.refreshProfile();
-      setTimeout(() => { showCelebration = false; }, 3000);
     } catch (e: any) {
       const msg = e.message || '';
       if (msg.includes('Insufficient') || msg.includes('energy')) {
@@ -289,6 +298,15 @@
         </div>
       </div>
 
+      <!-- Experience bar -->
+      <div class="mb-4">
+        <ExperienceBar
+          experience={spirit.experience || 0}
+          totalForNextStage={spirit.totalExperienceForNextStage || 0}
+          stage={spirit.currentEvolutionStage}
+        />
+      </div>
+
       {#if spirit.personality}
         <div class="mb-6">
           <h3 class="text-sm font-semibold text-gray-600 mb-3 text-center">性格特质</h3>
@@ -352,6 +370,22 @@
           />
         </div>
       {/if}
+
+      <!-- Learning profile card -->
+      <div class="mt-6">
+        <LearningProfileCard {weaknesses} />
+      </div>
     </div>
+  {/if}
+
+  <!-- Evolution animation overlay -->
+  {#if spirit}
+    <EvolutionAnimation
+      active={showEvolution}
+      species={spirit.species}
+      fromStage={evolvingFrom}
+      toStage={evolvingTo}
+      oncomplete={() => { showEvolution = false; showCelebration = true; setTimeout(() => { showCelebration = false; }, 3000); }}
+    />
   {/if}
 </div>

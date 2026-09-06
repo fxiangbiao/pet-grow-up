@@ -1,11 +1,12 @@
-<script lang="ts">
+﻿<script lang="ts">
   import { onMount } from 'svelte';
   import { achievementStore } from '$lib/stores/achievement.svelte';
   import AchievementCard from '$lib/components/achievement/AchievementCard.svelte';
   import PictureBook from '$lib/components/achievement/PictureBook.svelte';
   import KnowledgeAlbum from '$lib/components/achievement/KnowledgeAlbum.svelte';
-  import LoadingSpinner from '$lib/components/common/LoadingSpinner.svelte';
+  import SkeletonTemplates from '$lib/components/common/SkeletonTemplates.svelte';
   import EmptyState from '$lib/components/common/EmptyState.svelte';
+  import ErrorState from '$lib/components/common/ErrorState.svelte';
 
   const categoryLabels: Record<string, string> = {
     ALL: '全部',
@@ -71,7 +72,6 @@
         <p class="text-sm text-gray-400">/ {achievementStore.totalCount} 已解锁</p>
       </div>
     </div>
-    <!-- Progress bar -->
     <div class="mt-4 w-full h-2 bg-gray-100 rounded-full overflow-hidden">
       <div
         class="h-full bg-gradient-to-r from-indigo-400 to-purple-500 rounded-full transition-all duration-500"
@@ -80,7 +80,6 @@
     </div>
   </div>
 
-  <!-- Picture Book Mode -->
   {#if viewMode === 'book'}
     <PictureBook>
       <KnowledgeAlbum slot="knowledge" />
@@ -96,7 +95,6 @@
       </div>
     </PictureBook>
   {:else}
-  <!-- Category filter -->
   <div class="flex gap-2 overflow-x-auto pb-2">
     {#each categories as cat}
       <button
@@ -112,17 +110,10 @@
     {/each}
   </div>
 
-  <!-- Content -->
   {#if achievementStore.loading}
-    <LoadingSpinner text="加载成就数据..." />
+    <SkeletonTemplates name="achievements" />
   {:else if achievementStore.loadError}
-    <div class="max-w-md mx-auto text-center py-12">
-      <div class="text-5xl mb-4">🔒</div>
-      <p class="text-gray-500 mb-4">{achievementStore.loadError}</p>
-      <a href="/login" class="inline-block px-6 py-3 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition">
-        重新登录
-      </a>
-    </div>
+    <ErrorState type="auth" message={achievementStore.loadError} />
   {:else if achievementStore.progress}
     {#if filteredTotal === 0}
       <EmptyState

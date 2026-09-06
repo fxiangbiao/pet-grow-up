@@ -17,6 +17,8 @@ export interface WorldNode {
   isUnlocked: boolean;
   isCompleted: boolean;
   starRating: number;
+  parentId: number | null;
+  children: WorldNode[];
 }
 
 export interface WorldMap {
@@ -75,12 +77,33 @@ export interface SessionResult {
   randomEvent?: RandomEventInfo | null;
 }
 
+// Teaching content types
+export interface TeachingCard {
+  id: number;
+  type: 'intro' | 'concept' | 'steps' | 'example' | 'mnemonic' | 'quiz';
+  title: string;
+  content?: string;
+  steps?: string[];
+  spriteAction?: string;
+  illustration?: string;
+  animation?: string;
+  interactive?: string;
+}
+
+export interface TeachingContent {
+  cards: TeachingCard[];
+}
+
 export function getSubjectsProgress(): Promise<SubjectProgress[]> {
   return api.get<SubjectProgress[]>('/study/subjects');
 }
 
 export function getWorldMap(subject: string): Promise<WorldMap> {
   return api.get<WorldMap>(`/study/worlds/${subject}`);
+}
+
+export function getTeachingContent(nodeId: number): Promise<TeachingContent | null> {
+  return api.get<TeachingContent | null>(`/study/nodes/${nodeId}/teaching`);
 }
 
 export function startSession(data: {
@@ -103,4 +126,13 @@ export function submitAnswer(data: {
 
 export function getSessionResult(sessionId: number, maxCombo: number = 0, bossDefeated: boolean = false): Promise<SessionResult> {
   return api.get<SessionResult>(`/exploration/sessions/${sessionId}/result?maxCombo=${maxCombo}&bossDefeated=${bossDefeated}`);
+}
+
+
+export function generateVariant(nodeId: number, originalQuestionId: number): Promise<any> {
+  return api.get<any>(`/study/nodes/${nodeId}/generate-variant?originalQuestionId=${originalQuestionId}`);
+}
+
+export function assessExplanation(nodeId: number, text: string): Promise<any> {
+  return api.post<any>(`/study/nodes/${nodeId}/explain`, { text });
 }

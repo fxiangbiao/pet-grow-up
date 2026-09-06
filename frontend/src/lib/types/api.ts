@@ -62,6 +62,8 @@ export interface LearningSpirit {
   species: SpiritSpecies;
   nickname: string;
   currentEvolutionStage: number;
+  experience: number;
+  totalExperienceForNextStage: number;
   happiness: number;
   energy: number;
   affection: number;
@@ -220,4 +222,15 @@ export interface ChapterDTO {
   unlocked: boolean;
   completed: boolean;
   rewardClaimed: boolean;
+}
+
+// ---------- Weakness / Learning Profile ----------
+
+export interface WeaknessDTO {
+  knowledgeNodeId: number;
+  knowledgeNodeName: string;
+  subject: string;
+  wrongCount: number;
+  masteryLevel: number;
+  lastWrongAt: string | null;
 }

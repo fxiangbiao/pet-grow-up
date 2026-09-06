@@ -318,7 +318,7 @@
     </g>
 
     <!-- Back furniture -->
-    {#each backFurniture as item (item.userItemId ?? item.itemDefId)}
+    {#each backFurniture as item, i ('b-' + (item.userItemId ?? item.itemDefId) + '-' + i)}
       <g class={editing ? 'cursor-grab active:cursor-grabbing' : ''}
          onpointerdown={(e: PointerEvent) => handleDragStart(e, item)}
          onclick={() => { if (!dragItemId) editing && onfurnitureclick?.(item); }}>
@@ -333,7 +333,7 @@
     {/each}
 
     <!-- Front furniture -->
-    {#each sortedFront as item (item.userItemId ?? item.itemDefId)}
+    {#each sortedFront as item, i ('f-' + (item.userItemId ?? item.itemDefId) + '-' + i)}
       <g class={editing ? 'cursor-grab active:cursor-grabbing' : ''}
          onpointerdown={(e: PointerEvent) => handleDragStart(e, item)}
          onclick={() => { if (!dragItemId) editing && onfurnitureclick?.(item); }}>

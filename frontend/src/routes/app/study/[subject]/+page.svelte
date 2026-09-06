@@ -1,17 +1,9 @@
 <script lang="ts">
   import { getWorldMap } from '$lib/api/study';
+  import type { WorldNode } from '$lib/api/study';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
-
-  interface WorldNode {
-    nodeId: number;
-    name: string;
-    description: string;
-    difficulty: number;
-    isUnlocked: boolean;
-    isCompleted: boolean;
-    starRating: number;
-  }
+  import KnowledgeTree from '$lib/components/study/KnowledgeTree.svelte';
 
   let loading = $state(true);
   let nodes = $state<WorldNode[]>([]);
@@ -22,11 +14,6 @@
   };
   const subjectEmojis: Record<string, string> = {
     chinese: '📜', math: '🔢', english: '🔤'
-  };
-  const subjectThemes: Record<string, string> = {
-    chinese: 'bg-amber-50 border-amber-200',
-    math: 'bg-blue-50 border-blue-200',
-    english: 'bg-purple-50 border-purple-200'
   };
 
   $effect(() => {
@@ -39,6 +26,11 @@
   function startExploration(nodeId: number) {
     goto(`/app/study/${subject}/explore?nodeId=${nodeId}`);
   }
+
+  // Count total stats
+  const totalNodes = $derived(nodes.reduce((sum, n) => sum + 1 + (n.children?.length || 0), 0));
+  const completedNodes = $derived(nodes.reduce((sum, n) =>
+    sum + (n.isCompleted ? 1 : 0) + (n.children?.filter(c => c.isCompleted).length || 0), 0));
 </script>
 
 <svelte:head>
@@ -50,44 +42,24 @@
     ← 返回学科选择
   </button>
 
-  <div class="flex items-center gap-3 mb-6">
-    <span class="text-4xl">{subjectEmojis[subject] || '🌍'}</span>
-    <div>
-      <h1 class="text-2xl font-bold text-gray-800">{subjectLabels[subject] || subject}</h1>
-      <p class="text-gray-500">选择知识点开始探险</p>
+  <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center gap-3">
+      <span class="text-4xl">{subjectEmojis[subject] || '🌍'}</span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">{subjectLabels[subject] || subject}</h1>
+        <p class="text-gray-500 text-sm">已点亮 {completedNodes}/{totalNodes} 个知识点</p>
+      </div>
     </div>
   </div>
 
   {#if loading}
-    <div class="text-center text-gray-500 py-12">加载中...</div>
+    <div class="text-center text-gray-500 py-12">
+      <div class="inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
+      <p class="mt-2">加载知识树中...</p>
+    </div>
   {:else if nodes.length === 0}
     <div class="text-center py-12 text-gray-500">暂无可用节点</div>
   {:else}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {#each nodes as node}
-        <div class={[
-          'rounded-2xl border-2 p-5 transition',
-          node.isUnlocked
-            ? subjectThemes[subject] + ' hover:shadow-md cursor-pointer'
-            : 'bg-gray-50 border-gray-200 opacity-60'
-        ].join(' ')}
-          onclick={node.isUnlocked ? () => startExploration(node.nodeId) : undefined}
-          role={node.isUnlocked ? 'button' : undefined}
-        >
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-500">Lv.{node.difficulty}</span>
-            {#if node.isCompleted}
-              <span class="text-yellow-500 text-sm">⭐</span>
-            {:else if !node.isUnlocked}
-              <span class="text-gray-400 text-sm">🔒</span>
-            {:else}
-              <span class="text-green-500 text-sm">🔓</span>
-            {/if}
-          </div>
-          <h3 class="font-bold text-gray-800">{node.name}</h3>
-          <p class="text-sm text-gray-600 mt-1">{node.description}</p>
-        </div>
-      {/each}
-    </div>
+    <KnowledgeTree {nodes} {subject} onNodeClick={startExploration} />
   {/if}
 </div>

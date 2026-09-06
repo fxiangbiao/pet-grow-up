@@ -34,6 +34,10 @@ import java.util.stream.Collectors;
 @Service
 public class SpiritService {
 
+    // Experience thresholds per evolution stage
+    private static final int[] EXP_THRESHOLDS = {0, 500, 2000, 0}; // stage 1->2: 500, 2->3: 2000
+    private static final double EXP_ENERGY_RATIO = 0.5; // experience = energy * ratio
+
     private final SpiritMapper spiritMapper;
     private final SpiritSpeciesMapper speciesMapper;
     private final UserMapper userMapper;
@@ -361,6 +365,39 @@ public class SpiritService {
         return Math.max(0, Math.min(100, value));
     }
 
+    @Transactional
+    public void addExperience(Long userId, Long spiritId, int experienceGain) {
+        LearningSpirit spirit = spiritMapper.selectOneById(spiritId);
+        if (spirit == null || !spirit.getUserId().equals(userId)) return;
+
+        int currentExp = spirit.getExperience() != null ? spirit.getExperience() : 0;
+        int newExp = currentExp + experienceGain;
+        spirit.setExperience(newExp);
+
+        int threshold = getExperienceForNextStage(spirit.getCurrentEvolutionStage());
+        if (threshold > 0 && newExp >= threshold) {
+            // Auto-evolve
+            spirit.setExperience(newExp - threshold);
+            SpiritSpecies currentSpecies = speciesMapper.selectOneById(spirit.getSpeciesId());
+            if (currentSpecies != null) {
+                SpiritSpecies nextSpecies = speciesMapper.selectOneByQuery(
+                        QueryWrapper.create().eq("evolves_from_id", currentSpecies.getId()));
+                if (nextSpecies != null) {
+                    spirit.setSpeciesId(nextSpecies.getId());
+                    spirit.setCurrentEvolutionStage(nextSpecies.getEvolutionStage());
+                    achievementService.checkAndUnlock(userId, RequirementType.FIRST_EVOLUTION, Map.of());
+                    storyService.checkAllConditions(userId);
+                }
+            }
+        }
+        spiritMapper.update(spirit);
+    }
+
+    private int getExperienceForNextStage(int currentStage) {
+        if (currentStage <= 0 || currentStage >= EXP_THRESHOLDS.length) return 0;
+        return EXP_THRESHOLDS[currentStage];
+    }
+
     private SpiritDTO toSpiritDTO(LearningSpirit spirit) {
         SpiritSpecies species = speciesMapper.selectOneById(spirit.getSpeciesId());
         return SpiritDTO.builder()
@@ -368,6 +405,8 @@ public class SpiritService {
                 .species(toSpeciesDTO(species))
                 .nickname(spirit.getNickname())
                 .currentEvolutionStage(spirit.getCurrentEvolutionStage())
+                .experience(spirit.getExperience() != null ? spirit.getExperience() : 0)
+                .totalExperienceForNextStage(getExperienceForNextStage(spirit.getCurrentEvolutionStage()))
                 .happiness(spirit.getHappiness())
                 .energy(spirit.getEnergy())
                 .affection(spirit.getAffection())

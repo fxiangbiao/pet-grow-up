@@ -28,7 +28,7 @@
         <p class="text-sm text-gray-400 text-center py-8">背包中没有装饰品，去商店购买吧！</p>
       {:else}
         <div class="grid grid-cols-4 gap-3 max-h-64 overflow-y-auto">
-          {#each items as item (item.itemKey)}
+          {#each items as item, i (item.userItemId ?? item.itemDefId ?? i)}
             <button onclick={() => onselect?.(item)}
                     class="p-3 rounded-xl bg-gray-50 hover:bg-indigo-50 hover:shadow-sm transition text-center">
               <div class="text-2xl mb-1">{item.iconUrl || '📦'}</div>

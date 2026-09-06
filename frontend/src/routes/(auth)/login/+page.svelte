@@ -8,8 +8,9 @@
   let error = $state('');
   let fieldErrors = $state<Record<string, string>>({});
   let loading = $state(false);
+  let showPassword = $state(false);
+  let rememberMe = $state(false);
 
-  // Check if redirected due to expired session
   let expired = $state(typeof window !== 'undefined' && window.location.search.includes('expired=1'));
 
   function validate(): boolean {
@@ -56,50 +57,75 @@
   {/if}
 
   {#if error}
-    <div class="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
-      {error}
+    <div class="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm flex items-center gap-2">
+      <span>❗</span>
+      <span>{error}</span>
     </div>
   {/if}
 
-  <form onsubmit={handleSubmit} class="space-y-4">
+  <form onsubmit={handleSubmit} class="space-y-5">
     <div>
       <label for="username" class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
-      <input
-        id="username"
-        type="text"
-        bind:value={username}
-        required
-        class={['w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition',
-          fieldErrors.username ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
-        ].join(' ')}
-        placeholder="请输入用户名"
-      />
+      <div class="relative">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">👤</span>
+        <input
+          id="username"
+          type="text"
+          bind:value={username}
+          required
+          autofocus
+          class={['w-full pl-10 pr-4 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition',
+            fieldErrors.username ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+          ].join(' ')}
+          placeholder="请输入用户名"
+        />
+      </div>
       {#if fieldErrors.username}
-        <p class="text-red-500 text-xs mt-1">{fieldErrors.username}</p>
+        <p class="text-red-500 text-xs mt-1 flex items-center gap-1"><span>❗</span>{fieldErrors.username}</p>
       {/if}
     </div>
 
     <div>
       <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
-      <input
-        id="password"
-        type="password"
-        bind:value={password}
-        required
-        class={['w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition',
-          fieldErrors.password ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
-        ].join(' ')}
-        placeholder="请输入密码"
-      />
+      <div class="relative">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔒</span>
+        <input
+          id="password"
+          type={showPassword ? 'text' : 'password'}
+          bind:value={password}
+          required
+          class={['w-full pl-10 pr-12 py-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition',
+            fieldErrors.password ? 'border-red-300 focus:border-red-500' : 'border-gray-300 focus:border-blue-500'
+          ].join(' ')}
+          placeholder="请输入密码"
+        />
+        <button
+          type="button"
+          onclick={() => showPassword = !showPassword}
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition text-lg"
+          tabindex="-1"
+        >
+          {showPassword ? '🙈' : '👁️'}
+        </button>
+      </div>
       {#if fieldErrors.password}
-        <p class="text-red-500 text-xs mt-1">{fieldErrors.password}</p>
+        <p class="text-red-500 text-xs mt-1 flex items-center gap-1"><span>❗</span>{fieldErrors.password}</p>
       {/if}
+    </div>
+
+    <!-- Remember me -->
+    <div class="flex items-center justify-between">
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" bind:checked={rememberMe}
+               class="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500" />
+        <span class="text-sm text-gray-600">记住我</span>
+      </label>
     </div>
 
     <button
       type="submit"
       disabled={loading}
-      class="w-full py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+      class="w-full py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
     >
       {loading ? '登录中...' : '登录'}
     </button>
@@ -107,6 +133,6 @@
 
   <p class="text-center text-sm text-gray-500 mt-6">
     还没有账号？
-    <a href="/register" class="text-blue-500 hover:text-blue-600">立即注册</a>
+    <a href="/register" class="text-blue-500 hover:text-blue-600 font-medium">立即注册</a>
   </p>
 </div>
