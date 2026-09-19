@@ -83,6 +83,12 @@
   let liveDragX = $state(0);
   let liveDragY = $state(0);
   let svgEl = $state<SVGSVGElement | null>(null);
+  // 只有真的拖动过才提交位置：否则"点一下选中"也会发 PUT，
+  // 而它与随后的 DELETE 竞态——PUT 基于删除前的数据回写，会把已删的装饰"复活"。
+  let dragMoved = $state(false);
+  let dragStartClientX = 0;
+  let dragStartClientY = 0;
+  let dragCaptureEl: SVGElement | null = null;
 
   function svgCoords(e: PointerEvent): { x: number; y: number } {
     if (!svgEl) return { x: 0, y: 0 };
@@ -97,17 +103,26 @@
     if (!editing) return;
     const id = item.userItemId ?? item.itemDefId;
     dragItemId = id;
+    dragMoved = false;
+    dragStartClientX = e.clientX;
+    dragStartClientY = e.clientY;
     const coords = svgCoords(e);
     dragX = coords.x - (item.x ?? 200);
     dragY = coords.y - (item.y ?? 220);
     liveDragX = item.x ?? 200;
     liveDragY = item.y ?? 220;
-    (e.currentTarget as SVGElement).setPointerCapture(e.pointerId);
+    dragCaptureEl = e.currentTarget as SVGElement;
+    dragCaptureEl.setPointerCapture(e.pointerId);
     e.stopPropagation();
   }
 
   function handleDragMove(e: PointerEvent) {
     if (dragItemId === null) return;
+    if (!dragMoved) {
+      // 位移超过 3px 才算拖拽，纯点击不产生请求
+      if (Math.hypot(e.clientX - dragStartClientX, e.clientY - dragStartClientY) < 3) return;
+      dragMoved = true;
+    }
     const coords = svgCoords(e);
     liveDragX = Math.max(20, Math.min(380, coords.x - dragX));
     liveDragY = Math.max(30, Math.min(280, coords.y - dragY));
@@ -115,12 +130,16 @@
 
   function handleDragEnd(e: PointerEvent) {
     if (dragItemId === null) return;
-    const item = furniture.find(f => (f.userItemId ?? f.itemDefId) === dragItemId);
-    if (item) {
-      onfurnituredragend?.(item, Math.round(liveDragX), Math.round(liveDragY));
+    if (dragMoved) {
+      const item = furniture.find(f => (f.userItemId ?? f.itemDefId) === dragItemId);
+      if (item) {
+        onfurnituredragend?.(item, Math.round(liveDragX), Math.round(liveDragY));
+      }
     }
     dragItemId = null;
-    try { (e.currentTarget as SVGElement).releasePointerCapture(e.pointerId); } catch {}
+    dragMoved = false;
+    try { dragCaptureEl?.releasePointerCapture(e.pointerId); } catch {}
+    dragCaptureEl = null;
   }
 
   function getDisplayX(item: PlacedItem): number {

@@ -30,10 +30,17 @@ public class PetRoomController {
         return ApiResponse.success(petRoomService.placeItem(userId, request));
     }
 
+    /**
+     * 移除屋内装饰。
+     * userItemId / itemDefId 至少给一个：优先用 userItemId 精确匹配；
+     * 历史数据里的条目可能没有 userItemId，此时用 itemDefId 兜底。
+     * 一个都没匹配到会报错（不再静默返回原样，避免前端误报"已移除"）。
+     */
     @DeleteMapping("/remove")
     public ApiResponse<PetRoomDTO> removeItem(@AuthenticationPrincipal Long userId,
-                                               @RequestParam Long userItemId) {
-        return ApiResponse.success(petRoomService.removeItem(userId, userItemId));
+                                               @RequestParam(required = false) Long userItemId,
+                                               @RequestParam(required = false) Long itemDefId) {
+        return ApiResponse.success(petRoomService.removeItem(userId, userItemId, itemDefId));
     }
 
     @PutMapping("/position")

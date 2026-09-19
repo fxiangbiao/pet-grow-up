@@ -126,17 +126,44 @@ public class PetRoomService {
         return getRoom(userId);
     }
 
+    /**
+     * 移除屋内装饰。
+     *
+     * 匹配规则（按优先级）：
+     *   1. 双方都有 userItemId 时按 userItemId 精确匹配；
+     *   2. 否则按 itemDefId 匹配 —— 用于历史数据（早期写入的槽位没有 userItemId，
+     *      这类条目以前永远删不掉：前端拿 itemDefId 当 userItemId 发过来，匹配不上，
+     *      接口却返回 200，前端还会提示"已移除装饰品"）。
+     * 一条都没匹配到就直接报错，让前端能如实反馈。
+     */
     @Transactional
-    public PetRoomDTO removeItem(Long userId, Long userItemId) {
+    public PetRoomDTO removeItem(Long userId, Long userItemId, Long itemDefId) {
+        if (userItemId == null && itemDefId == null) {
+            throw new BusinessException("缺少要移除的装饰标识");
+        }
+
         PetRoom room = petRoomMapper.selectOneByQuery(
                 QueryWrapper.create().eq("user_id", userId));
-        if (room == null) return getRoom(userId);
+        if (room == null) throw new BusinessException(404, "小屋不存在，请先进入小屋后再操作");
 
         List<Map<String, Object>> slotList = parseSlotData(room.getSlotData());
+        int before = slotList.size();
+
         slotList.removeIf(entry -> {
             Number uid = (Number) entry.get("userItemId");
-            return uid != null && uid.longValue() == userItemId;
+            Number did = (Number) entry.get("itemDefId");
+            if (userItemId != null && uid != null) {
+                return uid.longValue() == userItemId.longValue();
+            }
+            if (itemDefId != null && did != null) {
+                return did.longValue() == itemDefId.longValue();
+            }
+            return false;
         });
+
+        if (slotList.size() == before) {
+            throw new BusinessException(404, "该装饰不在小屋中（可能已被移除），请刷新后重试");
+        }
 
         room.setSlotData(toJson(slotList));
         petRoomMapper.update(room);
@@ -151,14 +178,22 @@ public class PetRoomService {
         if (room == null) throw new BusinessException("房间不存在");
 
         List<Map<String, Object>> slotList = parseSlotData(room.getSlotData());
+        boolean matched = false;
         for (Map<String, Object> entry : slotList) {
             Number uid = (Number) entry.get("userItemId");
-            if (uid != null && uid.longValue() == req.getUserItemId()) {
+            Number did = (Number) entry.get("itemDefId");
+            boolean hit = (req.getUserItemId() != null && uid != null)
+                    ? uid.longValue() == req.getUserItemId().longValue()
+                    : (req.getItemDefId() != null && did != null
+                        && did.longValue() == req.getItemDefId().longValue());
+            if (hit) {
                 entry.put("x", req.getX());
                 entry.put("y", req.getY());
+                matched = true;
                 break;
             }
         }
+        if (!matched) throw new BusinessException(404, "该装饰不在小屋中（可能已被移除），请刷新后重试");
 
         room.setSlotData(toJson(slotList));
         petRoomMapper.update(room);
