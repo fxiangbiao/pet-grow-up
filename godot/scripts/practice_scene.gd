@@ -13,6 +13,7 @@ var _q_area: VBoxContainer
 var _progress_label: Label
 var _locked := false
 var _combo := 0
+var _wrong_streak := 0
 
 
 func _build() -> void:
@@ -135,26 +136,34 @@ func _on_ten_reached() -> void:
 	if pet: pet.cheer()
 
 
-## 答对：连击 + 经验 + 粒子 + 音效 + 连击弹出
+## 答对：连击 + 经验 + 粒子 + 音效 + 连击弹出（轻微震屏增加爽感）
 func _on_correct_feedback() -> void:
 	_combo += 1
+	_wrong_streak = 0
 	var gain: int = 8 + mini(_combo, 6) * 2
 	var r := PetState.add_exp(gain)
 	var gp := _q_area.global_position + Vector2(_q_area.size.x * 0.5, _q_area.size.y * 0.25)
 	var at := gp - self.global_position
-	Juice.burst(self, at, 14)
+	Juice.burst(self, at, 14 + mini(_combo, 4) * 2)
 	Juice.sfx_correct(self)
+	Juice.shake(self, 4.0, 0.24)
 	if _combo >= 2:
 		Juice.popup_text(self, at, "连击 x%d!" % _combo, Color(1.0, 0.7, 0.1))
+	if _combo == 3:
+		pet_say("哇！三连击，太厉害了！")
 	if r.leveled_up:
 		_on_level_up(r)
 	_refresh_hud()
 
 
-## 答错：连击清零 + 柔和错误音效（不惩罚式红叉）
+## 答错：连击清零 + 柔和错误反馈（轻微震屏提示，不打击）
 func _on_wrong_feedback() -> void:
 	_combo = 0
+	_wrong_streak += 1
 	Juice.sfx_wrong(self)
+	Juice.shake(self, 5.0, 0.3)
+	if pet and pet.has_method("think") and _wrong_streak >= 2:
+		pet.think()
 
 
 func _on_level_up(r: Dictionary) -> void:
@@ -227,18 +236,79 @@ func _show_result(res: Dictionary) -> void:
 	fb.custom_minimum_size = Vector2(560, 0)
 	_q_area.add_child(fb)
 
+	# 智能引导：连续答错后给更细的步骤提示（拆解当前题），不直接给答案数字
+	if not correct:
+		pet_say(_pep_talk(_wrong_streak))
+		if _wrong_streak >= 2:
+			var tip := _step_hint()
+			if tip != "":
+				var hint := Label.new()
+				hint.text = "💡 " + tip
+				hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				hint.custom_minimum_size = Vector2(560, 0)
+				hint.add_theme_font_size_override("font_size", 16)
+				hint.add_theme_color_override("font_color", Color(0.45, 0.32, 0.1))
+				_q_area.add_child(hint)
+
 	var done: bool = res.get("isSessionComplete", false) or res.get("isLastQuestion", false)
+	# 离线模式答错：允许“再试一次”（本地判分，不重复提交服务器）
+	if not correct and _mode == "offline" and not done:
+		var retry := Button.new()
+		retry.text = "🔁 再试一次"
+		retry.custom_minimum_size = Vector2(200, 48)
+		retry.pressed.connect(_on_retry_offline)
+		UiKit.style_button(retry, false, 12, 16)
+		_q_area.add_child(retry)
+		_answered -= 1   # 撤销刚才那次离线计数，重试不计入进度
+
 	var nb := Button.new()
 	if done:
 		nb.text = "完成练习，下一幕 →"
-		nb.custom_minimum_size = Vector2(240, 44)
+		nb.custom_minimum_size = Vector2(240, 48)
 		nb.pressed.connect(_on_done)
 	else:
 		nb.text = "下一题 →"
-		nb.custom_minimum_size = Vector2(160, 40)
+		nb.custom_minimum_size = Vector2(180, 48)
 		var nq: Variant = res.get("nextQuestion", null)
 		nb.pressed.connect(_on_next.bind(nq))
+	nb.add_theme_color_override("font_color", Color(0.15, 0.35, 0.4))
 	_q_area.add_child(nb)
+	# 把“下一题/完成”按钮做视觉主次：主操作用强调色
+	if done or correct:
+		UiKit.style_button(nb, true, 12, 16)
+	else:
+		UiKit.style_button(nb, false, 12, 16)
+
+
+## 鼓励话术（按连续错误次数递进）
+func _pep_talk(streak: int) -> String:
+	if streak <= 1:
+		return "没关系，再看看这题～"
+	if streak == 2:
+		return "别急，慢慢想，小精灵陪着你！"
+	return "换个思路试试，你一定行！💪"
+
+
+## 针对凑十题给出“不剧透答案”的步骤提示
+func _step_hint() -> String:
+	var pq := _parse_question(str(_current_q.get("questionText", "")))
+	if str(pq.get("mode", "")) == "complement":
+		var big: int = int(pq["big"])
+		var need: int = int(pq["small"])
+		if need == 0:
+			return "已经正好是 10 啦，数一数十格阵里有几个？"
+		return "看大数 %d：先不动它，数一数还空着 %d 个格子——把这 %d 个绿苹果点进去就满 10 了。" % [big, need, need]
+	if str(pq.get("mode", "")) == "sum":
+		var big: int = int(pq["big"])
+		var small: int = int(pq["small"])
+		return "看大数 %d，需要先补 %d 个凑成 10；补完后还剩 %d 个，10 加 %d 等于几？" % [big, 10 - big, maxi(small - (10 - big), 0), maxi(small - (10 - big), 0)]
+	return "用十格阵数一数，或者用手指头帮忙～"
+
+
+func _on_retry_offline() -> void:
+	_locked = false
+	_wrong_streak = 0
+	_render_question(_current_q)
 
 
 func _on_next(nq: Variant) -> void:

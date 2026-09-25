@@ -102,19 +102,29 @@
 
   async function handleRemove(item: PlacedItem) {
     if (!room) return;
-    const id = item.userItemId ?? item.itemDefId;
+    const before = room.furniture?.length ?? 0;
     try {
-      room = await removeItem(id);
+      // userItemId 为空（历史数据）时只传 itemDefId，让后端按 itemDefId 定位
+      const next = await removeItem(item.userItemId ?? null, item.itemDefId);
+      const after = next.furniture?.length ?? 0;
+      room = next;
       selectedItemId = null;
       await loadDecorations();
-      toastStore.success('已移除装饰品');
+      if (after < before) toastStore.success('已移除装饰品');
+      else toastStore.error('未能移除该装饰，请刷新页面后重试');
     } catch (e: any) { toastStore.error(e.message || '移除失败'); }
   }
 
+  function handleRemoveSelected() {
+    if (!room || selectedItemId == null) return;
+    const item = room.furniture?.find(f => (f.userItemId ?? f.itemDefId) === selectedItemId);
+    if (item) handleRemove(item);
+    else selectedItemId = null;
+  }
+
   async function handleFurnitureDragEnd(item: PlacedItem, x: number, y: number) {
-    const id = item.userItemId ?? item.itemDefId;
     try {
-      room = await updatePosition(id, x, y);
+      room = await updatePosition(item.userItemId ?? null, x, y, item.itemDefId);
     } catch { /* silent — position update is best-effort during drag */ }
   }
 
@@ -185,13 +195,17 @@
         onspiritclick={handleSpiritClick} />
 
       {#if editing}
-        <div class="mt-3 text-center">
+        <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
           <button onclick={handleAddDecoration}
                   class="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-500 text-white hover:bg-indigo-600 transition">
             ➕ 添加装饰品
           </button>
           {#if selectedItemId}
-            <span class="text-xs text-gray-400 ml-2">已选中家具，再次点击可移除</span>
+            <button onclick={handleRemoveSelected}
+                    class="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition">
+              🗑️ 移除选中装饰
+            </button>
+            <span class="text-xs text-gray-400">也可以再次点击该家具移除</span>
           {/if}
         </div>
       {/if}

@@ -225,8 +225,9 @@ func _finish_button() -> void:
 	var b := Button.new()
 	b.text = "我听懂啦，下一幕 →"
 	b.add_theme_font_size_override("font_size", font_size(16))
-	b.custom_minimum_size = Vector2(240, 44) * _font_scale()
+	b.custom_minimum_size = Vector2(260, 50) * _font_scale()
 	b.pressed.connect(_on_done)
+	UiKit.style_button(b, true, 14)
 	_scroll.add_child(b)
 
 

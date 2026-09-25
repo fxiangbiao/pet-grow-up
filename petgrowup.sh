@@ -14,10 +14,18 @@
 #    status / ps     查看容器状态
 #    logs [service]  跟踪日志 (backend|frontend|mysql)
 #    docker-up       启动 WSL 内 docker daemon（幂等）
+#    fix-perms       修复 backend/target 属主（root 构建残留导致 mvn clean 失败时用）
 #
 #  说明:
 #    - 本脚本可放在任意位置；Windows 侧建议直接用仓库里的原始文件：
-#        wsl -u root -e bash /mnt/d/ALAN/Codes/pet-grow-up/petgrowup.sh dev-up
+#        wsl -e bash /mnt/d/ALAN/Codes/pet-grow-up/petgrowup.sh dev-up
+#    - 【重要】请以普通用户运行本脚本。若用 `wsl -u root` 运行，maven 产物
+#      backend/target 会变成 root 属主；而 sync 已 --exclude='backend/target'，
+#      排除项同样受保护不会被删，同步永远修不好这棵树，之后普通用户执行
+#      dev-up 就会失败：
+#        Failed to execute goal maven-clean-plugin:3.3.2:clean (default-clean)
+#        ... Failed to delete .../backend/target/generated-test-sources/test-annotations
+#      脚本已内置属主自愈（ensure_target_owner）；以 root 运行时也会把属主交还。
 #    - 首次使用会先执行 sync 把源码同步进 WSL 部署目录，再在 WSL 内 docker 部署。
 #    - 可配置: WIN_DIR（Windows 源码）、WSL_DIR（WSL 部署目录）。
 #    - 后端容器内 JRE 为 17，与 pom <java.version>17 一致。
@@ -28,6 +36,8 @@ set -e
 WIN_DIR="${PETGROWUP_WIN_DIR:-/mnt/d/ALAN/Codes/pet-grow-up}"
 WSL_DIR="${PETGROWUP_WSL_DIR:-/home/fxb_2/pet-grow-up}"
 MYSQL_NAME="petgrowup-mysql"
+# backend/target 只由 WSL 内的 maven 产生（容器不写它），但对 dev compose 是 bind mount
+TARGET_DIR="$WSL_DIR/backend/target"
 
 need_docker() {
   if ! command -v docker >/dev/null 2>&1; then
@@ -60,6 +70,51 @@ ensure_mysql_name_free() {
     if [ -z "$proj" ] || [ "$proj" = "<no value>" ]; then
       echo "⚠  存在同名但非 compose 管理的容器 $MYSQL_NAME，删除后由 compose 重建。"
       docker rm -f "$MYSQL_NAME"
+    fi
+  fi
+}
+
+# 修复 backend/target 属主（自愈） ---------------------------------------
+#   target 内的文件若不属于当前用户，普通用户的 mvn clean 无法删除其中的目录，
+#   报 "Failed to clean project: Failed to delete .../test-annotations"。
+#   成因：此前用 root 执行过本脚本（见文件头说明）。
+ensure_target_owner() {
+  local uid owner
+  uid="$(id -u)"
+  [ -e "$TARGET_DIR" ] || return 0
+  if [ -z "$(find "$TARGET_DIR" ! -uid "$uid" -print -quit 2>/dev/null)" ]; then
+    return 0
+  fi
+  owner="$(stat -c '%U(uid=%u)' "$TARGET_DIR" 2>/dev/null || echo '未知')"
+  echo "⚠  backend/target 内存在不属于当前用户（$(id -un) uid=$uid）的文件，target 属主: $owner"
+  echo "   成因通常是此前以 root 执行过本脚本；sync 排除了 target，故不会被自动修好。"
+  if [ "$uid" -eq 0 ]; then
+    echo ">>> 当前即 root，直接删除 target 重建"
+    rm -rf "$TARGET_DIR"
+    return 0
+  fi
+  echo ">>> 尝试 sudo 修正属主..."
+  if sudo chown -R "$uid:$(id -g)" "$TARGET_DIR"; then
+    echo "✓ 属主已修正为 $(id -un)"
+    return 0
+  fi
+  echo "✗ 自动修正失败，请手动执行其一后重试："
+  echo "     sudo chown -R $(id -u):$(id -g) $TARGET_DIR"
+  echo "     sudo rm -rf $TARGET_DIR"
+  exit 1
+}
+
+# 打包 JAR：自愈属主 -> mvn clean package -> 若以 root 运行则把 target 交还属主
+mvn_package() {
+  ensure_target_owner
+  (cd "$WSL_DIR/backend" && mvn clean package -DskipTests -B -q)
+  if [ "$(id -u)" -eq 0 ]; then
+    local owner
+    owner="$(stat -c '%u:%g' "$WSL_DIR" 2>/dev/null || true)"
+    if [ -n "$owner" ]; then
+      chown -R "$owner" "$TARGET_DIR" 2>/dev/null || true
+      echo "ℹ  以 root 构建完成，target 属主已交还 $owner"
+      echo "   下次请用普通用户运行，避免再次踩到 mvn clean 权限问题。"
     fi
   fi
 }
@@ -101,7 +156,7 @@ up() {
   sync
   ensure_mysql_name_free
   echo ">>> [$label] 构建后端 JAR（WSL 内 maven）..."
-  (cd "$WSL_DIR/backend" && mvn clean package -DskipTests -B -q)
+  mvn_package
   echo ">>> [$label] compose 构建并启动..."
   (cd "$WSL_DIR" && docker compose -f "$compose" up --build -d)
   echo ">>> 等待服务就绪..."
@@ -125,7 +180,7 @@ restart() {
   need_docker
   if [ "$svc" = "backend" ]; then
     echo ">>> 重新打包 JAR 并重建后端镜像..."
-    (cd "$WSL_DIR/backend" && mvn clean package -DskipTests -B -q)
+    mvn_package
     (cd "$WSL_DIR" && docker compose -f "$compose" up --build -d backend)
   else
     (cd "$WSL_DIR" && docker compose -f "$compose" restart "$svc")
@@ -159,9 +214,12 @@ case "$CMD" in
   prod-down) down "$WSL_DIR/docker-compose.yml" ;;
   prod-restart) restart "$WSL_DIR/docker-compose.yml" "${1:-all}" ;;
   docker-up) docker-up ;;
+  fix-perms) ensure_target_owner && echo "✓ backend/target 属主正常（无需修复）" ;;
   status|ps) status ;;
   logs) logs "${1:-backend}" ;;
   help|--help|-h)
-    sed -n '2,30p' "$0" | sed 's/^#\{0,1\} *//' ;;
+    # 打印文件头注释块（直到第 2 条 ==== 分隔线），不依赖固定行号
+    awk 'NR==1{next} /^# =====/{c++; print; if(c==2) exit; next} {print}' "$0" \
+      | sed 's/^#\{0,1\} *//' ;;
   *) echo "未知命令: $CMD（试试 bash petgrowup.sh help）"; exit 1 ;;
 esac

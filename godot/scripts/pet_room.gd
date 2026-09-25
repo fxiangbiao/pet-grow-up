@@ -23,8 +23,9 @@ func _on_setup() -> void:
 
 	var cont := Button.new()
 	cont.text = "继续学习 →"
-	cont.custom_minimum_size = Vector2(220, 44)
+	cont.custom_minimum_size = Vector2(240, 52)
 	cont.pressed.connect(_on_continue)
+	UiKit.style_button(cont, true, 14, 18)
 	box.add_child(cont)
 
 	# 房间里的宠物（放大欢迎）
@@ -34,6 +35,16 @@ func _on_setup() -> void:
 	big.z_index = 50
 	add_child(big)
 	big.wave()
+	_greet(big.position)
+
+
+func _greet(pos: Vector2) -> void:
+	var lines := [
+		"欢迎回来！今天也要元气满满哦！",
+		"想我了没？学累了就来小屋转转~",
+		"看看这些收藏，都是你努力换来的！",
+	]
+	PetBubble.say(self, pos + Vector2(-30, -320), lines[randi() % lines.size()], 3.4, 420.0)
 
 
 # 覆盖 base_scene：小屋用一只放大宠物居中，不要右下角默认宠物
@@ -51,4 +62,4 @@ func _mk(text: String) -> Label:
 
 
 func _on_continue() -> void:
-	get_tree().change_scene_to_file("res://scenes/world_map.tscn")
+	UiKit.change_scene(get_tree(), "res://scenes/world_map.tscn")

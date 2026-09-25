@@ -121,6 +121,7 @@
   let showLittleTeacher = $state(false);
   let littleTeacherCompleted = $state(false);
   let littleTeacherEnergy = $state(0);
+  let analogyEnergy = $state(0);
   let expandStep = $state<'analogy' | 'summary' | 'done'>('analogy');
 
   // General
@@ -425,9 +426,11 @@
     showLittleTeacher = false;
   }
 
-  function handleAnalogyComplete(success: boolean) {
+  function handleAnalogyComplete(success: boolean, energyReward: number = 0) {
     showAnalogy = false;
     analogyCompleted = true;
+    analogyEnergy = energyReward;
+    energy = Math.min(100, energy + energyReward);
     expandStep = 'summary';
     showLittleTeacher = true;
   }
@@ -442,6 +445,18 @@
 
   function handleExpandDone() {
     phase = 'result';
+  }
+
+  /**
+   * 拓展环节的兜底出口。
+   * expand 分支的条件是 expandStep + show* + question 三者同时成立，任一不成立
+   * （例如 question 为空）整块就不会渲染，孩子会卡在一个空白卡片里出不去
+   * —— 和小老师环节原先那个"白屏无按钮"是同一类问题。
+   */
+  function skipExpandStep() {
+    if (expandStep === 'analogy') handleAnalogyComplete(false, 0);
+    else if (expandStep === 'summary') handleLittleTeacherComplete(false, 0);
+    else handleExpandDone();
   }
 
   function onNewTypeAnswer(answer: string) {
@@ -855,15 +870,26 @@
           <div class="text-5xl mb-3">🎉</div>
           <h3 class="text-lg font-bold text-gray-800 mb-2">太棒了！</h3>
           <p class="text-gray-600 mb-4">你已经完成了今天的学习！</p>
-          {#if littleTeacherEnergy > 0}
+          {#if littleTeacherEnergy + analogyEnergy > 0}
             <div class="bg-gradient-to-r from-amber-100 to-yellow-100 rounded-xl p-3 mb-4 border border-amber-300 inline-block">
-              <p class="text-sm font-bold text-amber-700">⚡ +{littleTeacherEnergy} 能量获得！</p>
+              <p class="text-sm font-bold text-amber-700">⚡ +{littleTeacherEnergy + analogyEnergy} 能量获得！</p>
             </div>
           {/if}
           <br/>
           <button onclick={handleExpandDone}
             class="mt-2 px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-lg font-bold rounded-2xl hover:from-purple-600 hover:to-pink-600 transition active:scale-95 shadow-lg">
             查看成绩 →
+          </button>
+        </div>
+      <!-- 兜底：万一上面几个条件都不成立（如题目信息缺失），也必须给出出口 -->
+      {:else}
+        <div class="text-center py-6">
+          <div class="text-4xl mb-3">🤔</div>
+          <p class="text-gray-600 mb-2">这一步暂时加载不出来（题目信息缺失）。</p>
+          <p class="text-xs text-gray-400 mb-4">可以先跳过，继续后面的环节。</p>
+          <button onclick={skipExpandStep}
+            class="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-2xl hover:from-purple-600 hover:to-pink-600 transition active:scale-95 shadow-md">
+            跳过这一步，继续 →
           </button>
         </div>
       {/if}

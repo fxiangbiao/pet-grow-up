@@ -22,6 +22,7 @@ config/accessibility/rendering=0
 ApiClient="*res://scripts/api_client.gd"
 PetState="*res://scripts/pet_state.gd"
 Demo="*res://scripts/demo.gd"
+Settings="*res://scripts/settings.gd"
 
 [display]
 

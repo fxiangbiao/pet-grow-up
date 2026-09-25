@@ -65,10 +65,11 @@ func _build_top_bar() -> void:
 	if show_back:
 		var back := Button.new()
 		back.text = "← 返回"
-		back.add_theme_font_size_override("font_size", int(16 * scale))
-		back.position = Vector2(16, 12)
-		back.size = Vector2(76, 32) * scale
+		back.add_theme_font_size_override("font_size", int(15 * scale))
+		back.position = Vector2(16, 8)
+		back.size = Vector2(104, 44) * scale
 		back.pressed.connect(_on_back)
+		UiKit.style_button(back, false, 12)
 		bar.add_child(back)
 
 	_title_label = Label.new()
@@ -174,7 +175,19 @@ func refresh_energy() -> void:
 
 
 func _on_back() -> void:
-	get_tree().change_scene_to_file(back_scene_path)
+	UiKit.change_scene(get_tree(), back_scene_path)
+
+
+## 宠物台词气泡：出现在宠物上方；设置里可整体关闭
+func pet_say(msg: String, dur: float = 2.8) -> void:
+	if msg == "" or not is_inside_tree():
+		return
+	if not Settings.bubble_enabled:
+		return
+	var anchor := Vector2(maxf(size.x - 150.0, 0.0), maxf(size.y - 170.0, 0.0))
+	if pet is Node2D:
+		anchor = pet.position + Vector2(-20, -60)
+	PetBubble.say(self, anchor, msg, dur)
 
 
 func toast(msg: String) -> void:

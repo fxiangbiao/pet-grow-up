@@ -117,6 +117,18 @@ func toast(msg: String) -> void:
 		root.toast(msg)
 
 
+## 宠物台词气泡（贴近本幕右下角宠物），设置关闭时跳过
+func pet_say(msg: String, dur: float = 2.6) -> void:
+	if msg == "" or not is_inside_tree():
+		return
+	if not Settings.bubble_enabled:
+		return
+	var anchor := Vector2(maxf(size.x - 120.0, 0.0), maxf(size.y - 140.0, 0.0))
+	if pet is Node2D:
+		anchor = pet.position + Vector2(-30, -70)
+	PetBubble.say(self, anchor, msg, dur)
+
+
 ## 从 "8 + 5 = ?" 这类文本解析出 [a, b]（求和形式，兼容旧调用方）
 func _parse_add(text: String) -> Array:
 	var p := _parse_question(text)
